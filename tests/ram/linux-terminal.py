@@ -1,0 +1,184 @@
+#!/usr/bin/env python3
+"""Exercise real Linux PTYs. Usage: python3 tests/ram/linux-terminal.py TARGET_DIR"""
+
+import fcntl
+import os
+import pty
+import resource
+import select
+import signal
+import struct
+import subprocess
+import sys
+import termios
+import time
+
+IDLE_LIMIT = 2_000_000
+PEAK_LIMIT = 10_000_000
+TIMEOUT = 8.0
+
+
+def resize(fd, rows, cols):
+    fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack("HHHH", rows, cols, 0, 0))
+
+
+def rss(pid):
+    with open(f"/proc/{pid}/status", encoding="ascii") as status:
+        for line in status:
+            if line.startswith("VmRSS:"):
+                fields = line.split()
+                if len(fields) != 3 or fields[2] != "kB":
+                    raise RuntimeError(f"unexpected VmRSS: {line!r}")
+                value = int(fields[1]) * 1024
+                if value <= 0:
+                    raise RuntimeError("VmRSS is zero; cannot verify memory budget")
+                return value
+    raise RuntimeError("VmRSS unavailable; cannot verify memory budget")
+
+
+def run(binary, profile, scenario):
+    master, slave = pty.openpty()
+    process = None
+    transcript = bytearray()
+    peak = 0
+    idle_samples = []
+    budget_error = None
+    try:
+        resize(slave, 24, 80)
+        before = termios.tcgetattr(slave)
+
+        def child_setup():
+            resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
+            os.setsid()
+            fcntl.ioctl(slave, termios.TIOCSCTTY, 0)
+
+        args = [binary]
+        if scenario == "panic":
+            args.append("--self-test-panic")
+        elif scenario == "ctrlc":
+            args.append("--debug")
+        environment = os.environ.copy()
+        environment["TERM"] = "xterm-256color"
+        process = subprocess.Popen(args, stdin=slave, stdout=slave, stderr=slave,
+                                   preexec_fn=child_setup, env=environment,
+                                   close_fds=True)
+
+        def sample():
+            nonlocal peak
+            if process.poll() is None:
+                try:
+                    value = rss(process.pid)
+                except (FileNotFoundError, ProcessLookupError, RuntimeError):
+                    # A process can lose VmRSS just before waitpid observes exit.
+                    time.sleep(0.02)
+                    if process.poll() is not None:
+                        return None
+                    raise
+                peak = max(peak, value)
+                return value
+            return None
+
+        def pump(wait=0.02):
+            ready, _, _ = select.select([master], [], [], wait)
+            if ready:
+                try:
+                    data = os.read(master, 65536)
+                except OSError as error:
+                    raise RuntimeError(f"PTY read failed: {error}") from error
+                transcript.extend(data)
+            if process.poll() is None:
+                sample()
+
+        def wait_for(expected, start):
+            deadline = time.monotonic() + TIMEOUT
+            while expected not in transcript[start:]:
+                if process.poll() is not None:
+                    raise RuntimeError(f"exited before {expected!r}; output={bytes(transcript)!r}")
+                if time.monotonic() >= deadline:
+                    raise RuntimeError(f"timed out waiting for {expected!r}; output={bytes(transcript)!r}")
+                pump()
+
+        wait_for(b"[1 Review]", 0)
+        if scenario != "panic":
+            for key, label in ((b"2", b"[2 Edit]"), (b"3", b"[3 Models]"),
+                               (b"1", b"[1 Review]")):
+                start = len(transcript)
+                os.write(master, key)
+                wait_for(label, start)
+            if scenario == "ctrlc" and b"Memory (rss):" not in transcript:
+                raise RuntimeError("debug memory status missing")
+            # A fresh frame after SIGWINCH must arrive before any subsequent key.
+            start = len(transcript)
+            resize(slave, 12, 60)
+            os.kill(process.pid, signal.SIGWINCH)
+            wait_for(b"[1 Review]", start)
+            start = len(transcript)
+            os.write(master, b"2")
+            wait_for(b"[2 Edit]", start)
+            start = len(transcript)
+            resize(slave, 24, 80)
+            os.kill(process.pid, signal.SIGWINCH)
+            wait_for(b"[2 Edit]", start)
+            for _ in range(5):
+                time.sleep(0.1)
+                value = sample()
+                if value is None:
+                    raise RuntimeError("application exited during idle measurement")
+                idle_samples.append(value)
+            if profile == "release" and max(idle_samples) >= IDLE_LIMIT:
+                budget_error = f"RAM budget exceeded: idle={idle_samples} peak_sampled={peak}"
+            os.write(master, b"\x03" if scenario == "ctrlc" else b"q")
+
+        deadline = time.monotonic() + TIMEOUT
+        while process.poll() is None:
+            if time.monotonic() >= deadline:
+                raise RuntimeError("application did not exit")
+            pump()
+        # Drain the PTY while the slave remains open in this process.
+        while select.select([master], [], [], 0)[0]:
+            pump(0)
+        if profile == "release" and peak >= PEAK_LIMIT:
+            budget_error = f"RAM peak budget exceeded: peak_sampled={peak}"
+        code = process.wait()
+        if (scenario == "panic") == (code == 0):
+            raise RuntimeError(f"unexpected exit code {code}")
+        after = termios.tcgetattr(slave)
+        if before != after:
+            raise RuntimeError(f"terminal attributes not restored: {before!r} -> {after!r}")
+        if b"\x1b[?1049h" not in transcript or b"\x1b[?1049l" not in transcript:
+            raise RuntimeError("alternate screen entry/exit missing")
+        if b"\x1b[?25l" not in transcript or b"\x1b[?25h" not in transcript:
+            raise RuntimeError("cursor hide/show missing")
+        if budget_error:
+            raise RuntimeError(budget_error)
+        print(f"{profile} {scenario} PASS idle_max_5_samples_rss_bytes="
+              f"{max(idle_samples) if idle_samples else 'n/a'} "
+              f"peak_sampled_rss_bytes={peak} exit={code}", flush=True)
+    finally:
+        if process is not None and process.poll() is None:
+            process.kill()
+            process.wait()
+        os.close(master)
+        os.close(slave)
+
+
+def main():
+    if not sys.platform.startswith("linux") or len(sys.argv) != 2:
+        raise SystemExit("Linux and target directory required; cannot verify")
+    failures = []
+    for profile in ("debug", "release"):
+        binary = os.path.join(sys.argv[1], profile, "dark")
+        if not os.path.isfile(binary):
+            raise SystemExit(f"missing binary: {binary}")
+        for scenario in ("q", "ctrlc", "panic"):
+            try:
+                run(binary, profile, scenario)
+            except (OSError, RuntimeError) as error:
+                failures.append(f"{profile} {scenario} FAIL: {error}")
+                print(failures[-1], flush=True)
+    if failures:
+        raise SystemExit(1)
+
+
+if __name__ == "__main__":
+    main()
