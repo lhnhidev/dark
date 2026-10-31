@@ -62,3 +62,67 @@ impl App {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crossterm::event::KeyEvent;
+
+    fn key(code: KeyCode, modifiers: KeyModifiers, kind: KeyEventKind) -> Event {
+        Event::Key(KeyEvent::new_with_kind(code, modifiers, kind))
+    }
+
+    #[test]
+    fn switches_screens_and_redraws_only_on_change() {
+        let mut app = App::new();
+        assert_eq!(app.screen, Screen::Review);
+        for (digit, screen) in [
+            ('2', Screen::Edit),
+            ('3', Screen::Models),
+            ('1', Screen::Review),
+        ] {
+            assert!(app.handle_event(key(
+                KeyCode::Char(digit),
+                KeyModifiers::NONE,
+                KeyEventKind::Press
+            )));
+            assert_eq!(app.screen, screen);
+            assert!(!app.handle_event(key(
+                KeyCode::Char(digit),
+                KeyModifiers::NONE,
+                KeyEventKind::Press
+            )));
+        }
+        assert!(app.handle_event(Event::Resize(40, 10)));
+        assert!(app.running);
+    }
+
+    #[test]
+    fn ignores_repeats_releases_and_modified_shortcuts() {
+        let mut app = App::new();
+        for kind in [KeyEventKind::Repeat, KeyEventKind::Release] {
+            for code in [KeyCode::Char('2'), KeyCode::Char('q')] {
+                assert!(!app.handle_event(key(code, KeyModifiers::NONE, kind)));
+            }
+        }
+        assert!(!app.handle_event(key(
+            KeyCode::Char('2'),
+            KeyModifiers::ALT,
+            KeyEventKind::Press
+        )));
+        assert_eq!(app.screen, Screen::Review);
+        assert!(app.running);
+    }
+
+    #[test]
+    fn quit_keys_stop_without_redrawing() {
+        for (code, modifiers) in [
+            (KeyCode::Char('q'), KeyModifiers::NONE),
+            (KeyCode::Char('c'), KeyModifiers::CONTROL),
+        ] {
+            let mut app = App::new();
+            assert!(!app.handle_event(key(code, modifiers, KeyEventKind::Press)));
+            assert!(!app.running);
+        }
+    }
+}
