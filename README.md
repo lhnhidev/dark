@@ -4,7 +4,36 @@
 
 dark giúp vibe coder xem AI đã sửa gì, giữ hoặc bỏ từng thay đổi, hỏi AI khi không hiểu, và giao task cho agent, với nhiều model AI tùy chọn. Mục tiêu là chất lượng gọi model ngang hoặc tốt hơn opencode, trong khi process của app chỉ dùng vài MB RAM.
 
-> **Trạng thái:** pre-MVP. Hiện mới có tài liệu thiết kế và khung project. Xem [PLANNING.md](docs/PLANNING.md).
+> **Trạng thái:** pre-MVP, đang kiểm chứng M0. Hiện có khung terminal với ba màn hình trống; git, diff, AI và editor chưa được triển khai. Xem [PLANNING.md](docs/PLANNING.md).
+
+## Chạy khung M0
+
+Project trên máy phát triển: `D:\workspace\dark`. Cần Rust stable; Windows dùng toolchain MSVC và Visual Studio C++ Build Tools.
+
+```powershell
+cargo build --release
+.\target\release\dark.exe
+.\target\release\dark.exe --debug
+```
+
+Linux/macOS chạy `./target/release/dark`. Phím `1`/`2`/`3` chuyển Review/Edit/Models; `q` hoặc `Ctrl-C` thoát. `--debug` hiện bộ nhớ của chính ứng dụng, không tính terminal hoặc tiến trình con. Windows đo private working set; Linux/macOS đo RSS. Nếu API không hỗ trợ, thanh trạng thái hiện `n/a` kèm lý do.
+
+```text
+cargo fmt --check
+cargo clippy --all-targets -- -D warnings
+cargo test
+cargo test --release -- --nocapture
+```
+
+Test RAM được bỏ qua có thông báo ở bản debug; bản release kiểm tra idle dưới 2.000.000 byte và đỉnh lấy mẫu dưới 10.000.000 byte. `dark --self-test` chạy không cần terminal, dùng cùng trạng thái app và renderer để kiểm tra điều hướng/resize rồi đo bộ nhớ. Nó không thay thế kiểm tra terminal thật.
+
+Kiểm tra console thật trên Windows, gồm đổi màn hình, resize, thoát và panic ở cả debug/release:
+
+```powershell
+cargo build
+cargo build --release
+powershell -NoProfile -ExecutionPolicy Bypass -File tests/ram/windows-console.ps1
+```
 
 ## Vì sao có dark
 
@@ -12,7 +41,7 @@ Sau một phiên vibe code, việc khó nhất thường là **biết AI đã đ
 
 **AI sửa → xem diff → giữ / bỏ / hỏi AI → chạy test → commit**
 
-## Tính năng chính (MVP)
+## Tính năng chính (MVP dự kiến)
 
 - **Review theo hunk:** danh sách file AI đã sửa kể từ snapshot, diff từng hunk, `a` giữ, `r` bỏ.
 - **AI nhận xét ngay dưới dòng:** chỉ ra lỗi, đề xuất sửa; áp dụng patch chỉ sau khi bạn duyệt.
@@ -39,7 +68,7 @@ Danh sách đầy đủ: [FEATURES.md](docs/FEATURES.md).
 
 Chi tiết: [ARCHITECTURE.md](docs/ARCHITECTURE.md#6-ngân-sách-ram).
 
-## Phím tắt
+## Phím tắt (MVP dự kiến)
 
 | Phím | Tác dụng |
 |---|---|
@@ -63,7 +92,7 @@ cd dark
 cargo build --release
 ```
 
-## Cấu hình
+## Cấu hình (dự kiến, chưa dùng ở M0)
 
 Tạo `~/.config/dark/providers.toml` (Windows: `%APPDATA%\dark\providers.toml`):
 
@@ -107,6 +136,8 @@ dark --debug    # hiện RSS, token, chi phí
 | [FEATURES.md](docs/FEATURES.md) | Sơ đồ use case, bảng tính năng MVP, phím tắt, ngoài phạm vi |
 | [SEQUENCE.md](docs/SEQUENCE.md) | Sơ đồ tuần tự các luồng chính |
 | [PLANNING.md](docs/PLANNING.md) | Milestone, tiêu chí hoàn thành, cách đo chất lượng, quyết định còn mở |
+| [M0_VERIFICATION.md](docs/M0_VERIFICATION.md) | Output kiểm tra M0, kích thước binary, bộ nhớ và nền tảng chưa kiểm chứng |
+| [AGENT_WORKFLOW.md](docs/AGENT_WORKFLOW.md) | Vai trò, model và quy trình làm việc của agent |
 
 ## Giấy phép
 

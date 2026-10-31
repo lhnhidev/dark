@@ -123,10 +123,13 @@ dark/
 ### 5.1 Event loop
 - Một luồng, dùng `polling`/`mio` (hoặc tương đương) để chờ đồng thời: phím bấm (stdin), output của `curl`, `git`, test runner, LSP.
 - Không dùng `tokio` đầy đủ, tiết kiệm khoảng 0,5–1,5 MB.
+- M0 dùng `crossterm::event::read/poll` đồng bộ trên cùng một luồng xử lý. `src/app/event.rs` tách phần chờ sự kiện để bổ sung nguồn pipe sau; M0 chưa triển khai process con hoặc multiplex pipe. Chế độ thường chờ phím/resize; `--debug` có thời hạn chờ để cập nhật bộ nhớ mỗi giây. Số thread hệ điều hành trên Windows có thể gồm thread loader của hệ thống; mã ứng dụng không tạo worker hay runtime async.
 
 ### 5.2 Renderer
 - Tự viết renderer theo dòng: chỉ nhớ hash của từng dòng ở frame trước, dòng nào đổi thì vẽ lại dòng đó bằng mã ANSI. Hỗ trợ Windows qua `crossterm`.
 - Phương án dự phòng: dùng `ratatui` nếu tự viết tốn quá nhiều công (tốn thêm khoảng 0,5–1,5 MB cho 2 bộ đệm ô).
+- M0 đã chọn renderer tự viết: một danh sách hash theo dòng và một chuỗi tạm tái sử dụng, không giữ hai frame. Resize làm mất hiệu lực cache; chỉ ghi nhận frame sau khi flush thành công. Lỗi ghi làm mất hiệu lực cache để lần sau vẽ lại đầy đủ.
+- Terminal có guard khi thoát/lỗi và panic hook phục hồi trước khi in chẩn đoán, kể cả release `panic="abort"`. Windows lưu và phục hồi console mode gốc. Không thể phục hồi sau khi hệ điều hành cưỡng chế kết thúc process.
 
 ### 5.3 Review engine
 - **Snapshot**: trước mỗi phiên vibe/agent, tạo một checkpoint git (commit tạm hoặc ref riêng) làm mốc so sánh.
@@ -192,6 +195,9 @@ dark/
 | **Giới hạn cứng** | **10 MB** |
 
 ### 6.3 Đo lường
+- M0: `--self-test` dùng cùng app/renderer, đi qua ba màn hình và resize trước khi lấy nhiều mẫu idle. `tests/ram/` chỉ áp dụng ngân sách ở `cargo test --release`; debug được đánh dấu bỏ qua kèm lý do. Kết quả ghi idle lớn nhất và đỉnh lấy mẫu, không gọi đỉnh lấy mẫu là đỉnh suốt đời process.
+- Windows: `GetProcessMemoryInfo` với EX2 lấy `PrivateWorkingSetSize`; không nhầm `PrivateUsage` (commit) hoặc `WorkingSetSize` (có trang chia sẻ). Không hỗ trợ thì `n/a` kèm lý do. Linux đọc `VmRSS` trong `/proc/self/status`; macOS dùng `proc_pidinfo(PROC_PIDTASKINFO)` lấy resident size. API theo nền tảng đặt trong `src/memory/mod.rs`, chỉ biên dịch phần tương ứng.
+- Kiểm tra console thật Windows nằm ở `tests/ram/windows-console.ps1`, tách process kiểm tra khỏi app, đo release riêng và kiểm tra đầu vào/đầu ra, con trỏ, màn hình sau khi thoát/panic.
 - Bài test tự động trong `tests/ram/`: mở 5 file, xem một diff 2.000 dòng, stream một câu trả lời AI giả lập, chạy một lượt agent giả lập. Fail nếu RSS vượt 10 MB.
 - Windows: đo "Memory (private working set)" (Task Manager) hoặc dùng API `GetProcessMemoryInfo`. Linux: `/usr/bin/time -v` hoặc `/proc/<pid>/status`.
 - Không tính vào ngân sách: cửa sổ terminal, các process con (`curl`, `git`, test runner, LSP).
