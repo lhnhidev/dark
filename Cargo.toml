@@ -1,0 +1,15 @@
+[package]
+name = "dark"
+version = "0.0.1"
+edition = "2021"
+description = "Terminal review & vibe-coding workbench, < 10 MB RAM"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+
+[profile.release]
+opt-level = "z"
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = true
