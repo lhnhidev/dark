@@ -35,6 +35,19 @@ cargo build --release
 powershell -NoProfile -ExecutionPolicy Bypass -File tests/ram/windows-console.ps1
 ```
 
+Trong WSL/Linux, dùng thư mục build riêng để không lẫn với `target/` của Windows:
+
+```bash
+cd /mnt/d/workspace/dark
+export PATH="$HOME/.cargo/bin:$PATH"
+export CARGO_TARGET_DIR="$HOME/dark-target"
+cargo build
+cargo build --release
+python3 tests/ram/linux-terminal.py "$CARGO_TARGET_DIR"
+```
+
+Script Linux cần Python 3 và PTY, kiểm tra phím/resize/thoát/panic trên terminal thật, đo RSS qua `/proc` và phục hồi thuộc tính terminal. Các cờ đo chỉ áp dụng ngân sách cho bản release. Trên Linux ngoài WSL, thay đường dẫn project cho đúng nơi checkout.
+
 ## Vì sao có dark
 
 Sau một phiên vibe code, việc khó nhất thường là **biết AI đã đổi những gì và có nên giữ không**. Các IDE và harness hiện có thường nặng (hàng trăm MB tới vài GB RAM) và nhiều tính năng mà vibe coder hiếm khi dùng. dark tập trung vào đúng vòng lặp:

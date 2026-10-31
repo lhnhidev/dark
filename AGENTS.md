@@ -36,6 +36,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tests/ram/windows-console.ps
 
 - Unit tests use `#[cfg(test)]`; integration tests live in `tests/`. RAM tests live under `tests/ram/` with an integration entry point. Add behavioral and regression tests for new code and fixes.
 - RAM budgets apply only to release binaries; debug RAM tests must be explicitly ignored with a reason. Do not substitute test-runner memory for application memory.
+- In WSL/Linux, set `CARGO_TARGET_DIR="$HOME/dark-target"` to keep artifacts separate from Windows. After debug/release builds, run `python3 tests/ram/linux-terminal.py "$CARGO_TARGET_DIR"` for real PTY checks. Install Rust only with user authorization, through official rustup under the Linux user's home; never use sudo without explicit authorization.
 - Windows uses private working set, Linux/macOS use resident memory; label the metric. Unsupported measurements are `n/a` with a reason, never another metric under the same name.
 - Verify navigation, clean exit, resize and panic cleanup in actual terminal sessions. Report exact commands, results, binary size, memory measurements and unverified platforms honestly.
 - Keep commits and pull requests focused; report behavior, validation and relevant milestone. Include terminal evidence for UI changes and measurements for memory-sensitive changes.
