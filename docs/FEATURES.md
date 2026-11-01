@@ -7,9 +7,9 @@
 
 dark chỉ phục vụ một vòng lặp:
 
-**vibe với agent → review từng thay đổi → góp ý ngược lại cho agent → hoàn tác khi cần**
+**vibe với agent → review từng thay đổi → sửa nhanh hoặc góp ý ngược lại cho agent → hoàn tác khi cần**
 
-Tính năng nào không phục vụ vòng lặp này thì bỏ hoặc giao cho công cụ khác (editor của người dùng, git, agent CLI).
+Tính năng nào không phục vụ vòng lặp này thì bỏ hoặc giao cho công cụ khác (editor đầy đủ của người dùng, git, agent CLI). dark có editor gọn để sửa ngay khi review; việc sửa lớn vẫn mở editor ngoài bằng `e`.
 
 | Mục tiêu | Cam kết |
 |---|---|
@@ -21,7 +21,7 @@ Tính năng nào không phục vụ vòng lặp này thì bỏ hoặc giao cho c
 
 | Tác nhân | Mô tả |
 |---|---|
-| **Vibe coder** | Người dùng chính: giao việc cho agent, review, giữ/bỏ thay đổi, góp ý, commit |
+| **Vibe coder** | Người dùng chính: giao việc cho agent, review, giữ/bỏ thay đổi, sửa code, góp ý, commit |
 | **Agent** | Claude Code, Codex CLI, Gemini CLI, opencode... chạy ngầm qua ACP, hoặc chạy riêng ở chế độ đi kèm |
 | **Hệ thống cục bộ** | git, editor của người dùng, test runner |
 
@@ -43,13 +43,15 @@ flowchart LR
         UC6([Gửi ghi chú cho agent])
         UC7([Hỏi agent về một hunk])
         UC8([Hoàn tác cả lượt AI])
-        UC9([Mở file trong editor])
+        UC9([Mở file trong editor ngoài])
         UC10([Chạy test])
         UC11([Commit])
         UC12([Chọn agent])
+        UC13([Sửa code ngay trong dark])
     end
 
-    U --- UC1 & UC3 & UC4 & UC5 & UC7 & UC8 & UC9 & UC10 & UC11 & UC12
+    U --- UC1 & UC3 & UC4 & UC5 & UC7 & UC8 & UC9 & UC10 & UC11 & UC12 & UC13
+    UC3 -. extend .-> UC13
     UC1 -. include .-> UC2
     UC5 -. extend .-> UC6
     UC1 --- AG
@@ -85,7 +87,25 @@ Cột "Milestone" theo [PLANNING.md](PLANNING.md). RAM tính cho process của d
 | R10 | Hỏi agent về hunk | `?` gửi câu hỏi kèm hunk cho agent đang dùng, hiện câu trả lời ngay dưới hunk | P1 | M5 |
 | R11 | Tô màu cú pháp trong diff | Chỉ từ khóa, chuỗi, comment | Sau | — |
 
-### 4.2 Vibe
+### 4.2 Sửa code ngay trong dark
+
+Editor gọn kiểu nano/micro: không có chế độ (mode) như vim, phím quen thuộc, đủ để sửa nhanh khi review.
+
+| ID | Tính năng | Mô tả | Ưu tiên | Milestone |
+|---|---|---|---|---|
+| E1 | Mở chế độ sửa | `Enter` tại hunk mở file ở chế độ sửa, con trỏ đúng dòng; `Esc` quay lại Review | P0 | M1 |
+| E2 | Sửa cơ bản | Gõ, xóa, xuống dòng; mũi tên, Home/End, PgUp/PgDn, Ctrl-Home/End; con trỏ đi theo cụm ký tự (tiếng Việt có dấu, emoji); Tab theo kiểu thụt lề của file | P0 | M1 |
+| E3 | Lưu | `Ctrl-S`; giữ kiểu xuống dòng LF/CRLF, BOM, quyền file; thoát khi chưa lưu thì hỏi | P0 | M1 |
+| E4 | Hoàn tác / làm lại | `Ctrl-Z` / `Ctrl-Y`, lịch sử có giới hạn | P0 | M1 |
+| E5 | Chọn chữ, clipboard | Shift + mũi tên; `Ctrl-C` / `Ctrl-X` / `Ctrl-V` với clipboard hệ thống (Windows; terminal hỗ trợ OSC 52) | P0 | M1 |
+| E6 | Tìm, nhảy dòng | `Ctrl-F` tìm trong file, `Ctrl-G` nhảy tới dòng | P1 | M1 |
+| E7 | Làm mới diff sau khi lưu | Danh sách hunk cập nhật ngay | P0 | M1 |
+| E8 | An toàn khi sửa | File không phải UTF-8, nhị phân, quá lớn: chỉ xem, gợi ý `e`. File bị đổi từ bên ngoài khi đang sửa: báo và cho chọn, không ghi đè âm thầm | P0 | M1 |
+| E9 | Hiện vùng thay đổi | Lề trái đánh dấu dòng khác so với snapshot ngay trong lúc sửa | P1 | M1 |
+| E10 | Tô màu cú pháp trong editor | Chỉ từ khóa, chuỗi, comment | Sau | — |
+| E11 | Thay thế hàng loạt | Tìm và thay trong file | Sau | — |
+
+### 4.3 Vibe
 
 | ID | Tính năng | Mô tả | Ưu tiên | Milestone |
 |---|---|---|---|---|
@@ -100,7 +120,7 @@ Cột "Milestone" theo [PLANNING.md](PLANNING.md). RAM tính cho process của d
 | V9 | Model API qua opencode | Dùng hơn 75 nhà cung cấp của opencode mà không cần dark tự gọi API | P1 | M4 |
 | V10 | Agent tích hợp riêng | Gọi API trực tiếp qua `curl`, nhẹ nhất | Sau | — |
 
-### 4.3 Quản lý agent
+### 4.4 Quản lý agent
 
 | ID | Tính năng | Mô tả | Ưu tiên | Milestone |
 |---|---|---|---|---|
@@ -112,18 +132,18 @@ Cột "Milestone" theo [PLANNING.md](PLANNING.md). RAM tính cho process của d
 | A6 | Hiện RAM của agent | Cộng cả cây process con, tách riêng với RAM của dark | P1 | M4 |
 | A7 | Giới hạn cứng | `NODE_OPTIONS` cho agent Node; Job Object trên Windows. Tắt mặc định | Sau | — |
 
-### 4.4 Chạy và commit
+### 4.5 Chạy và commit
 
 | ID | Tính năng | Mô tả | Ưu tiên | Milestone |
 |---|---|---|---|---|
 | T1 | Chạy test | `!` chạy lệnh trong cấu hình, chỉ hiện lỗi đầu tiên và vị trí | P1 | M2 |
 | T2 | Commit | `c` commit phần đã giữ; agent gợi ý message nếu đang có agent | P1 | M2 / M5 |
 
-### 4.5 Giao diện và vận hành
+### 4.6 Giao diện và vận hành
 
 | ID | Tính năng | Mô tả | Ưu tiên | Milestone |
 |---|---|---|---|---|
-| U1 | Màn Review | Màn chính: danh sách file, diff, ghi chú | P0 | M1 |
+| U1 | Màn Review | Màn chính: danh sách file, diff, ghi chú; chuyển sang chế độ sửa bằng `Enter` | P0 | M1 |
 | U2 | Màn Vibe | Xem V6 | P0 | M4 |
 | U3 | Chọn agent | Popup khi bấm `m`; agent thiếu cài đặt hoặc thiếu key bị làm mờ | P0 | M4 |
 | U4 | `darkw` | Cửa sổ Windows riêng (Win32 + GDI), không cần terminal | P0 | M3 |
@@ -133,7 +153,7 @@ Cột "Milestone" theo [PLANNING.md](PLANNING.md). RAM tính cho process của d
 | U8 | `--help`, `--version` | | P0 | M0 ✓ |
 | U9 | Ngôn ngữ giao diện | Tiếng Anh, tiếng Việt | P1 | M5 |
 
-### 4.6 An toàn
+### 4.7 An toàn
 
 | ID | Tính năng | Mô tả | Ưu tiên | Milestone |
 |---|---|---|---|---|
@@ -150,19 +170,31 @@ Cột "Milestone" theo [PLANNING.md](PLANNING.md). RAM tính cho process của d
 | `u` | Review | Hoàn tác cả lượt AI về snapshot |
 | `/` | Review | Ghi chú vào dòng hoặc hunk |
 | `?` | Review | Hỏi agent về hunk đang xem |
-| `e` | Review | Mở file trong editor |
+| `Enter` | Review | Sửa file ngay trong dark, tại hunk đang chọn |
+| `e` | Review | Mở file trong editor ngoài |
 | `!` | Mọi màn | Chạy test |
 | `c` | Review | Commit |
 | `v` | Mọi màn | Vibe: mở màn Vibe (ACP) hoặc nhường màn hình cho agent CLI |
 | `m` | Mọi màn | Chọn agent |
 | `Tab` | Mọi màn | Chuyển màn Review / Vibe |
-| `q` | Mọi màn | Thoát |
+| `q` | Review, Vibe | Thoát |
+
+**Trong chế độ sửa** các phím chữ dùng để gõ, nên phím tắt dùng `Ctrl`:
+
+| Phím | Tác dụng |
+|---|---|
+| `Ctrl-S` | Lưu |
+| `Ctrl-Z` / `Ctrl-Y` | Hoàn tác / làm lại |
+| `Shift` + mũi tên | Chọn chữ |
+| `Ctrl-C` / `Ctrl-X` / `Ctrl-V` | Copy / cắt / dán (trong chế độ sửa, `Ctrl-C` là copy, không thoát app) |
+| `Ctrl-F` / `Ctrl-G` | Tìm / nhảy tới dòng |
+| `Esc` | Quay lại màn Review (hỏi nếu chưa lưu) |
 
 ## 6. Ngoài phạm vi (cố tình không làm)
 
 | Không làm | Thay bằng |
 |---|---|
-| Editor tích hợp (rope buffer, undo, tìm/thay, tô màu) | `e` mở editor người dùng đang dùng |
+| Editor kiểu IDE (tự hoàn thành, đa con trỏ, nhiều tab, chế độ vim, plugin) | Editor gọn trong dark cho sửa nhanh; việc sửa lớn dùng `e` mở editor người dùng đang dùng |
 | Tìm file kiểu fuzzy, cây thư mục | Danh sách file đã đổi là đủ cho review |
 | Repo map (tree-sitter) | Agent tự tìm bằng công cụ của nó |
 | LSP | Lệnh test/lint của project |

@@ -6,6 +6,7 @@
 ## 1. Mục tiêu bản ra mắt
 
 - Review mọi thay đổi agent tạo ra: theo file, theo hunk, giữ/bỏ, hoàn tác cả lượt, ghi chú gửi lại agent.
+- Sửa code ngay trong dark bằng một editor gọn, không phải mở công cụ khác cho những chỗ sửa nhỏ.
 - Vibe với **Claude Code, Codex, Gemini CLI, opencode** ngay trong dark qua ACP, chất lượng ngang agent chính chủ.
 - Trên Windows, `darkw` chạy cửa sổ riêng không cần terminal.
 - RAM của dark dưới ngân sách ở mọi kịch bản test ([ARCHITECTURE.md §6](ARCHITECTURE.md#6-ngân-sách-ram)); RAM của agent đo và báo riêng.
@@ -25,13 +26,13 @@ Thời gian là ước tính cho một người làm cùng agent, cần điều 
 | Milestone | Nội dung | Ước tính | Tính năng ([FEATURES.md](FEATURES.md)) |
 |---|---|---|---|
 | **M0** Khung ✓ | Event loop, renderer, ba màn trống, đo RAM, runner kiểm chứng | xong (tag `m0`) | U5, U7, U8 |
-| **M1** Review | Snapshot, diff theo hunk, giữ/bỏ, hoàn tác cả lượt, mở editor, tên cửa sổ | 1–2 tuần | R1–R7, U1, U6 |
+| **M1** Review + sửa code | Snapshot, diff theo hunk, giữ/bỏ, hoàn tác cả lượt; **editor gọn ngay trong dark** (sửa, lưu, undo, chọn chữ, copy/paste, tìm); mở editor ngoài; tên cửa sổ | 2–3 tuần | R1–R7, E1–E9, U1, U6 |
 | **M2** Đi kèm agent | Ghi chú, xuất cho agent, phát hiện thay đổi, nhường/chia màn hình, chạy test, commit | 1–2 tuần | R8, R9 (xuất markdown), V1–V3, T1, T2 |
 | **M3** `darkw` | Bản thử đo RAM, rồi cửa sổ Win32 + GDI, bộ gõ tiếng Việt, clipboard, DPI | 1–2 tuần | U4 |
 | **M4** ACP | ACP client, màn Vibe, duyệt quyền, sửa file qua dark, vòng đời agent | 2–3 tuần | V4–V9, A1–A6, U2, U3, S1–S3, R9 (qua ACP) |
 | **M5** Ra mắt | Hỏi agent về hunk, gợi ý commit, ngôn ngữ giao diện, đóng gói, benchmark công khai, README | 1–2 tuần | R10, T2, U9 |
 
-**Tổng ước tính:** khoảng 7–11 tuần sau M0.
+**Tổng ước tính:** khoảng 8–12 tuần sau M0.
 
 **Phát hành:**
 - **v0.1 (sau M2):** bản dùng thử cho nhóm nhỏ và cộng đồng dev Việt để lấy phản hồi. Chưa đăng Show HN.
@@ -43,7 +44,7 @@ gantt
     dateFormat  YYYY-MM-DD
     axisFormat  %d/%m
     section Review
-    M1 Review              :m1, 2026-11-02, 10d
+    M1 Review + sửa code   :m1, 2026-11-02, 15d
     M2 Đi kèm agent · v0.1 :m2, after m1, 10d
     section Nền tảng
     M3 darkw               :m3, after m2, 10d
@@ -64,13 +65,28 @@ gantt
 
 Output và số đo: [M0_VERIFICATION.md](M0_VERIFICATION.md).
 
-### M1 — Review
+### M1 — Review + sửa code
+Review:
 - [ ] Trên một repo thật: tạo snapshot, hiện đúng danh sách file đổi so với snapshot (thêm, sửa, xóa, file mới).
 - [ ] Diff theo hunk; `a`/`r` giữ/bỏ; sau khi bỏ, `git diff` khớp đúng phần còn lại.
 - [ ] `u` hoàn tác cả lượt về snapshot, có xác nhận; không làm hỏng index hay nhánh của người dùng.
-- [ ] `e` mở đúng file và dòng trong editor; độ rộng tab cấu hình được; tên cửa sổ hiện project và tiến độ.
+- [ ] `e` mở đúng file và dòng trong editor ngoài; độ rộng tab cấu hình được; tên cửa sổ hiện project và tiến độ.
 - [ ] Repo không phải git, file nhị phân, file rất lớn, tên file Unicode: báo rõ, không crash.
-- [ ] RAM khi review repo mẫu (~30 file, ~3.000 dòng đổi) dưới 2.000.000 byte trên Windows và Linux musl.
+
+Sửa code ngay trong dark:
+- [ ] `Enter` tại một hunk mở file đó ở chế độ sửa, con trỏ đúng dòng; `Esc` quay lại màn Review.
+- [ ] Gõ, xóa, xuống dòng, di chuyển bằng phím mũi tên, Home/End, PgUp/PgDn; con trỏ đi theo cụm ký tự (tiếng Việt có dấu, emoji không bị tách).
+- [ ] `Ctrl-S` lưu; giữ nguyên kiểu xuống dòng (LF/CRLF), BOM và quyền file; thoát khi chưa lưu thì hỏi.
+- [ ] `Ctrl-Z` / `Ctrl-Y` hoàn tác / làm lại, lịch sử có giới hạn.
+- [ ] Chọn chữ bằng Shift + mũi tên; `Ctrl-C` / `Ctrl-X` / `Ctrl-V` với clipboard hệ thống (Windows, và terminal hỗ trợ OSC 52).
+- [ ] `Ctrl-F` tìm trong file, `Ctrl-G` nhảy tới dòng.
+- [ ] Lưu xong thì diff và danh sách hunk tự làm mới.
+- [ ] File không phải UTF-8, file nhị phân hoặc quá lớn: mở chế độ chỉ xem và gợi ý dùng `e`.
+- [ ] File bị thay đổi từ bên ngoài (agent, editor khác) khi đang sửa: báo và cho chọn giữ bản nào, không ghi đè âm thầm.
+
+RAM:
+- [ ] Review repo mẫu (~30 file, ~3.000 dòng đổi) dưới 2.000.000 byte trên Windows và Linux musl.
+- [ ] Đang sửa một file 10.000 dòng dưới 4.000.000 byte.
 - [ ] Chạy lại `tests/bench/compare-review-tools.py`; cập nhật bảng so sánh trong ARCHITECTURE §6.2.
 
 ### M2 — Đi kèm agent (v0.1)
@@ -84,7 +100,7 @@ Output và số đo: [M0_VERIFICATION.md](M0_VERIFICATION.md).
 ### M3 — `darkw`
 - [ ] **Bản thử (1–2 ngày, nhánh riêng):** cửa sổ Win32 + GDI, ba màn, resize, gõ tiếng Việt; RAM idle dưới 3.000.000 byte, không có conhost/OpenConsole đi kèm. Không đạt thì báo lại để quyết định trước khi làm tiếp.
 - [ ] `darkw.exe` chạy màn Review đầy đủ như bản terminal.
-- [ ] Gõ tiếng Việt bằng Unikey, EVKey và bộ gõ Windows; copy/paste; DPI cao; icon, tên cửa sổ.
+- [ ] Gõ tiếng Việt trong editor bằng Unikey, EVKey và bộ gõ Windows; copy/paste; DPI cao; icon, tên cửa sổ.
 - [ ] Process con không chớp cửa sổ console.
 
 ### M4 — ACP
@@ -109,6 +125,7 @@ Output và số đo: [M0_VERIFICATION.md](M0_VERIFICATION.md).
 | Câu hỏi | Lựa chọn | Thời điểm |
 |---|---|---|
 | Snapshot lưu thế nào | Ref riêng `refs/dark/...` / stash / commit tạm | Kế hoạch M1 |
+| Cấu trúc bộ đệm của editor | Mảng dòng (đơn giản, không thêm crate) / rope như `ropey` (tốt cho file lớn, thêm dependency) | Kế hoạch M1, kèm số đo RAM |
 | Chờ console + pipe trên Windows | Luồng đọc pipe nhỏ / overlapped I/O một luồng | Kế hoạch M4 |
 | SDK Rust của ACP hay tự viết JSON-RPC | Theo dependency và số đo RAM | Kế hoạch M4 |
 | Codex qua app-server hay `codex-acp` | App-server nhẹ hơn (không Node) / ACP thống nhất | Kế hoạch M4 |

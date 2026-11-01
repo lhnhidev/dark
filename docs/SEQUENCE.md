@@ -59,7 +59,42 @@ sequenceDiagram
     UI-->>U: Chuyển hunk kế / làm mới danh sách
 ```
 
-## 3. Ghi chú và gửi cho agent (M2 xuất markdown, M4 qua ACP)
+## 3. Sửa code ngay trong dark (M1)
+
+```mermaid
+sequenceDiagram
+    actor U as Vibe coder
+    participant UI as Màn Review
+    participant ED as Editor gọn
+    participant FS as File
+    participant RV as Review engine
+    participant G as git
+
+    U->>UI: Enter tại một hunk
+    UI->>ED: open(file, dòng của hunk)
+    ED->>FS: Đọc file, ghi nhận thời điểm sửa đổi
+    alt File nhị phân, không phải UTF-8 hoặc quá lớn
+        ED-->>U: Chỉ xem, gợi ý bấm e để mở editor ngoài
+    else File bình thường
+        ED-->>U: Chế độ sửa, con trỏ đúng dòng
+        U->>ED: Gõ, xóa, chọn chữ, copy/paste, Ctrl-Z
+        U->>ED: Ctrl-S
+        ED->>FS: Kiểm tra file có bị đổi từ bên ngoài không
+        alt Đã bị agent hoặc editor khác đổi
+            ED-->>U: Hỏi giữ bản nào, không ghi đè âm thầm
+        else Không đổi
+            ED->>FS: Ghi file tạm rồi đổi tên (giữ LF/CRLF, BOM)
+            ED->>RV: Đọc lại diff của file
+            RV->>G: git diff <snapshot> -- <file>
+            G-->>RV: Patch mới
+            RV-->>UI: Cập nhật hunk
+        end
+        U->>ED: Esc
+        ED-->>UI: Quay lại màn Review (hỏi nếu chưa lưu)
+    end
+```
+
+## 4. Ghi chú và gửi cho agent (M2 xuất markdown, M4 qua ACP)
 
 ```mermaid
 sequenceDiagram
@@ -85,7 +120,7 @@ sequenceDiagram
     end
 ```
 
-## 4. Vibe qua ACP (M4)
+## 5. Vibe qua ACP (M4)
 
 ```mermaid
 sequenceDiagram
@@ -126,7 +161,7 @@ sequenceDiagram
     UI-->>U: Review những gì agent vừa làm
 ```
 
-## 5. Nhường màn hình cho agent CLI (M2, bản terminal)
+## 6. Nhường màn hình cho agent CLI (M2, bản terminal)
 
 ```mermaid
 sequenceDiagram
@@ -149,7 +184,7 @@ sequenceDiagram
     D-->>U: Màn Review với những gì agent vừa sửa
 ```
 
-## 6. Khởi động lại agent khi phình RAM (M4)
+## 7. Khởi động lại agent khi phình RAM (M4)
 
 ```mermaid
 sequenceDiagram
@@ -170,7 +205,7 @@ sequenceDiagram
     LM-->>UI: Thông báo ngắn: đã khởi động lại agent
 ```
 
-## 7. Chạy test (M2)
+## 8. Chạy test (M2)
 
 ```mermaid
 sequenceDiagram

@@ -6,7 +6,7 @@ Project hiện tại: `D:\workspace\dark`; trong WSL là `/mnt/d/workspace/dark`
 
 - Rust stable, edition 2021. Windows dùng `stable-x86_64-pc-windows-msvc` và bộ C++ của Visual Studio. Nếu PATH chưa nhận Rust, dùng `%USERPROFILE%\.cargo\bin\cargo.exe` và `rustc.exe` trực tiếp; xác nhận phiên bản trước khi code.
 - Không tự cài Rust khi chưa được người dùng cho phép. `scripts/setup-wsl-rust.sh` chỉ chạy khi được duyệt cài trong WSL/Linux; dùng rustup chính thức dưới `~/.cargo` và `~/.rustup`, không sudo. Nếu thiếu `cc`, dừng và đưa người dùng lệnh `sudo apt update && sudo apt install build-essential` để họ tự chạy.
-- Dependency mới phải có lý do trong kế hoạch đã duyệt và đi qua bài test RAM. Hiện không dùng tokio, regex, clap, serde. Không làm editor tích hợp, repo map, LSP (xem [FEATURES.md §6](FEATURES.md#6-ngoài-phạm-vi-cố-tình-không-làm)). API key chỉ đọc từ biến môi trường; không ghi vào cấu hình hay log.
+- Dependency mới phải có lý do trong kế hoạch đã duyệt và đi qua bài test RAM. Hiện không dùng tokio, regex, clap, serde. Editor trong dark chỉ ở mức sửa nhanh ([FEATURES.md §4.2](FEATURES.md#42-sửa-code-ngay-trong-dark)); không làm tính năng IDE, repo map, LSP (xem [FEATURES.md §6](FEATURES.md#6-ngoài-phạm-vi-cố-tình-không-làm)). API key chỉ đọc từ biến môi trường; không ghi vào cấu hình hay log.
 
 ## Windows
 

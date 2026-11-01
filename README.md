@@ -13,7 +13,7 @@ Sau một lượt vibe, người dùng thường chỉ có hai lựa chọn: đ�
 
 dark làm đúng một vòng lặp:
 
-**vibe với agent → review từng hunk → giữ / bỏ → ghi chú gửi lại agent → hoàn tác khi cần**
+**vibe với agent → review từng hunk → giữ / bỏ → sửa nhanh hoặc ghi chú gửi lại agent → hoàn tác khi cần**
 
 ## Tính năng (dự kiến)
 
@@ -22,10 +22,11 @@ dark làm đúng một vòng lặp:
 - **Vibe ngay trong dark:** điều khiển **Claude Code, Codex, Gemini CLI, opencode** qua Agent Client Protocol (ACP). Agent chạy đúng harness chính chủ nên chất lượng không đổi; dark chỉ thay phần giao diện.
 - **Hoặc dùng kèm:** chạy agent ở cửa sổ riêng như bình thường, dark tự phát hiện thay đổi để review.
 - **Cửa sổ riêng trên Windows:** `darkw` mở thẳng cửa sổ, không cần terminal.
-- **Mở editor của bạn:** `e` mở đúng file và dòng trong VS Code, Neovim...
+- **Sửa code ngay trong dark:** `Enter` tại một hunk để sửa: gõ, lưu, hoàn tác, chọn chữ, copy/paste, tìm trong file. Lưu xong diff tự cập nhật.
+- **Hoặc mở editor của bạn:** `e` mở đúng file và dòng trong VS Code, Neovim... cho những lần sửa lớn.
 - **An toàn:** snapshot trước mỗi lượt AI; agent sửa file hay chạy lệnh đều phải được duyệt.
 
-Không có editor tích hợp, repo map hay LSP: dark để editor của bạn và agent lo những việc đó. Danh sách đầy đủ: [FEATURES.md](docs/FEATURES.md).
+Editor trong dark cố tình gọn (kiểu nano/micro): không tự hoàn thành, không repo map hay LSP. Danh sách đầy đủ: [FEATURES.md](docs/FEATURES.md).
 
 ## Nhẹ thật sự
 
@@ -52,7 +53,8 @@ dark M0 chưa tải diff nên phép so này chưa công bằng cho đối thủ;
 | `u` | Hoàn tác cả lượt AI |
 | `/` | Ghi chú |
 | `?` | Hỏi agent về hunk |
-| `e` | Mở editor |
+| `Enter` | Sửa code ngay trong dark (`Ctrl-S` lưu, `Esc` quay lại) |
+| `e` | Mở editor ngoài |
 | `!` | Chạy test |
 | `c` | Commit |
 | `v` | Vibe |

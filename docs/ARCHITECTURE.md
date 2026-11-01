@@ -9,7 +9,7 @@
 
 Sau một lượt vibe code, agent có thể đổi hàng chục file. Người dùng khó biết AI đã đổi gì, thường chỉ có lựa chọn giữ hết hoặc bỏ hết, và muốn bảo agent sửa lại thì phải mô tả từ đầu. dark giải quyết vòng lặp đó:
 
-**vibe → review từng hunk → giữ/bỏ → ghi chú gửi lại agent → hoàn tác khi cần**
+**vibe → review từng hunk → giữ/bỏ → sửa nhanh hoặc ghi chú gửi lại agent → hoàn tác khi cần**
 
 Ràng buộc:
 - **Chất lượng vibe không giảm.** dark không tự làm agent ở bản ra mắt; nó điều khiển agent chính chủ (Claude Code, Codex, Gemini CLI, opencode) qua ACP, nên agent chạy đúng harness của hãng.
@@ -25,7 +25,8 @@ Ràng buộc:
 | TUI bằng Go / TypeScript / Python | Loại | Runtime và GC khó giữ dưới vài MB |
 | **Rust, TUI + cửa sổ Win32 GDI** | **Chọn** | Không GC; GDI vẽ chữ thẳng lên cửa sổ, không giữ bộ đệm lớn |
 | Tự viết agent ngay từ đầu (harness riêng) | Hoãn | Khó đuổi kịp chất lượng harness chính chủ; ACP cho chất lượng ngang ngay ngày đầu. Agent riêng làm sau, như lựa chọn siêu nhẹ |
-| Editor tích hợp, repo map (tree-sitter), LSP | Loại | Tốn công và RAM; người dùng đã có editor, agent tự tìm ngữ cảnh |
+| Editor kiểu IDE (tự hoàn thành, đa con trỏ, nhiều tab, plugin), repo map (tree-sitter), LSP | Loại | Tốn công và RAM; người dùng đã có editor đầy đủ, agent tự tìm ngữ cảnh |
+| **Editor gọn trong dark** | **Chọn (M1)** | Sửa nhanh ngay khi review mà không rời app; giữ nhỏ: không mode, không tô màu ở M1, việc lớn vẫn mở editor ngoài |
 | Nhúng giao diện TUI của agent (PTY + terminal thu nhỏ) | Loại | Phải giữ lưới màn hình và lịch sử cuộn: khoảng 2–4 MB nếu tự viết rất cẩn thận, 10–50 MB nếu dùng thư viện; xung đột phím; nhiều việc |
 | Tự viết terminal emulator để chạy dark | Loại | Ngang công sức lõi dark (font, bộ gõ, Unicode, clipboard); `darkw` đạt cùng mục tiêu mà chỉ vẽ lưới chữ của chính dark |
 
@@ -52,6 +53,7 @@ flowchart TB
     subgraph CORE["Lõi"]
         EL[Event loop]
         RV[Review engine<br/>snapshot · diff · hunk]
+        EDT[Editor gọn<br/>sửa · lưu · undo · clipboard]
         NT[Notes<br/>ghi chú theo dòng/hunk]
         AC[ACP client<br/>JSON-RPC qua stdio]
         LM[Agent lifecycle<br/>bật khi cần · tắt khi rảnh · đo RAM]
@@ -73,7 +75,8 @@ flowchart TB
 
     EL --> S1 & S2
     S1 & S2 --> R --> TB & WB
-    S1 --> RV & NT
+    S1 --> RV & NT & EDT
+    EDT -- lưu xong làm mới diff --> RV
     S2 --> AC
     RV --> GIT
     RV --> SNAP
@@ -94,6 +97,7 @@ src/
 ├── ui/                # renderer theo dòng, terminal backend (crossterm), cắt chữ Unicode                    [M0 ✓]
 ├── memory/            # đo bộ nhớ theo nền tảng                                                         [M0 ✓]
 ├── review/            # snapshot, đọc git diff, tách hunk, giữ/bỏ, hoàn tác                              [M1]
+├── editor/            # bộ đệm, con trỏ theo grapheme, undo, chọn chữ, clipboard, tìm, lưu an toàn        [M1]
 ├── notes/             # ghi chú, xuất markdown cho agent                                               [M2]
 ├── companion/         # phát hiện thay đổi, nhường màn hình, chia màn hình                              [M2]
 ├── win/               # backend cửa sổ darkw (Win32 + GDI), chỉ biên dịch trên Windows                   [M3]
@@ -119,7 +123,7 @@ scripts/, tests/       # runner kiểm chứng, test RAM, benchmark so sánh    
 - **Phục hồi terminal (M0):** guard khi thoát/lỗi và panic hook, kể cả khi release dùng `panic = "abort"`. Windows lưu và khôi phục console mode gốc.
 - **Hai backend dùng chung renderer:**
   - *Terminal backend* (`dark`): ghi mã ANSI qua crossterm. Chạy trong mọi terminal.
-  - *Window backend* (`darkw`, M3): xem 5.6.
+  - *Window backend* (`darkw`, M3): xem 5.7.
 
 ### 5.3 Review engine (M1)
 - **Snapshot:** trước mỗi lượt agent, ghi một ref git riêng (ví dụ `refs/dark/snapshots/<n>`) trỏ tới trạng thái working tree, không đụng vào index hay nhánh của người dùng. Ở chế độ đi kèm, snapshot được tạo khi người dùng mở dark hoặc bấm vibe.
@@ -128,11 +132,22 @@ scripts/, tests/       # runner kiểm chứng, test RAM, benchmark so sánh    
 - **Hoàn tác cả lượt:** khôi phục working tree về snapshot, có xác nhận; không xóa file người dùng tạo ngoài phạm vi lượt AI mà không hỏi.
 - Mọi thao tác ghi đều kiểm tra lỗi của git và báo rõ, không để repo ở trạng thái nửa vời.
 
-### 5.4 Ghi chú (M2)
+### 5.4 Editor gọn (M1)
+- **Mục đích:** sửa nhanh ngay khi review, không rời app. Không phải IDE: không tự hoàn thành, không đa con trỏ, không nhiều tab, không chế độ kiểu vim.
+- **Chế độ:** `Enter` tại hunk mở file đó ở chế độ sửa, con trỏ đúng dòng; `Esc` quay lại Review. Trong chế độ sửa, phím chữ dùng để gõ, phím tắt đi qua `Ctrl` (`Ctrl-C` là copy, không thoát app).
+- **Bộ đệm:** chỉ nạp file đang sửa. Chọn giữa mảng dòng (không thêm crate) và rope như `ropey` trong kế hoạch M1, dựa trên số đo RAM với file 10.000 dòng. File quá lớn, nhị phân hoặc không phải UTF-8 mở ở chế độ chỉ xem.
+- **Con trỏ và hiển thị:** di chuyển theo cụm grapheme, vị trí cột tính bằng độ rộng hiển thị; tái dùng `unicode-width` và `unicode-segmentation` đã có. Chỉ vẽ các dòng trong khung nhìn, qua renderer theo dòng như phần còn lại.
+- **Undo/redo:** lưu các thao tác (chèn/xóa kèm vị trí), gộp thao tác gõ liên tiếp, giới hạn số bước và dung lượng để RAM không tăng theo thời gian.
+- **Lưu an toàn:** giữ kiểu xuống dòng LF/CRLF, BOM, quyền file; ghi ra file tạm cạnh file gốc rồi đổi tên để không mất dữ liệu nếu bị ngắt giữa chừng. Trước khi lưu, kiểm tra file có bị đổi từ bên ngoài (agent, editor khác) kể từ lúc mở không; nếu có, hỏi người dùng thay vì ghi đè.
+- **Clipboard:** Windows dùng API clipboard của hệ thống (qua `windows-sys`, bật thêm feature); terminal khác dùng OSC 52 nếu hỗ trợ, nếu không thì clipboard nội bộ của dark.
+- **Liên kết với review:** lưu xong thì review engine đọc lại diff của file đó; lề trái đánh dấu dòng khác so với snapshot.
+- **Trong `darkw` (M3):** cùng editor, cần thêm bộ gõ tiếng Việt qua `WM_CHAR` và vị trí khung gõ.
+
+### 5.5 Ghi chú (M2)
 - Ghi chú gắn với file + dòng/khoảng dòng/hunk, lưu trong `.dark/notes/`.
 - Gửi cho agent: qua ACP (M4) như một prompt có vị trí file:dòng; ở chế độ đi kèm, xuất markdown ra clipboard hoặc file để người dùng dán, hoặc để agent đọc qua skill.
 
-### 5.5 Tích hợp agent
+### 5.6 Tích hợp agent
 
 | Chế độ | Cách hoạt động | RAM thêm cho dark | Milestone |
 |---|---|---|---|
@@ -154,7 +169,7 @@ Lệnh và tên package cần kiểm tra lại với phiên bản mới nhất k
 
 **Vòng đời agent (M4):** khởi động khi bấm vibe; tự tắt sau một khoảng rảnh; mỗi lúc một agent; vượt ngưỡng RAM thì chờ hết lượt, tắt và mở lại với tính năng tiếp tục phiên của agent; chế độ gọn khởi động agent với cấu hình tối thiểu nếu agent hỗ trợ; đo RAM cả cây process của agent. Giới hạn cứng (`NODE_OPTIONS=--max-old-space-size`, Job Object trên Windows) là tùy chọn, tắt mặc định, chỉ dùng khi đã có snapshot để khôi phục.
 
-### 5.6 Cửa sổ riêng `darkw` (M3, Windows)
+### 5.7 Cửa sổ riêng `darkw` (M3, Windows)
 - File chạy riêng `darkw.exe` (subsystem windows), giống `pythonw.exe`: nhấp đúp mở thẳng cửa sổ, không có conhost/OpenConsole đi kèm. `dark.exe` (bản terminal) giữ nguyên.
 - Vẽ bằng GDI: mỗi dòng của renderer vẽ bằng `TextOutW` với font monospace, chỉ vẽ lại dòng đã đổi, không giữ bộ đệm toàn khung hình. Ảnh cửa sổ do DWM quản lý (phần này mọi cửa sổ đều có, kể cả terminal).
 - Phải làm: bộ gõ tiếng Việt (Unikey, EVKey, bộ gõ Windows) qua `WM_CHAR` và đặt vị trí khung gõ; clipboard; DPI theo màn hình; icon, tên cửa sổ.
@@ -163,11 +178,11 @@ Lệnh và tên package cần kiểm tra lại với phiên bản mới nhất k
 - Không thêm crate mới: bật thêm feature của `windows-sys` (`Win32_Graphics_Gdi`, `Win32_UI_WindowsAndMessaging`...).
 - Bắt đầu bằng **bản thử 1–2 ngày** để đo RAM trước khi cam kết (xem PLANNING M3).
 
-### 5.7 Chạy test và commit
+### 5.8 Chạy test và commit
 - `!` chạy lệnh test trong cấu hình (hoặc tự phát hiện), chỉ hiện lỗi đầu tiên và vị trí.
 - `c` commit các thay đổi đã giữ; nếu có agent, nhờ agent gợi ý message.
 
-### 5.8 Đo bộ nhớ (M0)
+### 5.9 Đo bộ nhớ (M0)
 - Windows: `GetProcessMemoryInfo` với `PROCESS_MEMORY_COUNTERS_EX2` lấy `PrivateWorkingSetSize`; không nhầm với `PrivateUsage` (commit) hay `WorkingSetSize` (gồm trang chia sẻ). Không hỗ trợ thì báo `n/a` kèm lý do.
 - Linux: `VmRSS` trong `/proc/self/status` là số quyết định ngân sách; private resident (`Private_Clean + Private_Dirty`) và PSS trong `smaps_rollup` là số bổ sung.
 - macOS: `proc_pidinfo(PROC_PIDTASKINFO)` lấy resident size.
@@ -204,6 +219,7 @@ RSS của dark GNU gồm ~1,6 MB glibc dùng chung; bản musl phát hành có R
 | Tình huống | Mục tiêu cho dark |
 |---|---|
 | Review diff ~30 file / ~3.000 dòng (M1) | dưới 2.000.000 byte |
+| Đang sửa một file 10.000 dòng trong editor gọn (M1) | dưới 4.000.000 byte |
 | `darkw` khi rảnh, tính cả cửa sổ (M3) | dưới 3.000.000 byte |
 | Đang nhận luồng ACP từ agent (M4) | dưới 4.000.000 byte, không tính agent |
 | **Giới hạn cứng mọi tình huống** | **dưới 10.000.000 byte** |
@@ -260,6 +276,8 @@ Không bao giờ dùng plugin đăng nhập không chính thức.
 |---|---|---|
 | Đối thủ đã có phần review (tuicr, Hunk, Zed) | Cao | Khác biệt ở cả vòng lặp: giữ/bỏ hunk trên code, ghi chú gửi thẳng agent qua ACP, hoàn tác cả lượt, siêu nhẹ, Windows hạng nhất |
 | Windows khó chờ đồng thời console và pipe | Trung bình | Chốt phương án ở kế hoạch M4 kèm số đo |
+| Editor phình dần thành IDE, kéo dài M1 và tăng RAM | Trung bình | Danh sách tính năng E1–E9 cố định cho M1; tính năng editor mới phải có lý do và qua bài test RAM |
+| Mất dữ liệu khi lưu hoặc ghi đè thay đổi của agent | Cao | Ghi file tạm rồi đổi tên; kiểm tra file bị đổi từ bên ngoài trước khi lưu; test cho LF/CRLF, BOM, Unicode |
 | `darkw` không đạt RAM hoặc bộ gõ tiếng Việt lỗi | Trung bình | Bản thử 1–2 ngày trước khi cam kết; bản terminal vẫn là dự phòng |
 | ACP hoặc giao thức agent thay đổi | Trung bình | Lớp `acp/` tách riêng, test với từng agent, ghim phiên bản đã kiểm |
 | Điều khoản gói thuê bao (Claude) | Trung bình | API key mặc định; chế độ đi kèm cho gói thuê bao |
