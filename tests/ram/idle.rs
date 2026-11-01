@@ -31,7 +31,7 @@ fn release_binary_stays_within_memory_budget_after_navigation() {
     let peak: u64 = value("peak_sampled_bytes=")
         .parse()
         .expect("invalid peak_sampled_bytes");
-    assert_eq!(value("screens="), "3", "not all screens were exercised");
+    assert_eq!(value("screens="), "7", "not all screens were exercised");
     assert!(idle > 0 && peak >= idle, "invalid samples: {report}");
     assert!(idle < 2_000_000, "idle RAM exceeded 2 MB: {report}");
     assert!(

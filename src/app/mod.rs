@@ -1,4 +1,5 @@
 pub mod event;
+pub mod workbench;
 
 use crossterm::event::{Event, KeyCode, KeyEventKind, KeyModifiers};
 
@@ -6,7 +7,11 @@ use crossterm::event::{Event, KeyCode, KeyEventKind, KeyModifiers};
 pub enum Screen {
     Review,
     Edit,
+    Vibe,
+    Git,
     Models,
+    View,
+    Help,
 }
 
 impl Screen {
@@ -14,7 +19,23 @@ impl Screen {
         match self {
             Self::Review => "Review",
             Self::Edit => "Edit",
+            Self::Vibe => "Vibe",
+            Self::Git => "Git commit",
             Self::Models => "Models",
+            Self::View => "View",
+            Self::Help => "Help",
+        }
+    }
+
+    pub fn index(self) -> usize {
+        match self {
+            Self::Review => 0,
+            Self::Edit => 1,
+            Self::Vibe => 2,
+            Self::Git => 3,
+            Self::Models => 4,
+            Self::View => 5,
+            Self::Help => 6,
         }
     }
 }
@@ -41,13 +62,22 @@ impl App {
                     self.running = false;
                     return false;
                 }
-                if !key.modifiers.is_empty() {
+                if !key.modifiers.is_empty() && key.modifiers != KeyModifiers::ALT {
+                    return false;
+                }
+                if key.modifiers == KeyModifiers::ALT
+                    && !matches!(key.code, KeyCode::Char('1'..='7'))
+                {
                     return false;
                 }
                 let screen = match key.code {
                     KeyCode::Char('1') => Screen::Review,
                     KeyCode::Char('2') => Screen::Edit,
-                    KeyCode::Char('3') => Screen::Models,
+                    KeyCode::Char('3') => Screen::Vibe,
+                    KeyCode::Char('4') => Screen::Git,
+                    KeyCode::Char('5') => Screen::Models,
+                    KeyCode::Char('6') => Screen::View,
+                    KeyCode::Char('7') => Screen::Help,
                     KeyCode::Char('q') => {
                         self.running = false;
                         return false;
@@ -78,7 +108,11 @@ mod tests {
         assert_eq!(app.screen, Screen::Review);
         for (digit, screen) in [
             ('2', Screen::Edit),
-            ('3', Screen::Models),
+            ('3', Screen::Vibe),
+            ('4', Screen::Git),
+            ('5', Screen::Models),
+            ('6', Screen::View),
+            ('7', Screen::Help),
             ('1', Screen::Review),
         ] {
             assert!(app.handle_event(key(
@@ -107,7 +141,7 @@ mod tests {
         }
         assert!(!app.handle_event(key(
             KeyCode::Char('2'),
-            KeyModifiers::ALT,
+            KeyModifiers::CONTROL,
             KeyEventKind::Press
         )));
         assert_eq!(app.screen, Screen::Review);
