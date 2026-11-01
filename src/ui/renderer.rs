@@ -752,7 +752,7 @@ pub(super) fn compact_path(path: &str, available: usize) -> String {
             return String::new();
         }
         let budget = available - 1;
-        let head_budget = budget / 3;
+        let head_budget = (budget / 4).max(1).min(budget);
         let mut head = String::new();
         let mut used = 0;
         for g in base.graphemes(true) {
@@ -962,8 +962,8 @@ mod tests {
     }
     #[test]
     fn narrow_paths_keep_distinguishing_filename_suffixes() {
-        assert_eq!(compact_path("src/module_02.ts", 7), "mo…2.ts");
-        assert_eq!(compact_path("src/module_03.ts", 7), "mo…3.ts");
+        assert_eq!(compact_path("src/module_02.ts", 7), "m…02.ts");
+        assert_eq!(compact_path("src/module_03.ts", 7), "m…03.ts");
         assert_eq!(compact_path("src/界e\u{301}.rs", 5), "…e\u{301}.rs");
     }
     #[test]

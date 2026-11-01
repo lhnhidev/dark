@@ -105,7 +105,7 @@ Màu cú pháp (chỉ dùng từ M9, theo GitHub Dark Default): từ khóa `#ff7
 - Tiêu đề: `Changes` (`text`) + `N file · X/N đã xem` (`muted`).
 - Ba nhóm, mỗi nhóm thu/mở được (`▾`/`▸`): **Staged (n)**, **Changes (n)**, **Untracked (n)**. Giữa các nhóm không có dòng trống (ảnh có dòng trống; bỏ để dành chỗ cho danh sách ở màn thấp).
 - Mỗi dòng file: `[x]`/`[ ]` (đã stage hay chưa) · chữ trạng thái có màu (`M` `file_modified`, `A` `file_added`, `D` `file_deleted`, `?` `file_added`, `R` `file_modified`) · thư mục màu `line_number` + tên file màu `text` (ví dụ `auth/` + `session.ts`) · bên phải `+N` (`file_added`) và `−N` (`file_deleted`); phần bằng 0 không hiện, cả hai bằng 0 thì không hiện số.
-- Thiếu chỗ: rút gọn thư mục từ bên trái (`…/auth/`), rồi bỏ hẳn thư mục; **luôn giữ tên file**. Chỉ khi riêng tên file cũng không vừa mới cắt giữa, giữ khoảng 1/3 đầu và 2/3 cuối (ví dụ `mo…2.ts`), để phần đuôi phân biệt và đuôi mở rộng còn thấy.
+- Thiếu chỗ: rút gọn thư mục từ bên trái (`…/auth/`), rồi bỏ hẳn thư mục; **luôn giữ tên file**. Chỉ khi riêng tên file cũng không vừa mới cắt giữa, giữ khoảng 1/4 đầu (ít nhất 1 ký tự) và phần còn lại cho đuôi (ví dụ `module_01.ts` trong 7 cột → `m…01.ts`), để phần đuôi phân biệt (`01`/`11`/`21`) và đuôi mở rộng còn thấy.
 - File đã xem hết các hunk: thêm `✓` sau tên (M1); file đang mở: kiểu dòng đang chọn.
 - Dưới cùng: nhãn `Commit message` (`muted`), ô nhập một dòng (nền `background`, viền `border`, viền `accent` khi đang gõ), gợi ý `Space stage · c commit`.
 - Phím: `↑`/`↓` hoặc `j`/`k` chọn file · `Enter` mở diff · `Space` stage/unstage file · `s` stage tất cả · `c` tới ô commit message, `Enter` trong ô để commit · `d` bỏ toàn bộ thay đổi của file (**có hỏi xác nhận**).

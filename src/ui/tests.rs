@@ -323,7 +323,22 @@ fn compact_path_shrinks_directory_then_drops_it_and_keeps_basename() {
     assert!(UnicodeWidthStr::width(out.as_str()) <= 12, "{out}");
     assert!(out.contains('…') && !out.starts_with('…'), "{out}");
     assert!(out.ends_with(".ts"), "{out}");
-    assert!(out.starts_with("ver"), "{out}");
+    assert!(out.starts_with("ve"), "head is about a quarter: {out}");
+}
+
+#[test]
+fn narrow_numbered_names_stay_distinct_with_visible_suffix() {
+    let outs: Vec<String> = ["src/module_01.ts", "src/module_11.ts", "src/module_21.ts"]
+        .iter()
+        .map(|p| compact_path(p, 7))
+        .collect();
+    for o in &outs {
+        assert_eq!(UnicodeWidthStr::width(o.as_str()), 7, "{o}");
+        assert!(o.ends_with("1.ts") && o.contains('…'), "{o}");
+        assert!(!o.starts_with('…'), "{o}");
+    }
+    assert_eq!(outs[0], "m…01.ts");
+    assert!(outs[0] != outs[1] && outs[1] != outs[2] && outs[0] != outs[2]);
 }
 
 #[test]
