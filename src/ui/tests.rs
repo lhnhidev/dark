@@ -613,3 +613,424 @@ fn no_color_keeps_active_pane_and_selection_recognizable() {
         }
     }
 }
+
+// ---------------------------------------------------------------------------
+// Diff syntax colors in the renderer (UI_SPEC §2 "Màu cú pháp", §4.2).
+// ---------------------------------------------------------------------------
+use crate::ui::syntax::{highlight, Lang, State};
+use std::ops::Range;
+
+fn syn_cell<'a>(
+    text: &'a str,
+    kind: DiffKind,
+    lang: Lang,
+    spans: &'a [Range<usize>],
+    state: State,
+) -> DiffCell<'a> {
+    DiffCell {
+        number: Some(1),
+        text,
+        kind,
+        spans,
+        lang,
+        state,
+    }
+}
+
+/// One diff row in the shape the workbench builds it: context on both sides,
+/// removed on the old side, added on the new side.
+fn syn_row<'a>(
+    text: &'a str,
+    kind: DiffKind,
+    lang: Lang,
+    spans: &'a [Range<usize>],
+    state: State,
+) -> DiffRow<'a> {
+    let mk = || Some(syn_cell(text, kind, lang, spans, state));
+    let (old, new) = match kind {
+        DiffKind::Context => (mk(), mk()),
+        DiffKind::Removed => (mk(), None),
+        DiffKind::Added => (None, mk()),
+    };
+    DiffRow {
+        old,
+        new,
+        header: None,
+        selected: false,
+    }
+}
+
+fn syn_raw(row: DiffRow<'_>, w: u16, unified: bool, opts: (bool, bool, usize)) -> String {
+    let rows = [row];
+    let mut v = rows_fixture(&[], &rows, false);
+    v.unified = unified;
+    let mut s = String::new();
+    make_line(&mut s, &v, w, 24, 2, opts);
+    s
+}
+
+fn occurrences(cells: &[Cell], needle: &str) -> Vec<usize> {
+    let hay: Vec<char> = cells.iter().map(|c| c.ch).collect();
+    let pat: Vec<char> = needle.chars().collect();
+    (0..hay.len().saturating_sub(pat.len() - 1))
+        .filter(|&i| hay[i..i + pat.len()] == pat[..])
+        .collect()
+}
+
+fn line_bg(kind: DiffKind) -> Rgb {
+    match kind {
+        DiffKind::Context => t::BACKGROUND,
+        DiffKind::Added => t::ADDED_BG,
+        DiffKind::Removed => t::REMOVED_BG,
+    }
+}
+
+fn kind_name(kind: DiffKind) -> &'static str {
+    match kind {
+        DiffKind::Context => "context",
+        DiffKind::Added => "added",
+        DiffKind::Removed => "removed",
+    }
+}
+
+const KINDS: [DiffKind; 3] = [DiffKind::Context, DiffKind::Added, DiffKind::Removed];
+
+#[test]
+fn syntax_foreground_sits_on_top_of_every_line_background() {
+    let src = "let x = 1; // c";
+    for w in WIDTHS {
+        for unified in [true, false] {
+            for kind in KINDS {
+                let row = syn_row(src, kind, Lang::Rust, &[], State::default());
+                let cells = parse(&syn_raw(row, w, unified, (true, true, 8)));
+                assert_eq!(cells.len(), usize::from(w) - 1, "w{w}");
+                let at = occurrences(&cells, src);
+                let expected = if kind == DiffKind::Context && !unified && w >= 160 {
+                    2
+                } else {
+                    1
+                };
+                assert_eq!(at.len(), expected, "w{w} unified={unified}");
+                for s in at {
+                    for (range, fg) in [
+                        (0..3, t::SYNTAX_KEYWORD),
+                        (4..5, t::TEXT),
+                        (8..9, t::SYNTAX_CONSTANT),
+                        (11..15, t::SYNTAX_COMMENT),
+                    ] {
+                        for i in range {
+                            let c = &cells[s + i];
+                            assert_eq!(c.fg, Some(fg), "w{w} {:?} {}", c.ch, i);
+                            assert_eq!(c.bg, Some(line_bg(kind)), "w{w} {:?}", c.ch);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[test]
+#[allow(clippy::single_range_in_vec_init, clippy::reversed_empty_ranges)]
+fn word_diff_background_overrides_line_background_but_keeps_syntax_color() {
+    let src = "let x = 1;";
+    for (kind, word_bg) in [
+        (DiffKind::Added, t::ADDED_WORD_BG),
+        (DiffKind::Removed, t::REMOVED_WORD_BG),
+    ] {
+        // A span that starts inside the keyword and ends inside the next token.
+        let spans = [1..5];
+        let row = syn_row(src, kind, Lang::Rust, &spans, State::default());
+        let cells = parse(&syn_raw(row, 160, true, (true, true, 8)));
+        let s = find(&cells, src).unwrap();
+        let expect = [
+            (Some(t::SYNTAX_KEYWORD), line_bg(kind)),
+            (Some(t::SYNTAX_KEYWORD), word_bg),
+            (Some(t::SYNTAX_KEYWORD), word_bg),
+            (Some(t::TEXT), word_bg),
+            (Some(t::TEXT), word_bg),
+            (Some(t::TEXT), line_bg(kind)),
+        ];
+        for (i, (fg, bg)) in expect.into_iter().enumerate() {
+            let c = &cells[s + i];
+            assert_eq!(
+                (c.fg, c.bg),
+                (fg, Some(bg)),
+                "{} col {i} {:?}",
+                kind_name(kind),
+                c.ch
+            );
+        }
+        // Several spans: both highlighted, the part between them is not.
+        let spans = [0..3, 8..9];
+        let row = syn_row(src, kind, Lang::Rust, &spans, State::default());
+        let cells = parse(&syn_raw(row, 160, true, (true, true, 8)));
+        let s = find(&cells, src).unwrap();
+        for i in 0..10 {
+            let in_word = i < 3 || i == 8;
+            let want = if in_word { word_bg } else { line_bg(kind) };
+            assert_eq!(cells[s + i].bg, Some(want), "{} col {i}", kind_name(kind));
+        }
+        assert_eq!(cells[s + 8].fg, Some(t::SYNTAX_CONSTANT));
+    }
+}
+
+#[test]
+#[allow(clippy::single_range_in_vec_init, clippy::reversed_empty_ranges)]
+fn word_span_inside_wide_string_keeps_string_color() {
+    let src = "x = \"日本\"";
+    let spans = [5..8];
+    let row = syn_row(src, DiffKind::Added, Lang::Rust, &spans, State::default());
+    let cells = parse(&syn_raw(row, 160, true, (true, true, 8)));
+    let q = find(&cells, "\"日\0本\0\"").unwrap();
+    // 日 is the span (2 columns), 本 is not.
+    for i in [1, 2] {
+        assert_eq!(cells[q + i].bg, Some(t::ADDED_WORD_BG));
+        assert_eq!(cells[q + i].fg, Some(t::SYNTAX_STRING));
+    }
+    for i in [3, 4] {
+        assert_eq!(cells[q + i].bg, Some(t::ADDED_BG));
+        assert_eq!(cells[q + i].fg, Some(t::SYNTAX_STRING));
+    }
+}
+
+#[test]
+#[allow(clippy::single_range_in_vec_init, clippy::reversed_empty_ranges)]
+fn invalid_word_spans_never_panic_and_keep_row_width() {
+    let src = "x = \"日本\" // é";
+    let bad: [&[Range<usize>]; 4] = [&[2..1000], &[6..7], &[9..3], &[0..2, 1..3, 5..6]];
+    for spans in bad {
+        for unified in [true, false] {
+            let row = syn_row(src, DiffKind::Added, Lang::Rust, spans, State::default());
+            let cells = parse(&syn_raw(row, 80, unified, (true, true, 8)));
+            assert_eq!(cells.len(), 79);
+        }
+    }
+}
+
+#[test]
+fn state_carried_into_a_line_decides_its_colors() {
+    let mut open = State::default();
+    highlight(Lang::Rust, &mut open, "let a = 1; /* still open", |_, _| {});
+    let src = "let b = 2; end";
+    // Same text, different starting state.
+    let inside = syn_row(src, DiffKind::Context, Lang::Rust, &[], open);
+    let cells = parse(&syn_raw(inside, 160, true, (true, true, 8)));
+    let s = find(&cells, src).unwrap();
+    for c in &cells[s..s + src.len()] {
+        assert_eq!(c.fg, Some(t::SYNTAX_COMMENT), "{:?}", c.ch);
+    }
+    let outside = syn_row(src, DiffKind::Context, Lang::Rust, &[], State::default());
+    let cells = parse(&syn_raw(outside, 160, true, (true, true, 8)));
+    let s = find(&cells, src).unwrap();
+    assert_eq!(cells[s].fg, Some(t::SYNTAX_KEYWORD));
+}
+
+#[test]
+fn old_and_new_side_of_a_split_row_use_their_own_state() {
+    let mut open = State::default();
+    highlight(Lang::JsTs, &mut open, "/* open on old only", |_, _| {});
+    let src = "return value;";
+    let row = DiffRow {
+        old: Some(syn_cell(src, DiffKind::Context, Lang::JsTs, &[], open)),
+        new: Some(syn_cell(
+            src,
+            DiffKind::Context,
+            Lang::JsTs,
+            &[],
+            State::default(),
+        )),
+        header: None,
+        selected: false,
+    };
+    let cells = parse(&syn_raw(row, 160, false, (true, true, 8)));
+    let at = occurrences(&cells, src);
+    assert_eq!(at.len(), 2);
+    assert_eq!(cells[at[0]].fg, Some(t::SYNTAX_COMMENT), "old side");
+    assert_eq!(cells[at[1]].fg, Some(t::SYNTAX_KEYWORD), "new side");
+}
+
+#[test]
+fn no_color_emits_no_color_codes_for_any_language_and_keeps_text() {
+    let src = "let x = \"s\\n\" // c <a b='1'> ## `k` 42 true Foo()";
+    for lang in [
+        Lang::Plain,
+        Lang::JsTs,
+        Lang::Python,
+        Lang::Html,
+        Lang::Css,
+        Lang::Json,
+        Lang::Rust,
+        Lang::Go,
+        Lang::Java,
+        Lang::C,
+        Lang::CSharp,
+        Lang::Php,
+        Lang::Shell,
+        Lang::Yaml,
+        Lang::Toml,
+        Lang::Markdown,
+    ] {
+        for w in [80u16, 160] {
+            for unified in [true, false] {
+                for kind in KINDS {
+                    let mk = || syn_row(src, kind, lang, &[], State::default());
+                    let raw = syn_raw(mk(), w, unified, (false, false, 8));
+                    assert!(!raw.contains("38;") && !raw.contains("48;"), "{lang:?}");
+                    let coloured = syn_raw(mk(), w, unified, (true, true, 8));
+                    assert_eq!(
+                        text(&parse(&raw)),
+                        text(&parse(&coloured)),
+                        "{lang:?} w{w}: color must not change visible text"
+                    );
+                    assert_eq!(parse(&raw).len(), usize::from(w) - 1);
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn plain_file_renders_code_with_text_color_only() {
+    let src = "let x = \"s\" // c 42 true Foo() <a>";
+    for kind in KINDS {
+        let row = syn_row(src, kind, Lang::Plain, &[], State::default());
+        let cells = parse(&syn_raw(row, 160, true, (true, true, 8)));
+        let s = find(&cells, src).unwrap();
+        for c in &cells[s..s + src.len()] {
+            assert_eq!(c.fg, Some(t::TEXT), "{} {:?}", kind_name(kind), c.ch);
+            assert_eq!(c.bg, Some(line_bg(kind)));
+            assert!(!c.bold);
+        }
+    }
+}
+
+#[test]
+fn markdown_heading_is_bold_constant_and_other_text_is_not_bold() {
+    let heading = syn_row(
+        "## Title",
+        DiffKind::Context,
+        Lang::Markdown,
+        &[],
+        State::default(),
+    );
+    let cells = parse(&syn_raw(heading, 160, true, (true, true, 8)));
+    let s = find(&cells, "## Title").unwrap();
+    for c in &cells[s..s + 8] {
+        assert_eq!(c.fg, Some(t::SYNTAX_CONSTANT));
+        assert!(c.bold, "{:?}", c.ch);
+    }
+    // Bold must stop at the end of the heading text.
+    assert!(!cells[s + 8].bold);
+    let body = syn_row(
+        "plain words",
+        DiffKind::Context,
+        Lang::Markdown,
+        &[],
+        State::default(),
+    );
+    let cells = parse(&syn_raw(body, 160, true, (true, true, 8)));
+    assert!(cells.iter().all(|c| !c.bold));
+}
+
+#[test]
+fn highlighted_rows_keep_exact_width_tab_stops_and_wide_characters() {
+    let langs = [
+        Lang::Plain,
+        Lang::Rust,
+        Lang::JsTs,
+        Lang::Python,
+        Lang::Html,
+        Lang::Css,
+        Lang::Markdown,
+        Lang::Yaml,
+    ];
+    let long_wide = format!("let s = \"{}\" // 😀\t日本", "日".repeat(120));
+    let samples = [
+        "\tlet 日本 = \"e\u{301}\"\t// 😀 x\t1".to_string(),
+        "\t\t\t<a\thref=\"日本\">\tt</a>\t".to_string(),
+        long_wide,
+        "a\tb".to_string(),
+    ];
+    for w in [80u16, 160] {
+        for unified in [true, false] {
+            for kind in KINDS {
+                for src in &samples {
+                    let baseline = {
+                        let row = syn_row(src, kind, Lang::Plain, &[], State::default());
+                        parse(&syn_raw(row, w, unified, (true, true, 8)))
+                    };
+                    for lang in langs {
+                        let row = syn_row(src, kind, lang, &[], State::default());
+                        let cells = parse(&syn_raw(row, w, unified, (true, true, 8)));
+                        assert_eq!(cells.len(), usize::from(w) - 1, "{lang:?} w{w}");
+                        // Colors never change geometry: same glyph in the same column.
+                        let a: Vec<char> = cells.iter().map(|c| c.ch).collect();
+                        let b: Vec<char> = baseline.iter().map(|c| c.ch).collect();
+                        assert_eq!(a, b, "{lang:?} w{w} unified={unified} {src:?}");
+                    }
+                }
+            }
+        }
+    }
+    // A tab ends on the next multiple of 8 columns, measured from the screen edge.
+    for lang in [Lang::Plain, Lang::Rust, Lang::JsTs, Lang::Python] {
+        for unified in [true, false] {
+            let row = syn_row("a\tb", DiffKind::Added, lang, &[], State::default());
+            let cells = parse(&syn_raw(row, 160, unified, (true, true, 8)));
+            let a = find(&cells, "a").unwrap();
+            let b = occurrences(&cells, "b")[0];
+            assert!(b > a && b.is_multiple_of(8), "{lang:?} a@{a} b@{b}");
+            assert!(b - a <= 8);
+        }
+    }
+}
+
+#[test]
+fn split_divider_stays_in_the_same_column_with_syntax_colors() {
+    let src = "let s = \"日本\"; // 😀\t/* x";
+    let divider = |lang| {
+        let row = syn_row(src, DiffKind::Context, lang, &[], State::default());
+        let cells = parse(&syn_raw(row, 160, false, (true, true, 8)));
+        cells.iter().rposition(|c| c.ch == '│')
+    };
+    assert_eq!(divider(Lang::Plain), divider(Lang::Rust));
+    assert!(divider(Lang::Rust).is_some());
+}
+
+#[test]
+fn indexed_256_color_mode_keeps_syntax_hues_chromatic() {
+    let rust = "fn main() { let v: Vec<u8> = 1; // c";
+    let cases: [(Lang, &str, &str, Rgb); 7] = [
+        (Lang::Rust, rust, "fn", t::SYNTAX_KEYWORD),
+        (Lang::Rust, rust, "main", t::SYNTAX_FUNCTION),
+        (Lang::Rust, rust, "Vec", t::SYNTAX_TYPE),
+        (Lang::Rust, rust, "// c", t::SYNTAX_COMMENT),
+        (Lang::Rust, "let s = \"abc\" + 1;", "1", t::SYNTAX_CONSTANT),
+        (Lang::Rust, "let s = \"abc\";", "\"abc\"", t::SYNTAX_STRING),
+        (Lang::Html, "<a href=\"x\">", "a", t::SYNTAX_TAG),
+    ];
+    let index = |rgb: Rgb| match t::color(rgb, false) {
+        crossterm::style::Color::AnsiValue(n) => n,
+        other => panic!("256 mode must emit indexed colors, got {other:?}"),
+    };
+    let bg = index(t::ADDED_BG);
+    for (lang, src, needle, rgb) in cases {
+        let row = syn_row(src, DiffKind::Added, lang, &[], State::default());
+        let raw = syn_raw(row, 160, true, (true, false, 8));
+        assert!(!raw.contains("38;2;") && !raw.contains("48;2;"), "{raw:?}");
+        let n = index(rgb);
+        // Chromatic: inside the 6x6x6 cube and not on its gray diagonal.
+        assert!(
+            (16..232).contains(&n),
+            "{needle}: index {n} is a gray ramp entry"
+        );
+        let c = n - 16;
+        assert!(
+            !(c / 36 == c / 6 % 6 && c / 6 % 6 == c % 6),
+            "{needle}: index {n} is gray"
+        );
+        let want = format!("\x1b[38;5;{n}m\x1b[48;5;{bg}m{needle}");
+        assert!(raw.contains(&want), "{needle}: {want:?} not in {raw:?}");
+    }
+}

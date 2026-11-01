@@ -287,3 +287,231 @@ fn selected_file_always_visible() {
         }
     }
 }
+
+// ---------------------------------------------------------------------------
+// Diff syntax highlighting end to end (real git fixture through Workbench).
+// ---------------------------------------------------------------------------
+
+/// Colored runs of drawn text: (SGR foreground parameters, visible text).
+/// The foreground is `2;r;g;b` or `5;n`, exactly what the renderer emitted.
+fn color_runs(ansi: &str) -> Vec<(Option<String>, String)> {
+    let mut runs: Vec<(Option<String>, String)> = Vec::new();
+    let mut fg: Option<String> = None;
+    let mut text = String::new();
+    let mut chars = ansi.chars();
+    while let Some(c) = chars.next() {
+        if c != '\x1b' {
+            text.push(c);
+            continue;
+        }
+        if !text.is_empty() {
+            runs.push((fg.clone(), std::mem::take(&mut text)));
+        }
+        if chars.next() != Some('[') {
+            continue;
+        }
+        let mut params = String::new();
+        let mut last = ' ';
+        for p in chars.by_ref() {
+            last = p;
+            if ('@'..='~').contains(&p) {
+                break;
+            }
+            params.push(p);
+        }
+        if last == 'm' {
+            if let Some(rest) = params.strip_prefix("38;") {
+                fg = Some(rest.to_owned());
+            } else if params == "0" || params.is_empty() {
+                fg = None;
+            }
+        }
+    }
+    if !text.is_empty() {
+        runs.push((fg, text));
+    }
+    runs
+}
+
+/// The foreground parameters the renderer uses on this platform for a theme color.
+fn fg_key(rgb: (u8, u8, u8)) -> String {
+    let truecolor = ui::theme::detect_truecolor(
+        std::env::var("COLORTERM").ok().as_deref(),
+        std::env::var("TERM").ok().as_deref(),
+        std::env::var_os("WT_SESSION").is_some(),
+        std::env::var("TERM_PROGRAM").ok().as_deref(),
+        cfg!(windows),
+    );
+    match ui::theme::color(rgb, truecolor) {
+        crossterm::style::Color::Rgb { r, g, b } => format!("2;{r};{g};{b}"),
+        crossterm::style::Color::AnsiValue(n) => format!("5;{n}"),
+        _ => unreachable!(),
+    }
+}
+
+fn runs_with(runs: &[(Option<String>, String)], fg: (u8, u8, u8), text: &str) -> usize {
+    let key = fg_key(fg);
+    runs.iter()
+        .filter(|(f, t)| f.as_deref() == Some(key.as_str()) && t == text)
+        .count()
+}
+
+fn runs_containing(runs: &[(Option<String>, String)], fg: (u8, u8, u8), text: &str) -> usize {
+    let key = fg_key(fg);
+    runs.iter()
+        .filter(|(f, t)| f.as_deref() == Some(key.as_str()) && t.contains(text))
+        .count()
+}
+
+const KEYWORD: (u8, u8, u8) = (255, 123, 114);
+const COMMENT: (u8, u8, u8) = (139, 148, 158);
+
+fn comment_pair_old_has_comment() -> (&'static str, &'static str) {
+    (
+        "let a = 1;\n/* note start\nreturn value;\nnote end */\nlet c = 3;\n",
+        "let a = 1;\nreturn value;\nlet c = 3;\n",
+    )
+}
+
+#[test]
+fn comment_opened_only_on_removed_side_does_not_color_the_new_side() {
+    if std::env::var_os("NO_COLOR").is_some() {
+        return;
+    }
+    let (old, new) = comment_pair_old_has_comment();
+    let f = Fixture::new(&[("a.ts", old)]);
+    f.write("a.ts", new);
+    let mut w = Workbench::open(&f.0);
+    let runs = color_runs(&render(&mut w));
+    // Old side: the unchanged line sits inside the removed block comment.
+    assert_eq!(runs_with(&runs, COMMENT, "return value;"), 1, "{runs:?}");
+    assert_eq!(runs_with(&runs, COMMENT, "/* note start"), 1, "{runs:?}");
+    assert_eq!(runs_with(&runs, COMMENT, "note end */"), 1, "{runs:?}");
+    // New side: the same line is plain code with a keyword.
+    assert_eq!(runs_with(&runs, KEYWORD, "return"), 1, "{runs:?}");
+    // The closing `*/` on the old side ends the comment: the next line is code on both sides.
+    assert_eq!(runs_with(&runs, KEYWORD, "let"), 4, "{runs:?}");
+}
+
+#[test]
+fn comment_opened_only_on_added_side_does_not_color_the_old_side() {
+    if std::env::var_os("NO_COLOR").is_some() {
+        return;
+    }
+    let (old, new) = comment_pair_old_has_comment();
+    let f = Fixture::new(&[("a.ts", new)]);
+    f.write("a.ts", old);
+    let mut w = Workbench::open(&f.0);
+    let runs = color_runs(&render(&mut w));
+    assert_eq!(runs_with(&runs, COMMENT, "return value;"), 1, "{runs:?}");
+    assert_eq!(runs_with(&runs, COMMENT, "/* note start"), 1, "{runs:?}");
+    assert_eq!(runs_with(&runs, KEYWORD, "return"), 1, "{runs:?}");
+    assert_eq!(runs_with(&runs, KEYWORD, "let"), 4, "{runs:?}");
+}
+
+#[test]
+fn unified_view_follows_the_old_side_for_unchanged_lines() {
+    if std::env::var_os("NO_COLOR").is_some() {
+        return;
+    }
+    let (old, new) = comment_pair_old_has_comment();
+    let f = Fixture::new(&[("a.ts", old)]);
+    f.write("a.ts", new);
+    let mut w = Workbench::open(&f.0);
+    key(&mut w, KeyCode::Char('v'));
+    let runs = color_runs(&render(&mut w));
+    // One row per line; the removed lines keep their comment color and the
+    // context line shows once, never mixing in the new side's color.
+    assert_eq!(runs_with(&runs, COMMENT, "/* note start"), 1, "{runs:?}");
+    assert_eq!(runs_with(&runs, COMMENT, "note end */"), 1, "{runs:?}");
+    assert_eq!(
+        runs_with(&runs, COMMENT, "return value;") + runs_with(&runs, KEYWORD, "return"),
+        1,
+        "{runs:?}"
+    );
+}
+
+#[test]
+fn syntax_state_does_not_leak_from_one_hunk_to_the_next() {
+    if std::env::var_os("NO_COLOR").is_some() {
+        return;
+    }
+    let mut old = String::new();
+    for i in 0..40 {
+        if i == 36 {
+            old.push_str("return old;\n");
+        } else {
+            old.push_str(&format!("let v{i} = {i};\n"));
+        }
+    }
+    let new = old
+        .replace("let v3 = 3;", "/* never closed")
+        .replace("return old;", "return fresh;");
+    let f = Fixture::new(&[("m.ts", &old)]);
+    f.write("m.ts", &new);
+    let mut w = Workbench::open(&f.0);
+    let runs = color_runs(&render(&mut w));
+    // First hunk really opens a comment on the new side...
+    assert!(runs_containing(&runs, COMMENT, "never") >= 1, "{runs:?}");
+    // ...but the second hunk starts clean: `return` is a keyword, never comment.
+    assert!(runs_with(&runs, KEYWORD, "return") >= 1, "{runs:?}");
+    assert_eq!(runs_containing(&runs, COMMENT, "return"), 0, "{runs:?}");
+    assert_eq!(runs_containing(&runs, COMMENT, "fresh"), 0, "{runs:?}");
+}
+
+#[test]
+fn hunk_that_starts_inside_an_unchanged_comment_still_draws() {
+    let mut old = String::from("/* header comment\n");
+    for i in 0..14 {
+        old.push_str(&format!(" line a{i}\n"));
+    }
+    old.push_str("*/\nlet x = 1;\n");
+    let f = Fixture::new(&[("c.ts", &old)]);
+    f.write("c.ts", &old.replace(" line a8\n", " line a8 changed\n"));
+    let mut w = Workbench::open(&f.0);
+    let screen = plain(&render(&mut w));
+    assert!(screen.contains("line a8 changed"), "{screen}");
+    assert!(screen.contains("line a7"), "{screen}");
+}
+
+#[test]
+fn plain_extension_is_drawn_without_syntax_colors() {
+    if std::env::var_os("NO_COLOR").is_some() {
+        return;
+    }
+    let f = Fixture::new(&[("notes.txt", "let a = 1; // old\n")]);
+    f.write("notes.txt", "let a = 2; // new\n");
+    let mut w = Workbench::open(&f.0);
+    let runs = color_runs(&render(&mut w));
+    for rgb in [
+        ui::theme::SYNTAX_KEYWORD,
+        ui::theme::SYNTAX_STRING,
+        ui::theme::SYNTAX_COMMENT,
+        ui::theme::SYNTAX_FUNCTION,
+        ui::theme::SYNTAX_CONSTANT,
+        ui::theme::SYNTAX_TYPE,
+        ui::theme::SYNTAX_TAG,
+    ] {
+        assert_eq!(runs_containing(&runs, rgb, "let"), 0, "{runs:?}");
+        assert_eq!(runs_containing(&runs, rgb, "// "), 0, "{runs:?}");
+    }
+}
+
+#[test]
+fn very_large_hunk_is_highlighted_to_the_last_line() {
+    // One 5,000-line hunk (10,000 diff lines). Only completion is asserted.
+    let mut old = String::new();
+    let mut new = String::new();
+    for i in 0..5000 {
+        old.push_str(&format!("let v{i} = {i}; // old\n"));
+        new.push_str(&format!("const w{i} = \"{i}\"; /* new */\n"));
+    }
+    let f = Fixture::new(&[("big.ts", &old)]);
+    f.write("big.ts", &new);
+    let mut w = Workbench::open(&f.0);
+    for _ in 0..340 {
+        key(&mut w, KeyCode::PageDown);
+    }
+    let screen = render(&mut w);
+    assert!(plain(&screen).contains("w4999"), "last line not drawn");
+}
