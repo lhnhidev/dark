@@ -10,7 +10,7 @@ Tài liệu này là **chuẩn bắt buộc** cho giao diện của dark. Ảnh 
 | Tab | Ảnh | Làm ở milestone |
 |---|---|---|
 | 1 Review | [ui/1-review.png](ui/1-review.png) | M1 (ghi chú AI ở M5) |
-| 2 Edit | [ui/2-edit.png](ui/2-edit.png) | M2 (tô màu cú pháp ở M9) |
+| 2 Edit | [ui/2-edit.png](ui/2-edit.png) | M2 (dùng bộ tô màu cú pháp có từ M1) |
 | 3 Vibe | [ui/3-vibe.png](ui/3-vibe.png) | M3 (chọn và gọi CLI), M5 (agent chạy bên trong), M7 (6 ô) |
 | 4 Git commit | [ui/4-git-commit.png](ui/4-git-commit.png) | M3 |
 | 5 Models | [ui/5-models.png](ui/5-models.png) | M6 |
@@ -47,7 +47,23 @@ Bảng màu lấy từ theme mặc định của **Hunk** (`github-dark-default`
 | `file_deleted` | `#fa8e89` | Chữ `D`, số `−N`, cảnh báo `⚠` |
 | `file_modified` | `#d3ac5f` | Chữ `M`, `R`, chấm "có thay đổi", "● chưa lưu", số thứ tự tab đang chọn |
 
-Màu cú pháp (chỉ dùng từ M9, theo GitHub Dark Default): từ khóa `#ff7b72`, hàm `#d2a8ff`, chuỗi `#a5d6ff`, chú thích `#8b949e`. Trước M9, code hiển thị bằng `text`.
+### Màu cú pháp (từ M1, trong diff; editor dùng lại từ M2)
+
+Theo theme VS Code **GitHub Dark Default** (`primer/github-vscode-theme` v6.3.5, `src/theme.js` commit `f7a67d6`, 2024-10-03; mã hex đối chiếu qua bản build của Shiki `github-dark-default.json`). Chỉ đổi **màu chữ**; nền vẫn theo loại dòng diff và phần chữ đổi.
+
+| Token | Hex | Dùng cho |
+|---|---|---|
+| `syntax_keyword` | `#ff7b72` | Từ khóa, từ khai báo (`const`, `fn`, `def`, `return`, `if`…), toán tử dạng chữ, ký tự thoát trong chuỗi |
+| `syntax_string` | `#a5d6ff` | Chuỗi |
+| `syntax_comment` | `#8b949e` | Chú thích |
+| `syntax_function` | `#d2a8ff` | Tên hàm khi khai báo và khi gọi (`tên(`) |
+| `syntax_constant` | `#79c0ff` | Số, `true`/`false`/`null`/`None`…, `HẰNG_SỐ`, thuộc tính HTML, thuộc tính CSS, tiêu đề Markdown (đậm) |
+| `syntax_type` | `#ffa657` | Tên kiểu và class (chữ cái đầu viết hoa ở vị trí kiểu, kiểu có sẵn của ngôn ngữ) |
+| `syntax_tag` | `#7ee787` | Thẻ HTML/JSX, khóa JSON/YAML/TOML |
+
+Biến, dấu câu và phần còn lại dùng `text`. Bộ tô màu tự viết nên khác VS Code ở vài chỗ: lời gọi hàm thư viện tô tím (VS Code tô xanh dương), tham số hàm không tô cam, regex và template lồng nhau có thể sai.
+
+**Ngôn ngữ (theo đuôi file):** JS/TS (`js jsx mjs cjs ts tsx`), Python, HTML, CSS, JSON, Rust, Go, Java, C/C++, C#, PHP, Shell (`sh bash zsh`), YAML, TOML, Markdown (chỉ tiêu đề, code trong dòng và khối code). Đuôi khác: không tô màu. `NO_COLOR`: không tô màu.
 
 **Chọn màu 24-bit hay 256 màu:** người dùng không phải đặt biến nào. dark dùng màu 24-bit khi: chạy trên Windows (Windows 10 trở lên và Windows Terminal đều hỗ trợ); hoặc `COLORTERM` là `truecolor`/`24bit`; hoặc `TERM` chứa `truecolor`, `24bit` hay `direct`; hoặc có `WT_SESSION`; hoặc `TERM_PROGRAM` là `iTerm.app`, `WezTerm`, `vscode`, `ghostty`. Không thấy dấu hiệu nào thì dùng 256 màu.
 
@@ -128,6 +144,8 @@ Màu cú pháp (chỉ dùng từ M9, theo GitHub Dark Default): từ khóa `#ff7
 | Ô trống (bên kia không có dòng tương ứng) | `panel` | trống |
 | Đoạn không đổi bị thu gọn | `background`, chữ `muted`: `⋯ N dòng không đổi` | — |
 
+- **Màu chữ của code** theo bảng màu cú pháp ở §2 cho mọi loại dòng (không đổi, thêm, xóa); nền theo bảng trên. Trạng thái chú thích/chuỗi nhiều dòng được theo dõi riêng cho cột cũ và cột mới, bắt đầu lại ở mỗi hunk.
+
 - **Hunk đang chọn:** cột đầu tiên của dòng tiêu đề hunk và mọi dòng của hunk có `▌` màu `accent`.
 - **Diff 1 cột** (khi hẹp hoặc chọn `unified`): dòng xóa ngay trên dòng thêm tương ứng, cùng bảng màu.
 
@@ -172,7 +190,7 @@ Màu cú pháp (chỉ dùng từ M9, theo GitHub Dark Default): từ khóa `#ff7
 - Lề trái: số dòng (`line_number`; dòng hiện tại màu `text`) rồi **vạch thay đổi 1 cột** so với snapshot: `▎` màu `added_sign` (dòng mới), `▎` màu `file_modified` (dòng sửa), `▁` màu `removed_sign` (có dòng bị xóa ở đây).
 - Dòng chứa con trỏ: nền `panel`. Con trỏ: ô nền `accent`, chữ `background`.
 - Vùng chọn: nền `accent_muted`.
-- Trước M9 code màu `text`; ảnh tham chiếu có tô màu cú pháp để minh họa đích M9.
+- Code tô màu cú pháp theo §2 (bộ tô màu có từ M1).
 - Thanh trạng thái phải: `Ngôn ngữ · UTF-8 · LF|CRLF · Ln X, Col Y`.
 - Phím: xem [FEATURES.md](FEATURES.md) mục Edit (`Ctrl-S`, `Ctrl-Z`/`Ctrl-Y`, `Shift`+mũi tên, `Ctrl-C`/`Ctrl-X`/`Ctrl-V`, `Ctrl-F`, `Ctrl-G`, `Esc`). Trong editor, `Ctrl-C` là copy, không thoát app.
 

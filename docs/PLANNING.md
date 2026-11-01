@@ -47,7 +47,7 @@ Mã tính năng (C, R, E, V, G, P, K, S) theo [FEATURES.md](FEATURES.md).
 
 | Milestone | Nội dung | Bạn dùng được gì | RAM mục tiêu của dark | Ước tính | Cần xong trước |
 |---|---|---|---|---|---|
-| **M1** Khung giao diện + Review | C1–C5, R1–R6, S4: thanh tab 1–7 (6, 7 Coming soon), theme Hunk, khung active, snapshot, panel danh sách (`l`), diff 2 cột (`r`), accept/reject (`a`/`x`), hoàn tác cả lượt (`u`), editor ngoài (`e`), tên cửa sổ | Review code agent viết, giữ/bỏ từng hunk | Review diff 30 file < 2 MB | 2 tuần | M0 |
+| **M1** Khung giao diện + Review | C1–C5, R1–R6, S4, E9 (diff): thanh tab 1–7 (6, 7 Coming soon), theme Hunk, khung active, snapshot, panel danh sách (`l`), diff 2 cột (`r`), accept/reject (`a`/`x`), hoàn tác cả lượt (`u`), editor ngoài (`e`), tên cửa sổ, tô màu cú pháp trong diff (E9, đưa lên từ M9) | Review code agent viết, giữ/bỏ từng hunk | Review diff 30 file < 2 MB | 2 tuần | M0 |
 | **M2** Edit | E1–E8, R7: cây thư mục, editor gọn, lưu an toàn, sửa hunk từ Review (`Enter`), `Alt-1…7` | Sửa code ngay trong dark | Sửa file 10.000 dòng < 4 MB | 2 tuần | M1 |
 | **M3** Git + Vibe cơ bản → **v0.1** | R8, G1–G5, V1–V3, C6, C7, S3: stage/commit từ panel, lịch sử + cây nhánh + diff commit, phát hiện và gọi agent CLI, tự làm mới, chạy test | **Bản dùng thử đầu tiên** | Lịch sử 200 commit < 0,5 MB thêm | 1,5–2 tuần | M2 |
 | **M4** `darkw` | C8: bản thử 1–2 ngày để đo, rồi cửa sổ Windows riêng | Nhấp đúp mở dark, không cần terminal | `darkw` idle < 3 MB tính cả cửa sổ | 1,5–2 tuần | M3 |
@@ -55,7 +55,7 @@ Mã tính năng (C, R, E, V, G, P, K, S) theo [FEATURES.md](FEATURES.md).
 | **M6** Models + phát hành → **v0.2** | P1–P4, V8, C9, S2: tab Models, lưu key trong Windows Credential Manager, model qua opencode, song ngữ, đóng gói, benchmark công khai | **Ra mắt chính thức** | Giữ các mục tiêu trên | 1,5–2 tuần | M5 |
 | **M7** Nhiều agent | V9: tối đa 6 ô agent, mỗi agent một git worktree | Chạy song song nhiều agent | 6 agent < 10 MB | 2 tuần | M5 |
 | **M8** Token + skill | K4–K7: chọn model theo việc, đồng hồ token, thư viện skill tùy chọn, tóm tắt hội thoại, bộ eval | Ít tốn token hơn | ~0 thêm | 1,5–2 tuần | M5 |
-| **M9** Mở rộng | V10, E9, E10, C10, P5: agent riêng, tô màu cú pháp, View/Help, kho mật khẩu macOS/Linux | Lựa chọn siêu nhẹ, giao diện đầy đủ | Agent riêng < 6 MB | 2 tuần trở lên | M6, M8 |
+| **M9** Mở rộng | V10, E10, C10, P5: agent riêng, tìm và thay, View/Help, kho mật khẩu macOS/Linux | Lựa chọn siêu nhẹ, giao diện đầy đủ | Agent riêng < 6 MB | 2 tuần trở lên | M6, M8 |
 
 ## 4. Tiêu chí hoàn thành
 
@@ -78,6 +78,7 @@ Triển khai và kiểm chứng nội bộ: xem [M1_VERIFICATION.md](M1_VERIFICA
 - [x] Diff 2 cột có nhấn mạnh chữ đổi trong dòng; ô trống đúng màu; khung diff < 120 cột tự về 1 cột; `v` đổi chế độ.
 - [x] `a`/`x`: sau khi reject, `git diff` khớp đúng phần còn lại. `u` hoàn tác cả lượt có xác nhận, không hỏng index/nhánh.
 - [x] `l`, `r`, `Tab`, `n`/`N`, `e` hoạt động như UI_SPEC §4.4.
+- [ ] Code trong diff tô màu cú pháp theo UI_SPEC §2 cho các ngôn ngữ đã liệt kê; giữ nền diff; RAM review vẫn < 2 MB (E9 đưa lên từ M9 theo yêu cầu chủ dự án, 01/11/2026).
 - [x] Repo không phải git, file nhị phân, file lớn, tên file Unicode: báo rõ, không crash.
 - [x] Giao diện ở 160×44 khớp [ui/1-review.png](ui/1-review.png) (trừ ghi chú AI, thuộc M5); kiểm tra thêm ở 120, 100, 80 cột.
 - [x] RAM review repo mẫu (~30 file, ~3.000 dòng đổi) < 2.000.000 byte trên Windows và Linux musl; chạy lại `tests/bench/compare-review-tools.py`, cập nhật ARCHITECTURE §6.2.
@@ -88,7 +89,7 @@ Triển khai và kiểm chứng nội bộ: xem [M1_VERIFICATION.md](M1_VERIFICA
 - [ ] Lưu giữ LF/CRLF, BOM, quyền file; ghi file tạm rồi đổi tên; file bị đổi từ bên ngoài thì hỏi, không ghi đè.
 - [ ] `Enter` ở Review mở editor đúng dòng của hunk; lưu xong diff tự cập nhật.
 - [ ] `Alt-1…7` đổi tab khi đang gõ; `Ctrl-C` trong editor là copy.
-- [ ] Giao diện khớp [ui/2-edit.png](ui/2-edit.png) (code chưa tô màu cú pháp).
+- [ ] Giao diện khớp [ui/2-edit.png](ui/2-edit.png), code tô màu bằng bộ tô màu của M1.
 - [ ] RAM khi sửa file 10.000 dòng < 4.000.000 byte.
 
 ### M3 — Git + Vibe cơ bản (v0.1)
@@ -135,7 +136,7 @@ Triển khai và kiểm chứng nội bộ: xem [M1_VERIFICATION.md](M1_VERIFICA
 
 ### M9 — Mở rộng
 - [ ] Agent riêng của dark đạt mức chất lượng tối thiểu trên bộ eval trước khi bật mặc định; RAM < 6.000.000 byte.
-- [ ] Tô màu cú pháp trong editor và diff; tìm và thay; tab View, Help có nội dung; kho mật khẩu macOS/Linux.
+- [ ] Tìm và thay; tab View, Help có nội dung; kho mật khẩu macOS/Linux.
 
 ## 5. Quy trình cho mỗi milestone
 
