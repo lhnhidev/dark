@@ -1,44 +1,44 @@
- dark  1 Review  2 Edit  3 Vibe  4 Git commit  5 Models  6 View  7 Help   shop-api · ⎇ main ↑0 ↓0 · snapshot 19:55 · so với HEAD
-┌ Changes 31 file · 0/31 đã xem┐┌ src/auth/session.ts  hunk 1/1                                                                                 +50 −50  split┐
-│ ▾ Staged (2)                 ││▌@@ -1,53 +1,53 @@                                                                                                           │
-│▌[x] M session.ts      +50 −50││▌    1− export const value_000 = 'old value 0:0';             │    1+ export const value_000 = 'new value 0:0';              │
-│ [x] M module_01.ts    +50 −50││▌    2− export const value_001 = 'old value 0:1';             │    2+ export const value_001 = 'new value 0:1';              │
-│ ▾ Changes (28)               ││▌    3− export const value_002 = 'old value 0:2';             │    3+ export const value_002 = 'new value 0:2';              │
-│ [ ] M module_02.ts    +50 −50││▌    4− export const value_003 = 'old value 0:3';             │    4+ export const value_003 = 'new value 0:3';              │
-│ [ ] M module_03.ts    +50 −50││▌    5− export const value_004 = 'old value 0:4';             │    5+ export const value_004 = 'new value 0:4';              │
-│ [ ] M module_04.ts    +50 −50││▌    6− export const value_005 = 'old value 0:5';             │    6+ export const value_005 = 'new value 0:5';              │
-│ [ ] M module_05.ts    +50 −50││▌    7− export const value_006 = 'old value 0:6';             │    7+ export const value_006 = 'new value 0:6';              │
-│ [ ] M module_06.ts    +50 −50││▌    8− export const value_007 = 'old value 0:7';             │    8+ export const value_007 = 'new value 0:7';              │
-│ [ ] M module_07.ts    +50 −50││▌    9− export const value_008 = 'old value 0:8';             │    9+ export const value_008 = 'new value 0:8';              │
-│ [ ] M module_08.ts    +50 −50││▌   10− export const value_009 = 'old value 0:9';             │   10+ export const value_009 = 'new value 0:9';              │
-│ [ ] M module_09.ts    +50 −50││▌   11− export const value_010 = 'old value 0:10';            │   11+ export const value_010 = 'new value 0:10';             │
-│ [ ] M module_10.ts    +50 −50││▌   12− export const value_011 = 'old value 0:11';            │   12+ export const value_011 = 'new value 0:11';             │
-│ [ ] M module_11.ts    +50 −50││▌   13− export const value_012 = 'old value 0:12';            │   13+ export const value_012 = 'new value 0:12';             │
-│ [ ] M module_12.ts    +50 −50││▌   14− export const value_013 = 'old value 0:13';            │   14+ export const value_013 = 'new value 0:13';             │
-│ [ ] M module_13.ts    +50 −50││▌   15− export const value_014 = 'old value 0:14';            │   15+ export const value_014 = 'new value 0:14';             │
-│ [ ] M module_14.ts    +50 −50││▌   16− export const value_015 = 'old value 0:15';            │   16+ export const value_015 = 'new value 0:15';             │
-│ [ ] M module_15.ts    +50 −50││▌   17− export const value_016 = 'old value 0:16';            │   17+ export const value_016 = 'new value 0:16';             │
-│ [ ] M module_16.ts    +50 −50││▌   18− export const value_017 = 'old value 0:17';            │   18+ export const value_017 = 'new value 0:17';             │
-│ [ ] M module_17.ts    +50 −50││▌   19− export const value_018 = 'old value 0:18';            │   19+ export const value_018 = 'new value 0:18';             │
-│ [ ] M module_18.ts    +50 −50││▌   20− export const value_019 = 'old value 0:19';            │   20+ export const value_019 = 'new value 0:19';             │
-│ [ ] M module_19.ts    +50 −50││▌   21− export const value_020 = 'old value 0:20';            │   21+ export const value_020 = 'new value 0:20';             │
-│ [ ] M module_20.ts    +50 −50││▌   22− export const value_021 = 'old value 0:21';            │   22+ export const value_021 = 'new value 0:21';             │
-│ [ ] M module_21.ts    +50 −50││▌   23− export const value_022 = 'old value 0:22';            │   23+ export const value_022 = 'new value 0:22';             │
-│ [ ] M module_22.ts    +50 −50││▌   24− export const value_023 = 'old value 0:23';            │   24+ export const value_023 = 'new value 0:23';             │
-│ [ ] M module_23.ts    +50 −50││▌   25− export const value_024 = 'old value 0:24';            │   25+ export const value_024 = 'new value 0:24';             │
-│ [ ] M module_24.ts    +50 −50││▌   26− export const value_025 = 'old value 0:25';            │   26+ export const value_025 = 'new value 0:25';             │
-│ [ ] M module_25.ts    +50 −50││▌   27− export const value_026 = 'old value 0:26';            │   27+ export const value_026 = 'new value 0:26';             │
-│ [ ] M module_26.ts    +50 −50││▌   28− export const value_027 = 'old value 0:27';            │   28+ export const value_027 = 'new value 0:27';             │
-│ [ ] M module_27.ts    +50 −50││▌   29− export const value_028 = 'old value 0:28';            │   29+ export const value_028 = 'new value 0:28';             │
-│ [ ] M module_28.ts    +50 −50││▌   30− export const value_029 = 'old value 0:29';            │   30+ export const value_029 = 'new value 0:29';             │
-│ [ ] M module_29.ts    +50 −50││▌   31− export const value_030 = 'old value 0:30';            │   31+ export const value_030 = 'new value 0:30';             │
-│ ▾ Untracked (1)              ││▌   32− export const value_031 = 'old value 0:31';            │   32+ export const value_031 = 'new value 0:31';             │
-│ [ ] ? notes.md          +0 −0││▌   33− export const value_032 = 'old value 0:32';            │   33+ export const value_032 = 'new value 0:32';             │
-│                              ││▌   34− export const value_033 = 'old value 0:33';            │   34+ export const value_033 = 'new value 0:33';             │
-│                              ││▌   35− export const value_034 = 'old value 0:34';            │   35+ export const value_034 = 'new value 0:34';             │
-│                              ││▌   36− export const value_035 = 'old value 0:35';            │   36+ export const value_035 = 'new value 0:35';             │
-│ Commit message               ││▌   37− export const value_036 = 'old value 0:36';            │   37+ export const value_036 = 'new value 0:36';             │
-│ [ Có ở M3 ]                  ││▌   38− export const value_037 = 'old value 0:37';            │   38+ export const value_037 = 'new value 0:37';             │
-│Space stage · c commit        ││▌   39− export const value_038 = 'old value 0:38';            │   39+ export const value_038 = 'new value 0:38';             │
-└──────────────────────────────┘└─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+ dark  1 Review  2 Edit  3 Vibe  4 Git commit  5 Models  6 View  7 Help                                        shop-api · ⎇ main · snapshot 21:59 · so với HEAD
+ Changes 31 file · 0/31 đã xem │ src/auth/session.ts  hunk 1/1                                                                                  +50 −50  split
+│ ▾ Staged (2)                 │▌@@ -1,53 +1,53 @@
+│▌[x] M session.ts      +50 −50│▌    1 − export const value_000 = 'old value 0:0';             │    1 + export const value_000 = 'new value 0:0';
+│ [x] M module_01.ts    +50 −50│▌    2 − export const value_001 = 'old value 0:1';             │    2 + export const value_001 = 'new value 0:1';
+│ ▾ Changes (28)               │▌    3 − export const value_002 = 'old value 0:2';             │    3 + export const value_002 = 'new value 0:2';
+│ [ ] M module_02.ts    +50 −50│▌    4 − export const value_003 = 'old value 0:3';             │    4 + export const value_003 = 'new value 0:3';
+│ [ ] M module_03.ts    +50 −50│▌    5 − export const value_004 = 'old value 0:4';             │    5 + export const value_004 = 'new value 0:4';
+│ [ ] M module_04.ts    +50 −50│▌    6 − export const value_005 = 'old value 0:5';             │    6 + export const value_005 = 'new value 0:5';
+│ [ ] M module_05.ts    +50 −50│▌    7 − export const value_006 = 'old value 0:6';             │    7 + export const value_006 = 'new value 0:6';
+│ [ ] M module_06.ts    +50 −50│▌    8 − export const value_007 = 'old value 0:7';             │    8 + export const value_007 = 'new value 0:7';
+│ [ ] M module_07.ts    +50 −50│▌    9 − export const value_008 = 'old value 0:8';             │    9 + export const value_008 = 'new value 0:8';
+│ [ ] M module_08.ts    +50 −50│▌   10 − export const value_009 = 'old value 0:9';             │   10 + export const value_009 = 'new value 0:9';
+│ [ ] M module_09.ts    +50 −50│▌   11 − export const value_010 = 'old value 0:10';            │   11 + export const value_010 = 'new value 0:10';
+│ [ ] M module_10.ts    +50 −50│▌   12 − export const value_011 = 'old value 0:11';            │   12 + export const value_011 = 'new value 0:11';
+│ [ ] M module_11.ts    +50 −50│▌   13 − export const value_012 = 'old value 0:12';            │   13 + export const value_012 = 'new value 0:12';
+│ [ ] M module_12.ts    +50 −50│▌   14 − export const value_013 = 'old value 0:13';            │   14 + export const value_013 = 'new value 0:13';
+│ [ ] M module_13.ts    +50 −50│▌   15 − export const value_014 = 'old value 0:14';            │   15 + export const value_014 = 'new value 0:14';
+│ [ ] M module_14.ts    +50 −50│▌   16 − export const value_015 = 'old value 0:15';            │   16 + export const value_015 = 'new value 0:15';
+│ [ ] M module_15.ts    +50 −50│▌   17 − export const value_016 = 'old value 0:16';            │   17 + export const value_016 = 'new value 0:16';
+│ [ ] M module_16.ts    +50 −50│▌   18 − export const value_017 = 'old value 0:17';            │   18 + export const value_017 = 'new value 0:17';
+│ [ ] M module_17.ts    +50 −50│▌   19 − export const value_018 = 'old value 0:18';            │   19 + export const value_018 = 'new value 0:18';
+│ [ ] M module_18.ts    +50 −50│▌   20 − export const value_019 = 'old value 0:19';            │   20 + export const value_019 = 'new value 0:19';
+│ [ ] M module_19.ts    +50 −50│▌   21 − export const value_020 = 'old value 0:20';            │   21 + export const value_020 = 'new value 0:20';
+│ [ ] M module_20.ts    +50 −50│▌   22 − export const value_021 = 'old value 0:21';            │   22 + export const value_021 = 'new value 0:21';
+│ [ ] M module_21.ts    +50 −50│▌   23 − export const value_022 = 'old value 0:22';            │   23 + export const value_022 = 'new value 0:22';
+│ [ ] M module_22.ts    +50 −50│▌   24 − export const value_023 = 'old value 0:23';            │   24 + export const value_023 = 'new value 0:23';
+│ [ ] M module_23.ts    +50 −50│▌   25 − export const value_024 = 'old value 0:24';            │   25 + export const value_024 = 'new value 0:24';
+│ [ ] M module_24.ts    +50 −50│▌   26 − export const value_025 = 'old value 0:25';            │   26 + export const value_025 = 'new value 0:25';
+│ [ ] M module_25.ts    +50 −50│▌   27 − export const value_026 = 'old value 0:26';            │   27 + export const value_026 = 'new value 0:26';
+│ [ ] M module_26.ts    +50 −50│▌   28 − export const value_027 = 'old value 0:27';            │   28 + export const value_027 = 'new value 0:27';
+│ [ ] M module_27.ts    +50 −50│▌   29 − export const value_028 = 'old value 0:28';            │   29 + export const value_028 = 'new value 0:28';
+│ [ ] M module_28.ts    +50 −50│▌   30 − export const value_029 = 'old value 0:29';            │   30 + export const value_029 = 'new value 0:29';
+│ [ ] M module_29.ts    +50 −50│▌   31 − export const value_030 = 'old value 0:30';            │   31 + export const value_030 = 'new value 0:30';
+│ ▾ Untracked (1)              │▌   32 − export const value_031 = 'old value 0:31';            │   32 + export const value_031 = 'new value 0:31';
+│ [ ] ? notes.md               │▌   33 − export const value_032 = 'old value 0:32';            │   33 + export const value_032 = 'new value 0:32';
+│──────────────────────────────│▌   34 − export const value_033 = 'old value 0:33';            │   34 + export const value_033 = 'new value 0:33';
+│ Commit message               │▌   35 − export const value_034 = 'old value 0:34';            │   35 + export const value_034 = 'new value 0:34';
+│ ┌──────────────────────────┐ │▌   36 − export const value_035 = 'old value 0:35';            │   36 + export const value_035 = 'new value 0:35';
+│ │ Có ở M3                  │ │▌   37 − export const value_036 = 'old value 0:36';            │   37 + export const value_036 = 'new value 0:36';
+│ └──────────────────────────┘ │▌   38 − export const value_037 = 'old value 0:37';            │   38 + export const value_037 = 'new value 0:37';
+│ Space stage · c commit       │▌   39 − export const value_038 = 'old value 0:38';            │   39 + export const value_038 = 'new value 0:38';
+└──────────────────────────────┘
  REVIEW  a accept  x reject  l danh sách file  r khung diff  n/N hunk  u hoàn tác  e editor ngoài  q thoát                                   0/31 file đã xem
