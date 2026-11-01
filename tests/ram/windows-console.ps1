@@ -1,9 +1,10 @@
-param([switch]$Helper, [string]$Exe, [string]$Scenario, [string]$Result)
+param([switch]$Helper, [string]$Exe, [string]$Scenario, [string]$Result, [string]$TargetDirectory)
 $ErrorActionPreference = 'Stop'
 if (-not $Helper) {
     $root = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
+    if (-not $TargetDirectory) { $TargetDirectory = Join-Path $root 'target' }
     foreach ($profile in @('debug', 'release')) {
-        $exePath = Join-Path $root "target/$profile/dark.exe"
+        $exePath = Join-Path $TargetDirectory "$profile/dark.exe"
         if (-not (Test-Path -LiteralPath $exePath)) { throw "Build missing: $exePath" }
         foreach ($case in @('q', 'ctrlc', 'panic', 'qhidden', 'panichidden')) {
             $resultPath = Join-Path ([IO.Path]::GetTempPath()) ("dark-console-" + [guid]::NewGuid() + '.txt')

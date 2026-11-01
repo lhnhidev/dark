@@ -1,2 +1,2 @@
-﻿#[path = "ram/idle.rs"]
+#[path = "ram/idle.rs"]
 mod idle;
