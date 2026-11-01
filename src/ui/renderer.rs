@@ -358,7 +358,8 @@ fn make_line(
             panel,
         );
         let status_width = UnicodeWidthStr::width(v.status).min(l.limit.saturating_sub(l.col));
-        let hint_end = l.limit.saturating_sub(status_width);
+        let separator = if status_width > 0 { 2 } else { 0 };
+        let hint_end = l.limit.saturating_sub(status_width + separator);
         if !v.message.is_empty() {
             l.put(v.message, hint_end.saturating_sub(l.col), muted);
         } else {
@@ -388,6 +389,7 @@ fn make_line(
             }
         }
         l.fill(hint_end, panel);
+        l.fill(l.limit.saturating_sub(status_width), panel);
         l.put(v.status, status_width, muted);
         l.fill(l.limit, panel);
         return;
@@ -512,20 +514,22 @@ fn file_line(l: &mut Line<'_>, v: &View<'_>, row: u16, height: u16, width: usize
             .flat_map(|g| g.files)
             .filter(|f| f.viewed)
             .count();
-        l.put(
-            &format!(" Changes {count} file · {viewed}/{count} đã xem"),
-            width,
-            panel,
-        );
+        let full = format!(" Changes {count} file · {viewed}/{count} đã xem");
+        let compact = format!("Changes {count} · {viewed}/{count}");
+        let label = if UnicodeWidthStr::width(full.as_str()) <= width {
+            &full
+        } else {
+            &compact
+        };
+        l.put(label, width, panel);
         l.fill(end, panel);
         return;
     }
     if row >= height.saturating_sub(5) {
         let text = match height - row {
             5 => " Commit message",
-            4 => " ┌────────────────────┐",
-            3 => " │ Có ở M3            │",
-            2 => " Space stage · c commit",
+            4 => " [ Có ở M3 ]",
+            3 => "Space stage · c commit",
             _ => "",
         };
         l.put(text, width, style(t::LINE_NUMBER, t::BACKGROUND));
@@ -587,12 +591,14 @@ fn file_line(l: &mut Line<'_>, v: &View<'_>, row: u16, height: u16, width: usize
                 };
                 l.put(&format!("{} ", file.status), 2, style(fg, s.bg));
                 let count = format!(" +{} −{}", file.added, file.removed);
-                let available = end.saturating_sub(l.col + count.len());
-                l.put(file.path, available, s);
+                let count_width = UnicodeWidthStr::width(count.as_str());
+                let available = end.saturating_sub(l.col + count_width);
+                let label = compact_path(file.path, available);
+                l.put(&label, available, s);
                 if file.viewed {
                     l.put(" ✓", 2, s);
                 }
-                l.fill(end.saturating_sub(count.len()), s);
+                l.fill(end.saturating_sub(count_width), s);
                 l.put(&count, end.saturating_sub(l.col), s);
                 l.fill(end, s);
                 return;
@@ -601,6 +607,29 @@ fn file_line(l: &mut Line<'_>, v: &View<'_>, row: u16, height: u16, width: usize
         }
     }
     l.fill(end, normal);
+}
+fn compact_path(path: &str, available: usize) -> String {
+    if UnicodeWidthStr::width(path) <= available {
+        return path.to_owned();
+    }
+    let basename = path.rsplit(['/', '\\']).next().unwrap_or(path);
+    if UnicodeWidthStr::width(basename) <= available {
+        return basename.to_owned();
+    }
+    if available == 0 {
+        return String::new();
+    }
+    let mut suffix = Vec::new();
+    let mut used = 1;
+    for grapheme in basename.graphemes(true).rev() {
+        let width = UnicodeWidthStr::width(grapheme);
+        if used + width > available {
+            break;
+        }
+        suffix.push(grapheme);
+        used += width;
+    }
+    format!("…{}", suffix.into_iter().rev().collect::<String>())
 }
 fn diff_line(l: &mut Line<'_>, v: &View<'_>, row: u16, width: usize, split: bool) {
     let end = l.col + width;
@@ -779,6 +808,46 @@ mod tests {
         };
         line.put("界\tX", 12, style(t::TEXT, t::BACKGROUND));
         assert_eq!(out, "界  X");
+    }
+    #[test]
+    fn narrow_paths_keep_distinguishing_filename_suffixes() {
+        assert_eq!(compact_path("src/module_02.ts", 7), "…_02.ts");
+        assert_eq!(compact_path("src/module_03.ts", 7), "…_03.ts");
+        assert_eq!(compact_path("src/界e\u{301}.rs", 5), "…e\u{301}.rs");
+    }
+    #[test]
+    fn narrow_header_footer_and_disabled_commit_remain_readable() {
+        let entries = [FileEntry {
+            path: "src/module_02.ts",
+            status: 'M',
+            staged: false,
+            selected: false,
+            viewed: false,
+            added: 50,
+            removed: 50,
+        }];
+        let groups = [FileGroup {
+            name: "Changes",
+            collapsed: false,
+            selected: false,
+            files: &entries,
+        }];
+        let v = View {
+            show_files: true,
+            show_diff: true,
+            groups: &groups,
+            status: "0/1 file đã xem",
+            ..View::default()
+        };
+        let mut r = Renderer::new();
+        r.color = false;
+        let mut output = Vec::new();
+        r.draw_view(&mut output, &v, 80, 24).unwrap();
+        let output = String::from_utf8(output).unwrap();
+        assert!(output.contains("Changes 1 · 0/1"));
+        assert!(output.contains("Có ở M3"));
+        assert!(output.contains("Space stage · c commit"));
+        assert!(output.contains("  0/1 file đã xem"));
     }
     struct FailFlush;
     impl Write for FailFlush {
