@@ -17,13 +17,24 @@ fn main() -> io::Result<()> {
     let mut panic_test = false;
     for arg in std::env::args_os().skip(1) {
         match arg.to_str() {
+            Some("--help" | "-h") => {
+                println!(
+                    "dark {}\n\nUsage: dark [OPTIONS]\n\nOptions:\n  -h, --help       Show this help\n  -V, --version    Show version\n      --debug      Show process memory\n      --self-test  Check navigation and memory without a terminal\n      --self-test-panic  Check terminal cleanup on panic\n\nKeys: 1 Review, 2 Edit, 3 Models, q or Ctrl-C quit",
+                    env!("CARGO_PKG_VERSION")
+                );
+                return Ok(());
+            }
+            Some("--version" | "-V") => {
+                println!("dark {}", env!("CARGO_PKG_VERSION"));
+                return Ok(());
+            }
             Some("--debug") => debug = true,
             Some("--self-test") => self_test = true,
             Some("--self-test-panic") => panic_test = true,
             _ => {
                 return Err(io::Error::new(
                     io::ErrorKind::InvalidInput,
-                    "unknown argument",
+                    format!("unknown argument: {}", arg.to_string_lossy()),
                 ))
             }
         }
