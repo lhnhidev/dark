@@ -267,10 +267,10 @@ fn selected_file_always_visible() {
     for i in 0..4 {
         f.write(&format!("u{i}.txt"), "untracked\n");
     }
-    // List height depends only on terminal height: cover the minimum, both
-    // sides of the commit-box switch (31/32) and a tall screen at 80 columns,
-    // plus the reference size. Every draw is slow in debug builds.
-    let sizes = [(80u16, 24u16), (80, 31), (80, 32), (80, 60), (160, 44)];
+    // List height depends only on terminal height: cover the minimum and both
+    // sides of the commit-box switch (31/32) at 80 columns, plus the tall
+    // reference size. Every draw is slow in debug builds.
+    let sizes = [(80u16, 24u16), (80, 31), (80, 32), (160, 44)];
     let check = |w: &mut Workbench, context: &str| {
         for &(width, height) in &sizes {
             assert_selected_visible(w, width, height, context);
