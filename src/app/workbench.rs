@@ -66,7 +66,14 @@ impl Workbench {
             .as_ref()
             .map(|r| {
                 let (ahead, behind) = r.repo.ahead_behind();
-                format!("{} ↑{ahead} ↓{behind}", r.repo.branch())
+                let mut branch = r.repo.branch().to_string();
+                if ahead > 0 {
+                    branch.push_str(&format!(" ↑{ahead}"));
+                }
+                if behind > 0 {
+                    branch.push_str(&format!(" ↓{behind}"));
+                }
+                branch
             })
             .unwrap_or_default();
         let prompt = review
@@ -668,7 +675,7 @@ impl Workbench {
                 overlay,
                 file_scroll: self
                     .cursor
-                    .saturating_sub(usize::from(height.saturating_sub(12))),
+                    .saturating_sub(crate::ui::layout::file_list_rows(height) - 1),
                 diff_added: file.and_then(|f| f.added).unwrap_or(0) as usize,
                 diff_removed: file.and_then(|f| f.deleted).unwrap_or(0) as usize,
             },

@@ -1,4 +1,7 @@
-use super::{layout::Layout, theme as t};
+use super::{
+    layout::{self, Layout},
+    theme as t,
+};
 use crate::app::Screen;
 use crossterm::{
     cursor::MoveTo,
@@ -272,7 +275,7 @@ impl Line<'_> {
         }
     }
 }
-fn make_line(
+pub(super) fn make_line(
     out: &mut String,
     v: &View<'_>,
     width: u16,
@@ -337,11 +340,11 @@ fn make_line(
             l.put(&format!(" {} ", name), name.len() + 2, s);
         }
         if !layout.short_tabs {
-            l.put(
-                &format!("  {} · ⎇ {} · snapshot {}", v.project, v.branch, v.snapshot),
-                l.limit.saturating_sub(l.col),
-                muted,
-            );
+            let info = format!("{} · ⎇ {} · snapshot {}", v.project, v.branch, v.snapshot);
+            let info_width = UnicodeWidthStr::width(info.as_str());
+            let start = l.limit.saturating_sub(info_width).max(l.col + 2);
+            l.fill(start, panel);
+            l.put(&info, l.limit.saturating_sub(l.col), muted);
         }
         l.fill(l.limit, panel);
         return;
@@ -377,12 +380,15 @@ fn make_line(
             } else {
                 &[("1", "Review"), ("q", "thoát")]
             };
+            let key_style = style(t::TEXT, t::PANEL_ALT);
             for (key, label) in hints {
-                l.put(
-                    key,
-                    hint_end.saturating_sub(l.col),
-                    style(t::TEXT, t::PANEL_ALT),
-                );
+                if let Some((first, second)) = key.split_once('/') {
+                    l.put(first, hint_end.saturating_sub(l.col), key_style);
+                    l.put("/", hint_end.saturating_sub(l.col), muted);
+                    l.put(second, hint_end.saturating_sub(l.col), key_style);
+                } else {
+                    l.put(key, hint_end.saturating_sub(l.col), key_style);
+                }
                 l.put(
                     &format!(" {label}  "),
                     hint_end.saturating_sub(l.col),
@@ -451,99 +457,151 @@ fn make_line(
         l.fill(l.limit, normal);
         return;
     }
+    let both = layout.files > 0 && layout.diff > 0;
+    let rows = (row, height);
     if layout.files > 0 {
-        pane(&mut l, v, row, height, layout.files, true, layout.split);
+        pane(&mut l, v, rows, layout.files, true, (layout.split, both));
     }
     if layout.diff > 0 {
-        pane(&mut l, v, row, height, layout.diff, false, layout.split);
+        pane(&mut l, v, rows, layout.diff, false, (layout.split, both));
+    }
+}
+fn edge(active: bool, glyph: &str) -> (&str, Style) {
+    if active {
+        (glyph, style(t::ACCENT, t::BACKGROUND))
+    } else {
+        (" ", style(t::TEXT, t::BACKGROUND))
     }
 }
 fn pane(
     l: &mut Line<'_>,
     v: &View<'_>,
-    row: u16,
-    height: u16,
+    (row, height): (u16, u16),
     width: usize,
     files: bool,
-    split: bool,
+    (split, both): (bool, bool),
 ) {
-    let active = if files { v.focus_files } else { !v.focus_files };
-    let border = style(if active { t::ACCENT } else { t::BORDER }, t::BACKGROUND);
-    let bottom = row == height - 2;
-    l.put(
-        if bottom {
-            "└"
-        } else if row == 1 {
-            "┌"
-        } else {
-            "│"
-        },
-        1,
-        border,
-    );
-    let end = l.col + width.saturating_sub(2);
-    if bottom {
-        while l.col < end {
-            l.put("─", 1, border);
-        }
-    } else if files {
-        file_line(l, v, row, height, width.saturating_sub(2));
-    } else {
-        diff_line(l, v, row, width.saturating_sub(2), split);
-    }
-    l.put(
-        if bottom {
-            "┘"
-        } else if row == 1 {
-            "┐"
-        } else {
-            "│"
-        },
-        1,
-        border,
-    );
-}
-fn file_line(l: &mut Line<'_>, v: &View<'_>, row: u16, height: u16, width: usize) {
-    let start = l.col;
-    let end = start + width;
+    let active = !both || files == v.focus_files;
     let panel = style(t::TEXT, t::PANEL);
-    let normal = style(t::TEXT, t::BACKGROUND);
+    let start = l.col;
     if row == 1 {
-        let count = v
-            .groups
-            .iter()
-            .flat_map(|g| g.files)
-            .map(|f| f.path)
-            .collect::<std::collections::HashSet<_>>()
-            .len();
-        let viewed = v
-            .groups
-            .iter()
-            .flat_map(|g| g.files)
-            .filter(|f| f.viewed)
-            .map(|f| f.path)
-            .collect::<std::collections::HashSet<_>>()
-            .len();
-        let full = format!(" Changes {count} file · {viewed}/{count} đã xem");
-        let compact = format!("Changes {count} · {viewed}/{count}");
-        let label = if UnicodeWidthStr::width(full.as_str()) <= width {
-            &full
+        if files {
+            let title = width - usize::from(both).min(width);
+            file_title(l, v, title);
+            l.fill(start + title, panel);
+            if both {
+                l.put("│", 1, style(t::BORDER, t::PANEL));
+            }
         } else {
-            &compact
-        };
-        l.put(label, width, panel);
-        l.fill(end, panel);
+            diff_title(l, v, width, split);
+        }
         return;
     }
-    if row >= height.saturating_sub(5) {
-        let text = match height - row {
-            5 => " Commit message",
-            4 => " [ Có ở M3 ]",
-            3 => "Space stage · c commit",
-            _ => "",
+    let bottom = row == height - 2;
+    let own_left = files || !both;
+    if own_left {
+        let (g, s) = edge(active, if bottom { "└" } else { "│" });
+        l.put(g, 1, s);
+    }
+    let content = width.saturating_sub(1 + usize::from(own_left));
+    let end = l.col + content;
+    if bottom {
+        let (g, s) = edge(active, "─");
+        while l.col < end {
+            l.put(g, 1, s);
+        }
+    } else if files {
+        file_line(l, v, row, height, content);
+    } else {
+        diff_line(l, v, row, content, split);
+    }
+    if files && both {
+        // Shared middle column: border of whichever pane is active.
+        let glyph = match (bottom, v.focus_files) {
+            (false, _) => "│",
+            (true, true) => "┘",
+            (true, false) => "└",
         };
-        l.put(text, width, style(t::LINE_NUMBER, t::BACKGROUND));
-        l.fill(end, normal);
+        l.put(glyph, 1, style(t::ACCENT, t::BACKGROUND));
+    } else {
+        let (g, s) = edge(active, if bottom { "┘" } else { "│" });
+        l.put(g, 1, s);
+    }
+}
+fn file_title(l: &mut Line<'_>, v: &View<'_>, width: usize) {
+    let end = l.col + width;
+    let panel = style(t::TEXT, t::PANEL);
+    let muted = style(t::MUTED, t::PANEL);
+    let count = v
+        .groups
+        .iter()
+        .flat_map(|g| g.files)
+        .map(|f| f.path)
+        .collect::<std::collections::HashSet<_>>()
+        .len();
+    let viewed = v
+        .groups
+        .iter()
+        .flat_map(|g| g.files)
+        .filter(|f| f.viewed)
+        .map(|f| f.path)
+        .collect::<std::collections::HashSet<_>>()
+        .len();
+    let full = format!(" {count} file · {viewed}/{count} đã xem");
+    let compact = format!(" {count} · {viewed}/{count}");
+    let rest = if 8 + UnicodeWidthStr::width(full.as_str()) <= width {
+        &full
+    } else {
+        &compact
+    };
+    l.put(" ", 1, panel);
+    l.put("Changes", width.saturating_sub(1), panel);
+    l.put(rest, end.saturating_sub(l.col), muted);
+    l.fill(end, panel);
+}
+fn diff_title(l: &mut Line<'_>, v: &View<'_>, width: usize, split: bool) {
+    let end = l.col + width;
+    let panel = style(t::TEXT, t::PANEL);
+    let muted = style(t::MUTED, t::PANEL);
+    let added = format!("+{}", v.diff_added);
+    let removed = format!("−{}", v.diff_removed);
+    let mode = if split { "split" } else { "unified" };
+    let right = UnicodeWidthStr::width(added.as_str())
+        + UnicodeWidthStr::width(removed.as_str())
+        + mode.len()
+        + 5;
+    let right = right.min(width);
+    let title_end = end - right;
+    l.put(" ", 1, panel);
+    l.put(v.diff_path, title_end.saturating_sub(l.col), panel);
+    if !v.hunk.is_empty() {
+        l.put("  ", 2, panel);
+        l.put(v.hunk, title_end.saturating_sub(l.col), muted);
+    }
+    l.fill(title_end, panel);
+    l.put(" ", 1, panel);
+    l.put(
+        &added,
+        end.saturating_sub(l.col),
+        style(t::FILE_ADDED, t::PANEL),
+    );
+    l.put(" ", 1, panel);
+    l.put(
+        &removed,
+        end.saturating_sub(l.col),
+        style(t::FILE_DELETED, t::PANEL),
+    );
+    l.put("  ", 2, panel);
+    l.put(mode, end.saturating_sub(l.col), muted);
+    l.fill(end, panel);
+}
+fn file_line(l: &mut Line<'_>, v: &View<'_>, row: u16, height: u16, width: usize) {
+    let end = l.col + width;
+    let normal = style(t::TEXT, t::BACKGROUND);
+    let commit = layout::commit_rows(height);
+    let top = height.saturating_sub(2 + commit);
+    if row >= top {
+        commit_line(l, usize::from(row - top), height, width);
         return;
     }
     let mut index = usize::from(row - 2).saturating_add(v.file_scroll);
@@ -579,38 +637,7 @@ fn file_line(l: &mut Line<'_>, v: &View<'_>, row: u16, height: u16, width: usize
         index -= 1;
         if !group.collapsed {
             if let Some(file) = group.files.get(index) {
-                let mut s = style(
-                    t::TEXT,
-                    if file.selected {
-                        t::ACCENT_MUTED
-                    } else {
-                        t::BACKGROUND
-                    },
-                );
-                s.selected = file.selected;
-                l.put(
-                    if file.selected { "▌" } else { " " },
-                    1,
-                    style(t::ACCENT, s.bg),
-                );
-                l.put(if file.staged { "[x] " } else { "[ ] " }, 4, s);
-                let fg = match file.status {
-                    'A' | '?' => t::FILE_ADDED,
-                    'D' => t::FILE_DELETED,
-                    _ => t::FILE_MODIFIED,
-                };
-                l.put(&format!("{} ", file.status), 2, style(fg, s.bg));
-                let count = format!(" +{} −{}", file.added, file.removed);
-                let count_width = UnicodeWidthStr::width(count.as_str());
-                let available = end.saturating_sub(l.col + count_width);
-                let label = compact_path(file.path, available);
-                l.put(&label, available, s);
-                if file.viewed {
-                    l.put(" ✓", 2, s);
-                }
-                l.fill(end.saturating_sub(count_width), s);
-                l.put(&count, end.saturating_sub(l.col), s);
-                l.fill(end, s);
+                file_row(l, file, end);
                 return;
             }
             index = index.saturating_sub(group.files.len());
@@ -618,52 +645,165 @@ fn file_line(l: &mut Line<'_>, v: &View<'_>, row: u16, height: u16, width: usize
     }
     l.fill(end, normal);
 }
-fn compact_path(path: &str, available: usize) -> String {
+fn file_row(l: &mut Line<'_>, file: &FileEntry<'_>, end: usize) {
+    let mut s = style(
+        t::TEXT,
+        if file.selected {
+            t::ACCENT_MUTED
+        } else {
+            t::BACKGROUND
+        },
+    );
+    s.selected = file.selected;
+    l.put(
+        if file.selected { "▌" } else { " " },
+        1,
+        style(t::ACCENT, s.bg),
+    );
+    l.put(if file.staged { "[x] " } else { "[ ] " }, 4, s);
+    let fg = match file.status {
+        'A' | '?' => t::FILE_ADDED,
+        'D' => t::FILE_DELETED,
+        _ => t::FILE_MODIFIED,
+    };
+    l.put(&format!("{} ", file.status), 2, style(fg, s.bg));
+    let added = (file.added > 0).then(|| format!("+{}", file.added));
+    let removed = (file.removed > 0).then(|| format!("−{}", file.removed));
+    let parts = usize::from(added.is_some()) + usize::from(removed.is_some());
+    let counts_width = added.as_ref().map_or(0, |a| a.len())
+        + removed
+            .as_ref()
+            .map_or(0, |r| UnicodeWidthStr::width(r.as_str()))
+        + parts.saturating_sub(1);
+    // Reserve one gap before the counts and one margin after them.
+    let reserved = if counts_width > 0 {
+        counts_width + 2
+    } else {
+        0
+    };
+    let check = if file.viewed { 2 } else { 0 };
+    let available = end.saturating_sub(l.col + reserved + check);
+    let label = compact_path(file.path, available);
+    let split = label.rfind(['/', '\\']).map_or(0, |i| i + 1);
+    l.put(&label[..split], available, style(t::LINE_NUMBER, s.bg));
+    l.put(&label[split..], end.saturating_sub(l.col), s);
+    if file.viewed {
+        l.put(" ✓", 2, s);
+    }
+    if counts_width > 0 {
+        l.fill(end.saturating_sub(counts_width + 1), s);
+        if let Some(a) = &added {
+            l.put(a, end.saturating_sub(l.col), style(t::FILE_ADDED, s.bg));
+        }
+        if let Some(r) = &removed {
+            if added.is_some() {
+                l.put(" ", 1, s);
+            }
+            l.put(r, end.saturating_sub(l.col), style(t::FILE_DELETED, s.bg));
+        }
+    }
+    l.fill(end, s);
+}
+fn commit_line(l: &mut Line<'_>, k: usize, height: u16, width: usize) {
+    let end = l.col + width;
+    let dim = style(t::LINE_NUMBER, t::BACKGROUND);
+    let line = style(t::BORDER, t::BACKGROUND);
+    let tall = height >= layout::TALL_COMMIT_HEIGHT;
+    let hint = if tall { 5 } else { 3 };
+    if k == 0 {
+        l.put(&"─".repeat(width), width, line);
+    } else if k == 1 {
+        l.put(" Commit message", width, dim);
+    } else if k == hint {
+        let text = if width > 22 {
+            " Space stage · c commit"
+        } else {
+            "Space stage · c commit"
+        };
+        l.put(text, width, dim);
+    } else if !tall {
+        l.put(" [ Có ở M3 ]", width, dim);
+    } else {
+        let inner = width.saturating_sub(4);
+        l.put(" ", 1, dim);
+        match k {
+            2 => l.put(&format!("┌{}┐", "─".repeat(inner)), inner + 2, line),
+            3 => {
+                l.put("│", 1, line);
+                l.put(" Có ở M3", inner, dim);
+                l.fill(end.saturating_sub(2), dim);
+                l.put("│", 1, line);
+            }
+            _ => l.put(&format!("└{}┘", "─".repeat(inner)), inner + 2, line),
+        }
+    }
+    l.fill(end, style(t::TEXT, t::BACKGROUND));
+}
+const ELLIPSIS: &str = "…";
+pub(super) fn compact_path(path: &str, available: usize) -> String {
     if UnicodeWidthStr::width(path) <= available {
         return path.to_owned();
     }
-    let basename = path.rsplit(['/', '\\']).next().unwrap_or(path);
-    if UnicodeWidthStr::width(basename) <= available {
-        return basename.to_owned();
-    }
-    if available == 0 {
-        return String::new();
-    }
-    let mut suffix = Vec::new();
-    let mut used = 1;
-    for grapheme in basename.graphemes(true).rev() {
-        let width = UnicodeWidthStr::width(grapheme);
-        if used + width > available {
-            break;
+    let split = path.rfind(['/', '\\']).map_or(0, |i| i + 1);
+    let (dir, base) = path.split_at(split);
+    let base_width = UnicodeWidthStr::width(base);
+    if base_width > available {
+        if available == 0 {
+            return String::new();
         }
-        suffix.push(grapheme);
-        used += width;
+        let budget = available - 1;
+        let head_budget = budget / 3;
+        let mut head = String::new();
+        let mut used = 0;
+        for g in base.graphemes(true) {
+            let w = UnicodeWidthStr::width(g);
+            if used + w > head_budget {
+                break;
+            }
+            head.push_str(g);
+            used += w;
+        }
+        let mut tail = Vec::new();
+        let mut tail_used = 0;
+        for g in base.graphemes(true).rev() {
+            let w = UnicodeWidthStr::width(g);
+            if used + tail_used + w > budget {
+                break;
+            }
+            tail.push(g);
+            tail_used += w;
+        }
+        let tail: String = tail.into_iter().rev().collect();
+        return format!("{head}{ELLIPSIS}{tail}");
     }
-    format!("…{}", suffix.into_iter().rev().collect::<String>())
+    // Keep whole trailing directory components behind a `…/` prefix.
+    let components = dir.split(['/', '\\']).filter(|p| !p.is_empty()).count();
+    for keep in (1..components).rev() {
+        let mut tail_start = None;
+        let mut seen = 0;
+        for (i, c) in dir.char_indices().rev() {
+            if (c == '/' || c == '\\') && i + 1 != dir.len() {
+                seen += 1;
+                if seen == keep {
+                    tail_start = Some(i + 1);
+                    break;
+                }
+            }
+        }
+        let Some(tail_start) = tail_start else {
+            continue;
+        };
+        let candidate = format!("{ELLIPSIS}/{}{base}", &dir[tail_start..]);
+        if UnicodeWidthStr::width(candidate.as_str()) <= available {
+            return candidate;
+        }
+    }
+    base.to_owned()
 }
 fn diff_line(l: &mut Line<'_>, v: &View<'_>, row: u16, width: usize, split: bool) {
     let end = l.col + width;
     let bg = style(t::TEXT, t::BACKGROUND);
     let panel = style(t::TEXT, t::PANEL);
-    if row == 1 {
-        let details = format!(
-            " +{} −{}  {}",
-            v.diff_added,
-            v.diff_removed,
-            if split { "split" } else { "unified" }
-        );
-        let details_width = UnicodeWidthStr::width(details.as_str()).min(width);
-        let title_end = end.saturating_sub(details_width);
-        l.put(
-            &format!(" {}  {}", v.diff_path, v.hunk),
-            title_end.saturating_sub(l.col),
-            panel,
-        );
-        l.fill(title_end, panel);
-        l.put(&details, details_width, panel);
-        l.fill(end, panel);
-        return;
-    }
     let index = usize::from(row - 2);
     if let Some(d) = v.lines.get(index) {
         if let Some(header) = d.header {
@@ -709,6 +849,7 @@ fn cell(l: &mut Line<'_>, cell: Option<&DiffCell<'_>>, width: usize) {
         .number
         .map_or_else(|| "     ".to_string(), |n| format!("{n:>5}"));
     l.put(&n, 5, style(t::LINE_NUMBER, bg));
+    l.put(" ", 1, style(t::TEXT, bg));
     l.put(sign, 1, style(fg, bg));
     l.put(" ", 1, style(t::TEXT, bg));
     let mut offset = 0;
@@ -821,9 +962,38 @@ mod tests {
     }
     #[test]
     fn narrow_paths_keep_distinguishing_filename_suffixes() {
-        assert_eq!(compact_path("src/module_02.ts", 7), "…_02.ts");
-        assert_eq!(compact_path("src/module_03.ts", 7), "…_03.ts");
+        assert_eq!(compact_path("src/module_02.ts", 7), "mo…2.ts");
+        assert_eq!(compact_path("src/module_03.ts", 7), "mo…3.ts");
         assert_eq!(compact_path("src/界e\u{301}.rs", 5), "…e\u{301}.rs");
+    }
+    #[test]
+    fn directory_shrinks_from_left_then_disappears() {
+        let p = "src/auth/session.ts";
+        assert_eq!(compact_path(p, 19), p);
+        assert_eq!(compact_path(p, 17), "…/auth/session.ts");
+        assert_eq!(compact_path(p, 16), "session.ts");
+        assert_eq!(compact_path("a/b/c/d.rs", 9), "…/c/d.rs");
+    }
+    #[test]
+    fn active_pane_border_moves_without_shifting_content() {
+        let mut v = View {
+            show_files: true,
+            show_diff: true,
+            focus_files: true,
+            ..View::default()
+        };
+        let mut a = String::new();
+        let mut b = String::new();
+        make_line(&mut a, &v, 100, 24, 3, (false, false, 8));
+        v.focus_files = false;
+        make_line(&mut b, &v, 100, 24, 3, (false, false, 8));
+        assert_eq!(a.chars().count(), b.chars().count());
+        assert!(a.starts_with('│') && !b.starts_with('│'));
+        assert_eq!(a.matches('│').count(), 2);
+        assert_eq!(b.matches('│').count(), 2);
+        let mut bottom = String::new();
+        make_line(&mut bottom, &v, 100, 24, 22, (false, false, 8));
+        assert!(bottom.contains('└') && bottom.contains('┘'));
     }
     #[test]
     fn narrow_header_footer_and_disabled_commit_remain_readable() {
@@ -937,10 +1107,10 @@ mod tests {
         r.draw_view(&mut output, &view, 100, 24).unwrap();
         output.clear();
         let mut before = String::new();
-        make_line(&mut before, &view, 100, 24, 1, (true, true, 8));
+        make_line(&mut before, &view, 100, 24, 3, (true, true, 8));
         view.focus_files = true;
         let mut after = String::new();
-        make_line(&mut after, &view, 100, 24, 1, (true, true, 8));
+        make_line(&mut after, &view, 100, 24, 3, (true, true, 8));
         assert_ne!(before, after);
         r.draw_view(&mut output, &view, 100, 24).unwrap();
         let output = String::from_utf8(output).unwrap();
