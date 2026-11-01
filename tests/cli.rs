@@ -55,5 +55,9 @@ fn rejects_unknown_argument_instead_of_opening_the_terminal() {
     assert!(!output.status.success());
     assert!(output.stdout.is_empty());
     assert!(!output.stderr.contains(&0x1b));
-    assert!(String::from_utf8_lossy(&output.stderr).contains("--not-a-dark-option"));
+    let error = std::str::from_utf8(&output.stderr).expect("error is not UTF-8");
+    assert_eq!(error.lines().count(), 1, "expected one-line error: {error}");
+    assert!(error.starts_with("dark: unknown argument:"), "{error}");
+    assert!(error.contains("--not-a-dark-option"), "{error}");
+    assert!(error.contains("Try --help."), "{error}");
 }

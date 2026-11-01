@@ -11,7 +11,17 @@ use std::{
 };
 use ui::{Renderer, TerminalSession};
 
-fn main() -> io::Result<()> {
+fn main() -> std::process::ExitCode {
+    match run() {
+        Ok(()) => std::process::ExitCode::SUCCESS,
+        Err(error) => {
+            eprintln!("dark: {error}");
+            std::process::ExitCode::FAILURE
+        }
+    }
+}
+
+fn run() -> io::Result<()> {
     let mut debug = false;
     let mut self_test = false;
     let mut panic_test = false;
@@ -34,7 +44,7 @@ fn main() -> io::Result<()> {
             _ => {
                 return Err(io::Error::new(
                     io::ErrorKind::InvalidInput,
-                    format!("unknown argument: {}", arg.to_string_lossy()),
+                    format!("unknown argument: {}. Try --help.", arg.to_string_lossy()),
                 ))
             }
         }
