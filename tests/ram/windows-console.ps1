@@ -81,6 +81,7 @@ public static class ConsoleProbe {
  static void RestoreSize(SCREENINFO info) { var h=Open("CONOUT$"); try { MarkHeader(); Check(SetConsoleScreenBufferSize(h,info.size),"restore console buffer"); var window=info.window; Check(SetConsoleWindowInfo(h,true,ref window),"restore console window"); } finally { CloseHandle(h); } }
  static void WaitScreen(Process p,string text,ref ulong peak,bool body=false) { var until=DateTime.UtcNow.AddSeconds(30); while(DateTime.UtcNow<until) { if(p.HasExited) throw new Exception("process exited with code "+p.ExitCode+" before screen "+text+"; got: "+Content()); peak=Math.Max(peak,Memory(p)); if((body?Body():Content()).Contains(text)) return; Thread.Sleep(20); } throw new Exception("screen not seen: "+text+"; got: "+(body?Body():Content())); }
  static void WaitResize(Process p,ref ulong peak) { var until=DateTime.UtcNow.AddSeconds(30); while(DateTime.UtcNow<until) { if(p.HasExited) throw new Exception("process exited during resize"); peak=Math.Max(peak,Memory(p)); if(!Screen().Contains("RESIZE TEST")) return; Thread.Sleep(20); } throw new Exception("resize did not redraw header"); }
+ static void WaitStatus(Process p,string text,ref ulong peak) { var until=DateTime.UtcNow.AddSeconds(30); while(DateTime.UtcNow<until) { if(p.HasExited) throw new Exception("process exited before status "+text); peak=Math.Max(peak,Memory(p)); if(Status().Contains(text)) return; Thread.Sleep(20); } throw new Exception("status not seen: "+text+"; got: "+Status()); }
  public static string Run(string exe,string scenario,bool release,string fixture) {
   // The child inherits this test-only setting; avoid interactive Windows error dialogs.
   SetErrorMode(0x0001u | 0x0002u | 0x8000u);
@@ -95,8 +96,9 @@ public static class ConsoleProbe {
   Process p=null; try {
    bool panic=scenario.StartsWith("panic"); var start=new ProcessStartInfo(exe,panic?"--self-test-panic":scenario=="ctrlc"?"--debug":""); start.UseShellExecute=false; start.WorkingDirectory=fixture; p=Process.Start(start); ulong peak=0,idle=0; int threads=0;
    WaitScreen(p,"Changes",ref peak);
+   WaitScreen(p,"sample.txt",ref peak);
    uint modeRunning; Check(GetConsoleMode(input,out modeRunning),"running input mode"); if((modeRunning & 8u)==0) throw new Exception("ENABLE_WINDOW_INPUT not enabled while running");
-   if(scenario=="ctrlc" && !Status().Contains("Memory (private_working_set):")) throw new Exception("debug memory status missing: "+Status());
+   if(scenario=="ctrlc") WaitStatus(p,"Memory (private_working_set):",ref peak);
    if(!panic) {
     foreach(var item in new[]{Tuple.Create('2',"Edit"),Tuple.Create('3',"Vibe"),Tuple.Create('5',"Models")}) { Key(input,item.Item1,false); WaitScreen(p,item.Item2,ref peak,true); }
     Key(input,'1',false); WaitScreen(p,"Changes",ref peak);
