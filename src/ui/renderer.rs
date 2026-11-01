@@ -265,10 +265,10 @@ impl<'a> Line<'a> {
     fn set_color(&mut self, code: u8, rgb: (u8, u8, u8)) {
         match t::color(rgb, self.truecolor) {
             Color::Rgb { r, g, b } => {
-                let _ = write!(self.out, "[{code};2;{r};{g};{b}m");
+                let _ = write!(self.out, "\x1b[{code};2;{r};{g};{b}m");
             }
             Color::AnsiValue(index) => {
-                let _ = write!(self.out, "[{code};5;{index}m");
+                let _ = write!(self.out, "\x1b[{code};5;{index}m");
             }
             _ => unreachable!("theme emits RGB or indexed colors"),
         }
@@ -310,7 +310,7 @@ impl<'a> Line<'a> {
             if self.col >= end {
                 break;
             }
-            if g == "	" {
+            if g == "\t" {
                 let n = (self.tab_width - self.col % self.tab_width).min(end - self.col);
                 for _ in 0..n {
                     self.out.push(' ');
@@ -1271,7 +1271,7 @@ mod tests {
             true,
         );
         assert!(
-            line.contains("[48;2;18;37;29m") && line.contains("[38;2;255;123;114mlet"),
+            line.contains("\x1b[48;2;18;37;29m") && line.contains("\x1b[38;2;255;123;114mlet"),
             "{line:?}"
         );
     }
@@ -1292,10 +1292,10 @@ mod tests {
             true,
         );
         assert!(
-            line.contains("[38;2;255;123;114m[48;2;22;57;35mlet"),
+            line.contains("\x1b[38;2;255;123;114m\x1b[48;2;22;57;35mlet"),
             "{line:?}"
         );
-        assert!(line.contains("[48;2;18;37;29m"), "{line:?}");
+        assert!(line.contains("\x1b[48;2;18;37;29m"), "{line:?}");
     }
 
     #[test]
@@ -1322,7 +1322,7 @@ mod tests {
         let (mut fgs, mut bgs) = (0, 0);
         let mut chars = raw.chars();
         while let Some(c) = chars.next() {
-            if c != '' {
+            if c != '\x1b' {
                 continue;
             }
             chars.next();
@@ -1367,8 +1367,8 @@ mod tests {
         assert_eq!(out.matches("38;2;").count(), 2, "{out:?}");
         assert_eq!(out.matches("48;2;").count(), 1, "{out:?}");
         assert!(out.contains("abcd"), "{out:?}");
-        assert!(out.ends_with("[0m"), "{out:?}");
-        assert_eq!(out.matches("[0m").count(), 1, "{out:?}");
+        assert!(out.ends_with("\x1b[0m"), "{out:?}");
+        assert_eq!(out.matches("\x1b[0m").count(), 1, "{out:?}");
     }
 
     #[test]
@@ -1454,7 +1454,7 @@ mod tests {
         let mut out = Vec::new();
         r.draw_view(&mut out, &view, 160, 44).unwrap();
         let raw = String::from_utf8(out).unwrap();
-        let sgr = raw.matches("[38;").count();
+        let sgr = raw.matches("\x1b[38;").count();
         (raw.len(), sgr)
     }
 
