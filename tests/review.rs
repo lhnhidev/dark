@@ -58,6 +58,23 @@ impl Drop for Fixture {
 }
 
 #[test]
+fn hunk_header_keeps_git_function_context() {
+    let f = Fixture::new();
+    let initial = fs::read_to_string(f.0.join("file.txt")).unwrap();
+    fs::write(
+        f.0.join("file.txt"),
+        initial.replace("fifteen\n", "changed\n"),
+    )
+    .unwrap();
+    let r = f.open();
+    let diff = r.diff(Path::new("file.txt")).unwrap();
+    assert_eq!(diff.hunks.len(), 1);
+    let header = &diff.hunks[0].header;
+    assert!(header.starts_with("@@ -"), "{header}");
+    assert!(header.ends_with("@@ eleven"), "{header}");
+}
+
+#[test]
 fn raw_snapshot_undo_preserves_index_branch_and_unrelated_files() {
     let f = Fixture::new();
     fs::write(f.0.join("file.txt"), b"startup\r\nbytes\r\n").unwrap();
