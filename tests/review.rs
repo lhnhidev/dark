@@ -112,6 +112,50 @@ fn reject_is_atomic_stale_safe_and_preserves_staged_disjoint_changes() {
 }
 
 #[test]
+fn copied_index_preserves_racy_clean_detection_for_same_size_edits() {
+    let f = Fixture::new();
+    f.git(&["config", "core.trustctime", "false"]);
+    f.git(&["config", "core.checkStat", "minimal"]);
+    let path = f.0.join("file.txt");
+    let initial = fs::read_to_string(&path).unwrap();
+    let staged = initial.replace("one\n", "staged\n");
+    fs::write(&path, &staged).unwrap();
+    fs::File::options()
+        .write(true)
+        .open(&path)
+        .unwrap()
+        .set_times(
+            fs::FileTimes::new()
+                .set_modified(std::time::SystemTime::now() - std::time::Duration::from_secs(5)),
+        )
+        .unwrap();
+    let timestamp = fs::metadata(&path).unwrap().modified().unwrap();
+    f.git(&["add", "file.txt"]);
+    fs::File::options()
+        .write(true)
+        .open(f.0.join(".git/index"))
+        .unwrap()
+        .set_times(fs::FileTimes::new().set_modified(timestamp))
+        .unwrap();
+    fs::write(&path, staged.replace("fifteen\n", "working\n")).unwrap();
+    fs::File::options()
+        .write(true)
+        .open(&path)
+        .unwrap()
+        .set_times(fs::FileTimes::new().set_modified(timestamp))
+        .unwrap();
+    let mut r = f.open();
+    let diff = r.diff(Path::new("file.txt")).unwrap();
+    assert_eq!(
+        diff.hunks.len(),
+        2,
+        "Same-size working edits must not disappear when copying the index"
+    );
+    r.reject(Path::new("file.txt"), &diff, 1).unwrap();
+    assert_eq!(fs::read_to_string(path).unwrap(), staged);
+}
+
+#[test]
 fn untracked_unicode_and_spaces_can_be_reviewed_and_rejected() {
     let f = Fixture::new();
     let path = Path::new("new 日本 file.txt");
@@ -190,6 +234,19 @@ fn large_diff_reports_read_only_without_mutating_files() {
         .to_string()
         .contains("external editor"));
     assert_eq!(fs::read(f.0.join("file.txt")).unwrap(), content);
+}
+
+#[test]
+fn non_utf8_changes_are_explicitly_read_only_and_unchanged() {
+    let f = Fixture::new();
+    let bytes = b"not utf8: \xff\xfe\n";
+    fs::write(f.0.join("file.txt"), bytes).unwrap();
+    let mut r = f.open();
+    let diff = r.diff(Path::new("file.txt")).unwrap();
+    assert!(diff.binary);
+    assert!(diff.hunks.is_empty());
+    assert!(r.reject(Path::new("file.txt"), &diff, 0).is_err());
+    assert_eq!(fs::read(f.0.join("file.txt")).unwrap(), bytes);
 }
 
 #[test]

@@ -439,6 +439,12 @@ impl Review {
             }
         }
         self.repo.clear_output();
+        if std::str::from_utf8(&patch).is_err() {
+            return Ok(FileDiff {
+                binary: true,
+                ..FileDiff::default()
+            });
+        }
         Ok(parse_diff(patch))
     }
 

@@ -118,7 +118,15 @@ impl Repo {
             let private = directory.join("read-index");
             crate::proc::reject_link(&private)?;
             if self.index_path.exists() {
+                let modified = fs::metadata(&self.index_path)?.modified()?;
                 fs::copy(&self.index_path, &private)?;
+                // Git compares entry timestamps with the index file's own mtime
+                // to detect same-size edits made within one filesystem tick.
+                // A fresh copy timestamp would incorrectly mark those entries clean.
+                File::options()
+                    .write(true)
+                    .open(&private)?
+                    .set_times(fs::FileTimes::new().set_modified(modified))?;
             } else if private.exists() {
                 fs::remove_file(&private)?;
             }
