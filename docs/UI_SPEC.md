@@ -1,6 +1,6 @@
 # dark — Đặc tả giao diện
 
-> Phiên bản: 1.0 · Cập nhật: 01/11/2026
+> Phiên bản: 1.1 · Cập nhật: 01/11/2026
 > Liên quan: [FEATURES.md](FEATURES.md) · [PLANNING.md](PLANNING.md) · [ARCHITECTURE.md](ARCHITECTURE.md)
 
 Tài liệu này là **chuẩn bắt buộc** cho giao diện của dark. Ảnh trong [`docs/ui/`](ui/) là đích nhìn; khi ảnh và văn bản khác nhau, **văn bản thắng** (ảnh được vẽ bằng HTML nên khoảng cách pixel chỉ mang tính minh họa). Mọi thay đổi giao diện phải cập nhật tài liệu này trước.
@@ -70,19 +70,21 @@ Màu cú pháp (chỉ dùng từ M9, theo GitHub Dark Default): từ khóa `#ff7
 - Trái: chữ `dark` màu `accent`, đậm.
 - Mỗi tab: ` N Nhãn ` với `N` màu `line_number`, nhãn màu `muted`.
 - **Tab đang chọn:** nền `accent_muted`, nhãn `text` đậm, `N` màu `file_modified`.
-- Phải: `tên-project · ⎇ nhánh ↑trước ↓sau · snapshot HH:MM`, màu `muted`; thông tin này bị cắt trước tiên khi thiếu chỗ.
+- Phải: `tên-project · ⎇ nhánh ↑trước ↓sau · snapshot HH:MM`, màu `muted`, căn sát phải; `↑N`/`↓N` chỉ hiện khi khác 0. Thông tin này bị cắt trước tiên khi thiếu chỗ.
 - Đổi tab: phím `1`…`7`; khi đang gõ chữ (editor, ô nhập) dùng `Alt-1`…`Alt-7`.
 
 ### 3.2 Thanh trạng thái (dòng cuối)
 - Nền `panel`. Trái: tên chế độ viết hoa (`REVIEW`, `EDIT`, `VIBE`, `GIT`, `MODELS`, `VIEW`, `HELP`) màu `text`.
-- Gợi ý phím: phím trong ô nền `panel_alt` chữ `text`, nhãn màu `muted`, cách nhau 2 cột.
+- Gợi ý phím: phím trong ô nền `panel_alt` chữ `text`, nhãn màu `muted`, cách nhau 2 cột. Cặp phím như `n/N` vẽ thành hai ô `n` và `N`, giữa là `/` màu `muted`.
 - Phải: thông tin ngữ cảnh màu `muted` (tiến độ review, vị trí con trỏ...).
 - `--debug`: thêm RAM của dark ở cuối bên phải.
 
 ### 3.3 Khung (pane)
-- Tiêu đề khung: một dòng nền `panel`, tiêu đề màu `text`, thông tin phụ màu `muted`.
-- Phân cách giữa hai khung: ký tự `│` màu `border`.
-- **Khung đang active** (đang nhận phím): viền bao quanh màu `accent`. Khung không active: viền `border` hoặc chỉ có đường phân cách. Đổi khung active: `Tab` / `Shift-Tab`.
+- Tiêu đề khung: một dòng riêng nền `panel` (không nằm trên đường viền), tiêu đề màu `text`, thông tin phụ màu `muted`.
+- Dưới dòng tiêu đề, mỗi khung luôn **giữ chỗ** cho viền: 1 cột trái, 1 cột phải, 1 dòng đáy. Hai khung cạnh nhau dùng chung một cột ở giữa.
+- **Khung đang active** (đang nhận phím): vẽ viền `│ └ ─ ┘` màu `accent` vào các ô giữ chỗ. **Khung không active không có viền**: các ô giữ chỗ để trống nền `background`. Nhờ giữ chỗ, đổi khung active không làm nội dung xê dịch. Đổi khung active: `Tab` / `Shift-Tab`.
+- Phân cách giữa hai khung: cột chung ở giữa. Ở dòng tiêu đề là `│` màu `border` trên nền `panel`; bên dưới là viền của khung active nên mang màu `accent`.
+- Khi chỉ hiện một khung, khung đó luôn coi là active. Khi `NO_COLOR`, có/không có viền cho biết khung nào active.
 - **Dòng đang chọn** trong danh sách: nền `accent_muted`, cột đầu tiên là `▌` màu `accent`.
 
 ### 3.4 Kích thước tối thiểu và màn hẹp
@@ -100,20 +102,21 @@ Màu cú pháp (chỉ dùng từ M9, theo GitHub Dark Default): từ khóa `#ff7
 
 ### 4.1 Panel trái: danh sách thay đổi (kiểu git panel của Zed)
 - `l` ẩn/hiện. Khi ẩn, khung diff chiếm toàn bộ chiều ngang.
-- Tiêu đề: `Changes` + `N file · X/N đã xem`.
-- Ba nhóm, mỗi nhóm thu/mở được (`▾`/`▸`): **Staged (n)**, **Changes (n)**, **Untracked (n)**.
-- Mỗi dòng file: `[x]`/`[ ]` (đã stage hay chưa) · chữ trạng thái có màu (`M` `file_modified`, `A` `file_added`, `D` `file_deleted`, `?` `file_added`, `R` `file_modified`) · thư mục màu `line_number` + tên file màu `text` · bên phải `+N` (`file_added`) và `−N` (`file_deleted`).
+- Tiêu đề: `Changes` (`text`) + `N file · X/N đã xem` (`muted`).
+- Ba nhóm, mỗi nhóm thu/mở được (`▾`/`▸`): **Staged (n)**, **Changes (n)**, **Untracked (n)**. Giữa các nhóm không có dòng trống (ảnh có dòng trống; bỏ để dành chỗ cho danh sách ở màn thấp).
+- Mỗi dòng file: `[x]`/`[ ]` (đã stage hay chưa) · chữ trạng thái có màu (`M` `file_modified`, `A` `file_added`, `D` `file_deleted`, `?` `file_added`, `R` `file_modified`) · thư mục màu `line_number` + tên file màu `text` (ví dụ `auth/` + `session.ts`) · bên phải `+N` (`file_added`) và `−N` (`file_deleted`); phần bằng 0 không hiện, cả hai bằng 0 thì không hiện số.
+- Thiếu chỗ: rút gọn thư mục từ bên trái (`…/auth/`), rồi bỏ hẳn thư mục; **luôn giữ tên file**. Chỉ khi riêng tên file cũng không vừa mới cắt giữa, giữ khoảng 1/3 đầu và 2/3 cuối (ví dụ `mo…2.ts`), để phần đuôi phân biệt và đuôi mở rộng còn thấy.
 - File đã xem hết các hunk: thêm `✓` sau tên (M1); file đang mở: kiểu dòng đang chọn.
 - Dưới cùng: nhãn `Commit message` (`muted`), ô nhập một dòng (nền `background`, viền `border`, viền `accent` khi đang gõ), gợi ý `Space stage · c commit`.
 - Phím: `↑`/`↓` hoặc `j`/`k` chọn file · `Enter` mở diff · `Space` stage/unstage file · `s` stage tất cả · `c` tới ô commit message, `Enter` trong ô để commit · `d` bỏ toàn bộ thay đổi của file (**có hỏi xác nhận**).
 
-**Trong M1:** vùng commit giữ nguyên vị trí nhưng vô hiệu hóa, có nhãn `Có ở M3`, dùng `line_number`. Các phím stage/commit/bỏ cả file chỉ báo chưa có ở M1, không thay đổi index. File có cả staged và unstaged có thể hiện trong hai nhóm nhưng tổng file và tiến độ chỉ đếm một lần.
+**Trong M1:** vùng commit giữ nguyên vị trí nhưng vô hiệu hóa: đường kẻ `─` màu `border` ngăn với danh sách; nhãn, ô nhập (chữ `Có ở M3`) và dòng gợi ý đều màu `line_number`; gợi ý không có ô phím `panel_alt` để không trông như đang dùng được. Màn cao từ 32 dòng: ô nhập có viền 3 dòng như ảnh; thấp hơn: ô gọn 1 dòng `[ Có ở M3 ]` để giữ chỗ cho danh sách file. Các phím stage/commit/bỏ cả file chỉ báo chưa có ở M1, không thay đổi index. File có cả staged và unstaged có thể hiện trong hai nhóm nhưng tổng file và tiến độ chỉ đếm một lần.
 
 ### 4.2 Khung phải: diff (80%)
 - `r` ẩn/hiện. Hai khung đều ẩn: hiện dòng giữa màn hình "Ấn l hoặc r để hiện lại".
-- Tiêu đề: đường dẫn file (`text`) · `hunk i/n` · bên phải `+N −N` · chế độ `split`/`unified`.
+- Tiêu đề: đường dẫn file (`text`) · `hunk i/n` (`muted`) · bên phải `+N` (`file_added`) `−N` (`file_deleted`) · chế độ `split`/`unified` (`muted`).
 - **Dòng tiêu đề hunk:** nền `panel`, chữ `muted`: `@@ -a,b +c,d @@ ngữ cảnh`.
-- **Diff 2 cột** (cũ trái, mới phải), giữa là `│` màu `border`. Mỗi cột: số dòng (5 cột, căn phải, `line_number`) · dấu (2 cột) · nội dung.
+- **Diff 2 cột** (cũ trái, mới phải), giữa là `│` màu `border`. Mỗi cột: số dòng (5 cột, căn phải, `line_number`) · 1 khoảng trắng · dấu (1 cột) · 1 khoảng trắng · nội dung, ví dụ `   41 − const raw`.
 
 | Loại dòng | Nền | Dấu |
 |---|---|---|
