@@ -9,6 +9,9 @@ use crossterm::{
     terminal::{Clear, ClearType},
 };
 
+use unicode_segmentation::UnicodeSegmentation;
+use unicode_width::UnicodeWidthStr;
+
 use crate::app::Screen;
 
 pub struct Renderer {
@@ -80,27 +83,48 @@ fn line_hash(line: &str, width: u16) -> u64 {
 
 fn make_line(line: &mut String, row: u16, height: u16, width: u16, screen: Screen, status: &str) {
     line.clear();
+    let available = usize::from(width.saturating_sub(1));
     if row == 0 {
         let header = match screen {
             Screen::Review => "[1 Review]  2 Edit  3 Models  q Quit",
             Screen::Edit => "1 Review  [2 Edit]  3 Models  q Quit",
             Screen::Models => "1 Review  2 Edit  [3 Models]  q Quit",
         };
-        line.push_str(header);
+        clip_into(line, header, available);
     } else if row == 2 {
-        line.push_str(screen.title());
-        line.push_str(" - Coming soon");
+        let used = clip_into(line, screen.title(), available);
+        clip_into(line, " - Coming soon", available.saturating_sub(used));
     } else if height > 3 && row == height - 1 {
-        // Avoid control sequences and multi-column characters in terminal output.
-        line.extend(status.chars().map(|c| {
-            if c.is_ascii_graphic() || c == ' ' {
-                c
-            } else {
-                ' '
-            }
-        }));
+        clip_into(line, status, available);
     }
-    line.truncate(line.len().min(usize::from(width.saturating_sub(1))));
+}
+
+fn clip_into(line: &mut String, input: &str, available: usize) -> usize {
+    let mut columns = 0;
+    let initial_columns = UnicodeWidthStr::width(line.as_str());
+    for grapheme in input.graphemes(true) {
+        if columns >= available {
+            break;
+        }
+        if grapheme == "\t" {
+            let spaces = (8 - (initial_columns + columns) % 8).min(available - columns);
+            for _ in 0..spaces {
+                line.push(' ');
+            }
+            columns += spaces;
+        } else if grapheme.chars().any(char::is_control) {
+            line.push(' ');
+            columns += 1;
+        } else {
+            let width = UnicodeWidthStr::width(grapheme);
+            if width > available - columns {
+                break;
+            }
+            line.push_str(grapheme);
+            columns += width;
+        }
+    }
+    columns
 }
 
 #[cfg(test)]
@@ -135,6 +159,77 @@ mod tests {
         assert!(output.contains("\x1b[2K"));
         assert!(output.contains("Edit"));
     }
+    #[test]
+    fn status_preserves_complete_unicode_clusters() {
+        let mut line = String::new();
+        let text = "Vi\u{1ec7}t e\u{301} \u{4e2d}\u{6587} \u{1f44d}\u{1f3fd} \u{1f468}\u{200d}\u{1f469}\u{200d}\u{1f467}\u{200d}\u{1f466} \u{1f1fb}\u{1f1f3}";
+        make_line(&mut line, 3, 4, 80, Screen::Review, text);
+        assert_eq!(line, text);
+        for width in 0..50 {
+            make_line(&mut line, 3, 4, width, Screen::Review, text);
+            assert!(UnicodeWidthStr::width(line.as_str()) <= usize::from(width.saturating_sub(1)));
+            assert!(text.starts_with(&line));
+            assert!(
+                line.is_empty()
+                    || text
+                        .graphemes(true)
+                        .scan(0, |n, g| {
+                            *n += g.len();
+                            Some(*n)
+                        })
+                        .any(|end| end == line.len())
+            );
+        }
+    }
+
+    #[test]
+    fn wide_clusters_require_two_columns() {
+        let cases = [
+            "\u{754c}",
+            "\u{1f600}",
+            "\u{1f44d}\u{1f3fd}",
+            "\u{1f468}\u{200d}\u{1f469}\u{200d}\u{1f467}\u{200d}\u{1f466}",
+            "\u{1f1fb}\u{1f1f3}",
+            "\u{2764}\u{fe0f}",
+        ];
+        let mut line = String::new();
+        for text in cases {
+            make_line(&mut line, 3, 4, 2, Screen::Review, text);
+            assert!(line.is_empty());
+            make_line(&mut line, 3, 4, 3, Screen::Review, text);
+            assert_eq!(line, text);
+        }
+    }
+
+    #[test]
+    fn tabs_expand_to_next_stop_and_controls_are_safe() {
+        let mut line = String::new();
+        make_line(&mut line, 3, 4, 20, Screen::Review, "1234567\tX\x1b\nY");
+        assert_eq!(line, "1234567 X  Y");
+        make_line(&mut line, 3, 4, 9, Screen::Review, "123456\tX");
+        assert_eq!(line, "123456  ");
+        for width in 0..=2 {
+            make_line(&mut line, 3, 4, width, Screen::Review, "\u{754c}a");
+            assert!(line.is_empty());
+        }
+    }
+
+    #[test]
+    fn long_combining_cluster_remains_complete() {
+        let mut line = String::new();
+        let input = format!("a{}", "\u{301}".repeat(10000));
+        make_line(&mut line, 3, 4, 2, Screen::Review, &input);
+        assert_eq!(line, input);
+    }
+
+    #[test]
+    fn tab_stops_follow_existing_unicode_columns() {
+        let mut line = String::new();
+        clip_into(&mut line, "\u{754c}\u{e9}e\u{301}", 20);
+        clip_into(&mut line, "\tX", 16);
+        assert_eq!(line, "\u{754c}\u{e9}e\u{301}    X");
+    }
+
     struct FailFlush;
     impl Write for FailFlush {
         fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
