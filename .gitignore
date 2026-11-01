@@ -1,3 +1,4 @@
 /target
 /.dark/
 *.log
+.claude/settings.local.json

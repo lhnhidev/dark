@@ -70,6 +70,22 @@ Mỗi khi nhận yêu cầu xây dựng hoặc mở rộng tính năng, bắt bu
 
 Bước 3 và bước 7 dùng cấu hình riêng trong bảng, thay cho mặc định của Agent chính. Đây là phân công theo giai đoạn, không tạo thêm vai trò. Bảng này ghi nhận phân công trong hướng dẫn dự án; việc áp dụng vào phiên chạy phụ thuộc khả năng chọn model của công cụ điều phối. Nếu công cụ không hỗ trợ chuyển model hoặc mức suy nghĩ, phải báo rõ thay vì khẳng định đã chuyển.
 
+#### Claude Code
+
+Bảng trên dành cho Codex (Sol → `opus`, Terra → `sonnet`). Với Claude Code, định nghĩa sub-agent nằm trong [`.claude/agents/`](../.claude/agents/); model và mức suy nghĩ của phiên chính đặt trong `.claude/settings.json` (`model`, `effortLevel`), của sub-agent đặt bằng frontmatter `model` và `effort`.
+
+| Vai trò | Sub-agent | Model | Mức suy nghĩ |
+|---|---|---|---|
+| Agent chính — Điều phối (phiên làm việc) | — | `opus` | `high` |
+| Rust Developer | `rust-developer` | `opus` | `medium` |
+| Researcher — Nghiên cứu tài liệu & thông tin trên mạng | `researcher` | `opus` | `high` |
+| Terminal UI | `terminal-ui` | `sonnet` | `medium` |
+| Tester | `tester` | `sonnet` | `medium` |
+| Reviewer — Chất lượng & RAM | `reviewer` | `sonnet` | `medium` |
+| User Advocate — Góc nhìn non-tech | `user-advocate` | `sonnet` | `medium` |
+
+Claude Code không đổi model theo bước 3/7 trong cùng một phiên; phiên chính dùng một cấu hình. `/model`, `--model`, `ANTHROPIC_MODEL` và `CLAUDE_CODE_EFFORT_LEVEL` ghi đè cấu hình trong repo.
+
 ## Agent Pipeline
 
 Áp dụng pipeline sau cho yêu cầu xây dựng hoặc mở rộng tính năng. Agent chính điều phối xuyên suốt; chỉ gọi các sub-agent liên quan đến công việc.
