@@ -49,6 +49,7 @@ public static class ConsoleProbe {
  [StructLayout(LayoutKind.Sequential)] struct MEM { public uint cb, faults; public UIntPtr peak, working, qpp, qp, qnp, qn, page, peakpage, privateUsage, privateWorking, shared; }
  [DllImport("kernel32.dll", SetLastError=true)] static extern bool AllocConsole();
  [DllImport("kernel32.dll")] static extern bool FreeConsole();
+ [DllImport("kernel32.dll")] static extern uint SetErrorMode(uint mode);
  [DllImport("kernel32.dll")] static extern IntPtr GetConsoleWindow();
  [DllImport("user32.dll")] static extern bool ShowWindow(IntPtr h,int n);
  [DllImport("kernel32.dll",CharSet=CharSet.Unicode,SetLastError=true)] static extern IntPtr CreateFile(string n,uint a,uint s,IntPtr sa,uint c,uint flags,IntPtr t);
@@ -81,6 +82,8 @@ public static class ConsoleProbe {
  static void WaitScreen(Process p,string text,ref ulong peak,bool body=false) { var until=DateTime.UtcNow.AddSeconds(30); while(DateTime.UtcNow<until) { if(p.HasExited) throw new Exception("process exited with code "+p.ExitCode+" before screen "+text+"; got: "+Content()); peak=Math.Max(peak,Memory(p)); if((body?Body():Content()).Contains(text)) return; Thread.Sleep(20); } throw new Exception("screen not seen: "+text+"; got: "+(body?Body():Content())); }
  static void WaitResize(Process p,ref ulong peak) { var until=DateTime.UtcNow.AddSeconds(30); while(DateTime.UtcNow<until) { if(p.HasExited) throw new Exception("process exited during resize"); peak=Math.Max(peak,Memory(p)); if(!Screen().Contains("RESIZE TEST")) return; Thread.Sleep(20); } throw new Exception("resize did not redraw header"); }
  public static string Run(string exe,string scenario,bool release,string fixture) {
+  // The child inherits this test-only setting; avoid interactive Windows error dialogs.
+  SetErrorMode(0x0001u | 0x0002u | 0x8000u);
   FreeConsole(); Check(AllocConsole(),"AllocConsole"); ShowWindow(GetConsoleWindow(),0);
   IntPtr input=Open("CONIN$"), output=Open("CONOUT$");
   SCREENINFO geometry; Check(GetConsoleScreenBufferInfo(output,out geometry),"initial geometry"); if(geometry.window.right-geometry.window.left+1<80 || geometry.window.bottom-geometry.window.top+1<24) throw new Exception("console geometry must be at least 80x24");

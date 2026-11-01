@@ -114,7 +114,7 @@ def run(binary, profile, scenario):
             marker = b"\x1b[13;1H"
             while True:
                 chunk = bytes(transcript[start:])
-                pos = chunk.find(marker)
+                pos = chunk.rfind(marker)
                 if pos >= 0:
                     body = chunk[pos + len(marker):].split(b"\x1b[14;1H", 1)[0]
                     if expected in body:
@@ -125,6 +125,8 @@ def run(binary, profile, scenario):
 
         wait_for(b"Changes", 0)
         if scenario != "panic":
+            wait_for(b"sample.txt", 0)
+            wait_for(b"\x1b[24;1H", transcript.find(b"sample.txt"))
             for key, label in ((b"2", b"Edit"), (b"3", b"Vibe"), (b"5", b"Models")):
                 start = len(transcript)
                 os.write(master, key)
