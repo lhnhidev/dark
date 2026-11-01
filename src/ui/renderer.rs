@@ -93,9 +93,13 @@ impl Renderer {
             width: 0,
             line: String::new(),
             color: std::env::var_os("NO_COLOR").is_none(),
-            truecolor: std::env::var("COLORTERM").is_ok_and(|s| {
-                s.eq_ignore_ascii_case("truecolor") || s.eq_ignore_ascii_case("24bit")
-            }),
+            truecolor: t::detect_truecolor(
+                std::env::var("COLORTERM").ok().as_deref(),
+                std::env::var("TERM").ok().as_deref(),
+                std::env::var_os("WT_SESSION").is_some(),
+                std::env::var("TERM_PROGRAM").ok().as_deref(),
+                cfg!(windows),
+            ),
             tab_width: std::env::var("DARK_TAB_WIDTH")
                 .ok()
                 .and_then(|s| s.parse::<usize>().ok())

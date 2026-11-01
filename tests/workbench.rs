@@ -166,8 +166,14 @@ fn unified_diff_renders_word_highlights_when_terminal_has_color() {
     let mut w = Workbench::open(&f.0);
     key(&mut w, KeyCode::Char('v'));
     let screen = render(&mut w);
-    let truecolor = std::env::var("COLORTERM")
-        .is_ok_and(|s| s.eq_ignore_ascii_case("truecolor") || s.eq_ignore_ascii_case("24bit"));
+    // Same detection as Renderer::new, so the expectation follows the platform.
+    let truecolor = ui::theme::detect_truecolor(
+        std::env::var("COLORTERM").ok().as_deref(),
+        std::env::var("TERM").ok().as_deref(),
+        std::env::var_os("WT_SESSION").is_some(),
+        std::env::var("TERM_PROGRAM").ok().as_deref(),
+        cfg!(windows),
+    );
     let expected = if truecolor {
         "\x1b[48;2;22;57;35m".to_owned()
     } else if let crossterm::style::Color::AnsiValue(n) =

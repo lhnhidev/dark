@@ -51,7 +51,7 @@ Màu cú pháp (chỉ dùng từ M9, theo GitHub Dark Default): từ khóa `#ff7
 
 **Chọn màu 24-bit hay 256 màu:** người dùng không phải đặt biến nào. dark dùng màu 24-bit khi: chạy trên Windows (Windows 10 trở lên và Windows Terminal đều hỗ trợ); hoặc `COLORTERM` là `truecolor`/`24bit`; hoặc `TERM` chứa `truecolor`, `24bit` hay `direct`; hoặc có `WT_SESSION`; hoặc `TERM_PROGRAM` là `iTerm.app`, `WezTerm`, `vscode`, `ghostty`. Không thấy dấu hiệu nào thì dùng 256 màu.
 
-**Khi dùng 256 màu:** màu có sắc (không phải xám) chỉ được quy về ô màu có sắc gần nhất trong khối 6×6×6, không quy về dải xám, để nền thêm/xóa vẫn xanh/đỏ và nền đang chọn vẫn nâu. Màu gần xám (nền, panel, chữ) quy về màu 256 gần nhất như cũ. **Biến `NO_COLOR` được đặt:** không dùng màu, chỉ giữ chữ đậm/đảo màu cho ô đang chọn.
+**Khi dùng 256 màu:** màu có sắc (kênh lớn nhất trừ kênh nhỏ nhất ≥ 16) chỉ được quy về ô có sắc trong khối 6×6×6, không quy về dải xám; điểm chọn là khoảng cách RGB cộng phạt lệch hướng sắc, để nền thêm/xóa vẫn xanh/đỏ và nền đang chọn vẫn nâu/olive (không thành đỏ). Màu gần xám (chênh < 16: nền, panel, chữ) quy về màu 256 gần nhất như cũ. **Biến `NO_COLOR` được đặt:** không dùng màu, chỉ giữ chữ đậm/đảo màu cho ô đang chọn.
 
 **Không bao giờ chỉ dùng màu để truyền nghĩa:** dòng thêm/xóa luôn có dấu `+`/`−`, trạng thái file luôn có chữ `M A D ? R`, ô đang chọn luôn có vạch `▌` ở đầu.
 
