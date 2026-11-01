@@ -80,6 +80,13 @@ fn render(workbench: &mut Workbench) -> String {
     String::from_utf8(bytes).unwrap()
 }
 
+/// Rendered screen from row 2 on. The tab bar shows the snapshot clock, which
+/// differs between two workbenches opened in different minutes (and reads
+/// `n/a` on Linux when parallel tests race for the clock helper directory).
+fn below_tab_bar(screen: &str) -> &str {
+    &screen[screen.find("[2;1H").expect("row 2 cursor move")..]
+}
+
 fn plain(ansi: &str) -> String {
     let mut chars = ansi.chars();
     let mut result = String::new();
@@ -677,7 +684,7 @@ fn checkpoints_reset_when_file_selection_changes() {
     let mut fresh = Workbench::open(&f.0);
     key(&mut fresh, KeyCode::Down);
     assert_eq!(fresh.selected_path().unwrap(), PathBuf::from("b.ts"));
-    assert_eq!(switched, render(&mut fresh));
+    assert_eq!(below_tab_bar(&switched), below_tab_bar(&render(&mut fresh)));
 }
 
 #[test]
@@ -703,6 +710,6 @@ fn checkpoints_reset_after_refresh_with_changed_content() {
     w.refresh();
     let after = render(&mut w);
     let mut fresh = Workbench::open(&f.0);
-    assert_eq!(after, render(&mut fresh));
+    assert_eq!(below_tab_bar(&after), below_tab_bar(&render(&mut fresh)));
     assert_eq!(runs_containing(&color_runs(&after), COMMENT, "v1"), 0);
 }
