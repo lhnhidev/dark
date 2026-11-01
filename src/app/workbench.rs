@@ -922,7 +922,12 @@ fn local_clock() -> String {
     }
     #[cfg(not(windows))]
     {
-        let directory = std::env::temp_dir().join(format!("dark-clock-{}", std::process::id()));
+        // One directory per call: concurrent callers in one process (parallel
+        // tests) must not remove each other's output before it is read.
+        static CALLS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+        let call = CALLS.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let directory =
+            std::env::temp_dir().join(format!("dark-clock-{}-{call}", std::process::id()));
         let mut command = std::process::Command::new("date");
         command.arg("+%H:%M");
         let value = crate::proc::run(&mut command, &directory, 1024)
@@ -931,5 +936,28 @@ fn local_clock() -> String {
             .unwrap_or_else(|| "n/a".into());
         let _ = std::fs::remove_dir_all(directory);
         value.trim().to_owned()
+    }
+}
+
+#[cfg(all(test, not(windows)))]
+mod clock_tests {
+    use super::local_clock;
+
+    #[test]
+    fn concurrent_clock_reads_all_return_a_time() {
+        let readers: Vec<_> = (0..8)
+            .map(|_| std::thread::spawn(|| (0..5).map(|_| local_clock()).collect::<Vec<_>>()))
+            .collect();
+        for reader in readers {
+            for value in reader.join().unwrap() {
+                let bytes = value.as_bytes();
+                assert!(
+                    bytes.len() == 5
+                        && bytes[2] == b':'
+                        && bytes[..2].iter().chain(&bytes[3..]).all(u8::is_ascii_digit),
+                    "expected HH:MM, got {value:?}"
+                );
+            }
+        }
     }
 }
