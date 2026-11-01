@@ -1,8 +1,10 @@
 # dark — M0 verification
 
+**Mới nhất sau review code:** đã sửa Unicode/tab, CLI, BOM và script tracked; Windows/WSL musl đều qua bộ kiểm tra cuối với 17 test release. Binary mới: Windows **212.480 byte**, musl **537.464 byte**. TUI idle cao nhất trong lượt cuối: **557.056 byte** private working set Windows, **524.288 byte** VmRSS musl. Bảng trước–sau và toàn bộ output mới ở mục **M0 review corrections — kết quả mới nhất** cuối tài liệu. Những số liệu phía trên mục đó là lịch sử trước sửa. M0 chưa đóng, chưa push hoặc tag; chờ người dùng kiểm tra Windows cuối.
+
 Project: `D:\workspace\dark`. Windows 11 Pro 10.0.26200; Rust/Cargo 1.99.1, stable MSVC. Windows đã đạt các kiểm tra dưới đây. Linux musl thử nghiệm đã đạt kiểm tra chức năng và ngưỡng RAM trong WSL Ubuntu 22.04; bản GNU vẫn được giữ nguyên nhưng chưa đạt ổn định ngưỡng idle 2.000.000 byte. Đề xuất musl cho bản phát hành Linux, GNU cho phát triển; chưa đổi target mặc định. M0 chưa đóng, chờ người dùng kiểm tra lại Windows. macOS mới qua cargo check, chưa chạy thực tế.
 
-Release profile giữ nguyên. Binary Windows: **170.496 byte**. Lượt headless cuối: **552.960 byte** private working set; lượt test release: **557.056 byte**. Console thật release: idle lớn nhất **561.152 byte** qua các tình huống thường; đỉnh lấy mẫu lớn nhất **561.152 byte**. Không tính process kiểm tra và console host. Đỉnh lấy mẫu không phải bằng chứng về mọi đỉnh giữa các mẫu.
+Số liệu lịch sử trước sửa review: release profile giữ nguyên. Binary Windows: **170.496 byte**. Lượt headless cuối lúc đó: **552.960 byte** private working set; lượt test release: **557.056 byte**. Console thật release lúc đó: idle lớn nhất **561.152 byte** qua các tình huống thường; đỉnh lấy mẫu lớn nhất **561.152 byte**. Không tính process kiểm tra và console host. Đỉnh lấy mẫu không phải bằng chứng về mọi đỉnh giữa các mẫu.
 
 Code M0 không có worker thread hoặc async runtime; event loop chạy đồng bộ trên một luồng. Windows ghi nhận 4 thread hệ điều hành trong phiên thường; số này không đồng nghĩa có 4 event loop. Các tình huống panic không lấy mẫu idle (`idle=0`, `threads=0` trong harness nghĩa là không đo các mục đó, không phải RAM bằng 0).
 
@@ -685,3 +687,553 @@ Lệnh: `python3 tests/ram/linux-memory.py "$HOME/dark-target/release/dark" "$HO
 ```json
 "\u001b[?9001h\u001b[?1004h\u001b[?25l\u001b[2J\u001b[m\u001b[H/dev/pts/0\r\n\u001b]0;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe\u0007\u001b[?25h\u001b[?1049h\u001b[?25l\u001b[H[1 Review]  2 Edit  3 Models  q Quit\u001b[K\r\n\u001b[K\r\nReview - Coming soon\u001b[K\r\n\u001b[K\r\n\u001b[K\r\n\u001b[K\r\n\u001b[K\r\n\u001b[K\r\n\u001b[K\r\n\u001b[K\r\n\u001b[K\r\n\u001b[K\r\n\u001b[K\r\n\u001b[K\r\n\u001b[K\r\n\u001b[K\r\n\u001b[K\r\n\u001b[K\r\n\u001b[K\r\n\u001b[K\r\n\u001b[K\r\n\u001b[K\r\n\u001b[K\r\nMemory (rss): 512000 bytes\u001b[K\u001b[54C\rMemory (rss): 548864 bytes\u001b[K\u001b[54C\u001b[H1 Review  [2 Edit]  3 Models  q Quit\u001b[K\u001b[3;1HEdit - Coming soon\u001b[K\u001b[62C\u001b[H1 Review  2 Edit  [3 Models]  q Quit\u001b[K\u001b[3;1HModels - Coming soon\u001b[K\u001b[60C\u001b[H[1 Review]  2 Edit  3 Models  q Quit\u001b[K\u001b[3;1HReview - Coming soon\u001b[K\u001b[60C\u001b[H[1 Review]  2 Edit  3 Models  q Quit\u001b[K\r\n\u001b[K\r\nReview - Coming soon\u001b[K\r\n\u001b[K\r\n\u001b[K\r\n\u001b[K\r\n\u001b[K\r\n\u001b[K\r\n\u001b[K\r\n\u001b[K\r\n\u001b[K\r\nMemory (rss): 548864 bytes\u001b[K\u001b[54C\u001b[12;27H\u001b[?25h\u001b[?1049l\u001b[?25l\u001b[H/dev/pts/0\u001b[K\r\n\u001b[K\r\n\u001b[K\r\n\u001b[K\r\n\u001b[K\r\n\u001b[K\r\n\u001b[K\r\n\u001b[K\r\n\u001b[K\r\n\u001b[K\r\n\u001b[K\r\n\u001b[K\r\n\u001b[K\r\n\u001b[K\r\n\u001b[K\r\n\u001b[K\r\n\u001b[K\r\n\u001b[K\r\n\u001b[K\r\n\u001b[K\r\n\u001b[K\r\n\u001b[K\r\n\u001b[K\r\n\u001b[K\u001b[2;1H\u001b[?25h\u001b[?9001l\u001b[?1004l"
 ```
+
+## M0 review corrections — kết quả mới nhất
+
+Đã xử lý năm điểm review: clipping theo grapheme/cột, tab stop 8; scripts tracked thay cho source trong .dark; bỏ BOM tests/ram.rs; help/version và thông báo tham số sai dễ hiểu; AGENTS chỉ giữ luật chính và lệnh, chi tiết chuyển DEVELOPMENT.md. Cấu hình tab để M1. M0 vẫn chờ người dùng kiểm tra Windows cuối, chưa push hoặc tag.
+
+### Dependency đã duyệt
+
+`unicode-width 0.2.3` và `unicode-segmentation 1.13.3` đều `default-features=false`, được khóa bằng Cargo.lock. Không bật bảng CJK mở rộng; các ký tự CJK rộng vẫn tính hai cột và test đạt. So Cargo.lock trước/sau chỉ thêm đúng hai package này, không đổi version package cũ. Đồ thị resolve của từng crate có **0 dependency**, features rỗng; không kéo thêm crate gián tiếp. Dependency dev/optional khai trong manifest upstream nhưng không resolve không được tính là dependency của dark.
+
+```json
+[
+    {
+        "name":  "unicode-width",
+        "locked_version":  "0.2.3",
+        "default_features":  false,
+        "resolved_dependency_count":  0,
+        "resolved_features":  [
+
+                              ],
+        "package_dev_dependencies":  [
+
+                                     ]
+    },
+    {
+        "name":  "unicode-segmentation",
+        "locked_version":  "1.13.3",
+        "default_features":  false,
+        "resolved_dependency_count":  0,
+        "resolved_features":  [
+
+                              ],
+        "package_dev_dependencies":  [
+                                         "criterion",
+                                         "proptest",
+                                         "quickcheck"
+                                     ]
+    }
+]
+```
+
+### Binary và RAM idle trước–sau (byte)
+
+Baseline được sao lưu trước sửa, chạy lại bằng cùng harness: Windows qua -TargetDirectory và musl qua thư mục baseline riêng. Bảng RAM lấy giá trị cao nhất của 5 mẫu idle trong mỗi phiên release q/Ctrl-C (Windows thêm qhidden); panic không có idle. Chênh lệch là toàn bộ batch Unicode + CLI + xử lý lỗi, không phải phép đo riêng chi phí hai crate. RSS/private WS có dao động OS; số giảm không chứng minh hiệu năng cải thiện. Không so trực tiếp hai metric giữa hai hệ điều hành.
+
+| Nền tảng / metric | Binary trước | Binary sau | Chênh binary | TUI idle trước | TUI idle sau | Chênh idle |
+|---|---|---|---|---|---|---|
+| Windows / private working set | 170496 | 212480 | 41984 | 585728 | 557056 | -28672 |
+| WSL musl / VmRSS | 496504 | 537464 | 40960 | 458752 | 524288 | 65536 |
+
+Cả hai vẫn dưới idle 2.000.000 byte, đỉnh lấy mẫu 10.000.000 byte và binary 3.000.000 byte. Headless trong cargo test release đo Windows 569.344 byte, musl 544.768 byte; self-test chạy riêng lần cuối lần lượt 548.864 và 503.808 byte. Các số này là kịch bản khác bảng TUI, không được trộn để tính chênh lệch.
+
+### Bộ kiểm tra cuối
+
+- Windows và WSL musl: fmt, Clippy -D warnings, test debug, test release, build debug/release đều đạt. Mỗi bản release có 17 test đạt: 13 unit, 3 CLI, 1 RAM. Debug có 16 đạt và 1 RAM bỏ qua có lý do.
+- Renderer: tiếng Việt có dấu/dấu tổ hợp, emoji đơn/cờ/skin tone/ZWJ/variation selector, CJK, tab sau ký tự rộng và chiều rộng 0/1/2; giữ nguyên cụm, không panic hoặc ghi quá cột.
+- Terminal thật: Windows 10/10 và musl 6/6, gồm resize trước phím, q, Ctrl-C, panic debug/release và phục hồi trạng thái. Baseline cũ cũng qua cùng số tình huống.
+- CLI help/version không cần TTY; lỗi tham số một dòng nêu đúng giá trị sai, không in cấu trúc Rust nội bộ.
+- Runner Windows ép đúng target dir/host để không đo binary cũ từ cấu hình khác. Runner Linux kiểm tra cả lỗi ghi log; thử output /dev/null/dark-log-probe trả exit 1 như mong đợi, không chạy cargo và không báo đạt giả.
+- macOS ARM64 cargo check sau sửa đạt; chưa chạy thực tế và chưa khẳng định build macOS hoàn chỉnh.
+- Tất cả script thực thi ở scripts/ hoặc tests/. Đã kiểm tra không còn .sh/.py/.ps1/.rs trong .dark; output và binary baseline giữ lại. Các đường dẫn .dark/*.sh trong log cũ là lịch sử, không còn là lệnh tái lập hiện tại.
+
+Lệnh tái lập: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify-windows.ps1; trong WSL dùng bash scripts/verify-linux.sh musl. Chi tiết vận hành tại [DEVELOPMENT.md](DEVELOPMENT.md). Output Windows tách stdout/stderr (không giả định thứ tự liên luồng); output Linux ghi exit_code và log_exit_code của tee. Hai runner cuối đều exit 0.
+
+### Baseline Windows terminal
+
+```text
+debug q PASS idle_max_5_samples_private_ws_bytes=593920 peak_sampled_private_ws_bytes=593920 threads=4 input_mode_before=503 input_mode_running=504 input_mode_after=503 output_mode_before=3 output_mode_after=3 initial_cursor_visible=True exit=0
+debug ctrlc PASS idle_max_5_samples_private_ws_bytes=557056 peak_sampled_private_ws_bytes=557056 threads=4 input_mode_before=503 input_mode_running=504 input_mode_after=503 output_mode_before=3 output_mode_after=3 initial_cursor_visible=True exit=0
+debug panic PASS idle_max_5_samples_private_ws_bytes=0 peak_sampled_private_ws_bytes=552960 threads=0 input_mode_before=503 input_mode_running=504 input_mode_after=503 output_mode_before=3 output_mode_after=3 initial_cursor_visible=True exit=101
+debug qhidden PASS idle_max_5_samples_private_ws_bytes=561152 peak_sampled_private_ws_bytes=561152 threads=4 input_mode_before=503 input_mode_running=504 input_mode_after=503 output_mode_before=3 output_mode_after=3 initial_cursor_visible=False exit=0
+debug panichidden PASS idle_max_5_samples_private_ws_bytes=0 peak_sampled_private_ws_bytes=565248 threads=0 input_mode_before=503 input_mode_running=504 input_mode_after=503 output_mode_before=3 output_mode_after=3 initial_cursor_visible=False exit=101
+release q PASS idle_max_5_samples_private_ws_bytes=585728 peak_sampled_private_ws_bytes=585728 threads=4 input_mode_before=503 input_mode_running=504 input_mode_after=503 output_mode_before=3 output_mode_after=3 initial_cursor_visible=True exit=0
+release ctrlc PASS idle_max_5_samples_private_ws_bytes=561152 peak_sampled_private_ws_bytes=561152 threads=4 input_mode_before=503 input_mode_running=504 input_mode_after=503 output_mode_before=3 output_mode_after=3 initial_cursor_visible=True exit=0
+release panic PASS idle_max_5_samples_private_ws_bytes=0 peak_sampled_private_ws_bytes=557056 threads=0 input_mode_before=503 input_mode_running=504 input_mode_after=503 output_mode_before=3 output_mode_after=3 initial_cursor_visible=True exit=-1073740791
+release qhidden PASS idle_max_5_samples_private_ws_bytes=557056 peak_sampled_private_ws_bytes=557056 threads=4 input_mode_before=503 input_mode_running=504 input_mode_after=503 output_mode_before=3 output_mode_after=3 initial_cursor_visible=False exit=0
+release panichidden PASS idle_max_5_samples_private_ws_bytes=0 peak_sampled_private_ws_bytes=552960 threads=0 input_mode_before=503 input_mode_running=504 input_mode_after=503 output_mode_before=3 output_mode_after=3 initial_cursor_visible=False exit=-1073740791
+```
+
+### Baseline musl terminal
+
+```text
+debug q PASS idle_max_5_samples_rss_bytes=933888 peak_sampled_rss_bytes=933888 exit=0
+debug ctrlc PASS idle_max_5_samples_rss_bytes=937984 peak_sampled_rss_bytes=937984 exit=0
+debug panic PASS idle_max_5_samples_rss_bytes=n/a peak_sampled_rss_bytes=913408 exit=101
+release q PASS idle_max_5_samples_rss_bytes=454656 peak_sampled_rss_bytes=454656 exit=0
+release ctrlc PASS idle_max_5_samples_rss_bytes=458752 peak_sampled_rss_bytes=458752 exit=0
+release panic PASS idle_max_5_samples_rss_bytes=n/a peak_sampled_rss_bytes=503808 exit=-6
+```
+
+### Review windows: environment
+
+```text
+CARGO_TARGET_DIR=D:\workspace\dark\target\verify-windows
+explicit_host_target=x86_64-pc-windows-msvc
+```
+
+### Review windows: fmt
+
+```text
+$ C:\Users\ACER\.cargo\bin\cargo.exe fmt --check
+stdout:
+
+stderr:
+
+exit_code=0
+```
+
+### Review windows: clippy
+
+```text
+$ C:\Users\ACER\.cargo\bin\cargo.exe clippy --locked --all-targets --target x86_64-pc-windows-msvc -- -D warnings
+stdout:
+
+stderr:
+    Checking dark v0.0.1 (D:\workspace\dark)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.23s
+
+exit_code=0
+```
+
+### Review windows: test
+
+```text
+$ C:\Users\ACER\.cargo\bin\cargo.exe test --locked --target x86_64-pc-windows-msvc
+stdout:
+
+running 13 tests
+test app::tests::switches_screens_and_redraws_only_on_change ... ok
+test app::tests::ignores_repeats_releases_and_modified_shortcuts ... ok
+test memory::tests::rejects_missing_units_malformed_values_and_overflow ... ok
+test ui::renderer::tests::tab_stops_follow_existing_unicode_columns ... ok
+test ui::renderer::tests::tabs_expand_to_next_stop_and_controls_are_safe ... ok
+test ui::renderer::tests::wide_clusters_require_two_columns ... ok
+test memory::tests::parses_kernel_kib_as_bytes ... ok
+test app::tests::quit_keys_stop_without_redrawing ... ok
+test ui::renderer::tests::status_preserves_complete_unicode_clusters ... ok
+test ui::renderer::tests::unchanged_frame_writes_nothing_and_resize_redraws ... ok
+test ui::renderer::tests::changing_screen_clears_old_lines_even_when_narrow ... ok
+test ui::renderer::tests::long_combining_cluster_remains_complete ... ok
+test ui::renderer::tests::failed_flush_forces_full_redraw ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 3 tests
+test rejects_unknown_argument_instead_of_opening_the_terminal ... ok
+test help_describes_user_options_and_keys_without_a_terminal ... ok
+test version_uses_package_version_without_a_terminal ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.21s
+
+
+running 1 test
+test idle::release_binary_stays_within_memory_budget_after_navigation ... ignored, RAM budget measures release binary; run cargo test --release
+
+test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+stderr:
+   Compiling dark v0.0.1 (D:\workspace\dark)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.58s
+     Running unittests src\main.rs (target\verify-windows\x86_64-pc-windows-msvc\debug\deps\dark-86e2298bb1adee91.exe)
+     Running tests\cli.rs (target\verify-windows\x86_64-pc-windows-msvc\debug\deps\cli-6a83ef32369dfc2c.exe)
+     Running tests\ram.rs (target\verify-windows\x86_64-pc-windows-msvc\debug\deps\ram-8aa2d8241a85c1ed.exe)
+
+exit_code=0
+```
+
+### Review windows: test-release
+
+```text
+$ C:\Users\ACER\.cargo\bin\cargo.exe test --locked --release --target x86_64-pc-windows-msvc -- --nocapture
+stdout:
+
+running 13 tests
+test app::tests::quit_keys_stop_without_redrawing ... ok
+test app::tests::ignores_repeats_releases_and_modified_shortcuts ... ok
+test memory::tests::parses_kernel_kib_as_bytes ... ok
+test ui::renderer::tests::failed_flush_forces_full_redraw ... ok
+test memory::tests::rejects_missing_units_malformed_values_and_overflow ... ok
+test ui::renderer::tests::tab_stops_follow_existing_unicode_columns ... ok
+test app::tests::switches_screens_and_redraws_only_on_change ... ok
+test ui::renderer::tests::status_preserves_complete_unicode_clusters ... ok
+test ui::renderer::tests::tabs_expand_to_next_stop_and_controls_are_safe ... ok
+test ui::renderer::tests::long_combining_cluster_remains_complete ... ok
+test ui::renderer::tests::unchanged_frame_writes_nothing_and_resize_redraws ... ok
+test ui::renderer::tests::changing_screen_clears_old_lines_even_when_narrow ... ok
+test ui::renderer::tests::wide_clusters_require_two_columns ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 3 tests
+test rejects_unknown_argument_instead_of_opening_the_terminal ... ok
+test help_describes_user_options_and_keys_without_a_terminal ... ok
+test version_uses_package_version_without_a_terminal ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
+
+
+running 1 test
+memory_metric=private_working_set
+idle_bytes=569344
+peak_sampled_bytes=569344
+screens=3
+
+test idle::release_binary_stays_within_memory_budget_after_navigation ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.52s
+
+
+stderr:
+   Compiling dark v0.0.1 (D:\workspace\dark)
+    Finished `release` profile [optimized] target(s) in 7.28s
+     Running unittests src\main.rs (target\verify-windows\x86_64-pc-windows-msvc\release\deps\dark-b86b407d718b5a0b.exe)
+     Running tests\cli.rs (target\verify-windows\x86_64-pc-windows-msvc\release\deps\cli-be76f663a8ea4e11.exe)
+     Running tests\ram.rs (target\verify-windows\x86_64-pc-windows-msvc\release\deps\ram-eafa5ed02f159e98.exe)
+
+exit_code=0
+```
+
+### Review windows: build-debug
+
+```text
+$ C:\Users\ACER\.cargo\bin\cargo.exe build --locked --target x86_64-pc-windows-msvc
+stdout:
+
+stderr:
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.05s
+
+exit_code=0
+```
+
+### Review windows: build-release
+
+```text
+$ C:\Users\ACER\.cargo\bin\cargo.exe build --locked --release --target x86_64-pc-windows-msvc
+stdout:
+
+stderr:
+    Finished `release` profile [optimized] target(s) in 0.03s
+
+exit_code=0
+```
+
+### Review windows: binary-size
+
+```text
+binary_size_bytes=212480
+```
+
+### Review windows: self-test
+
+```text
+$ D:\workspace\dark\target\verify-windows\x86_64-pc-windows-msvc\release\dark.exe --self-test
+stdout:
+memory_metric=private_working_set
+idle_bytes=548864
+peak_sampled_bytes=548864
+screens=3
+
+stderr:
+
+exit_code=0
+```
+
+### Review windows: help
+
+```text
+$ D:\workspace\dark\target\verify-windows\x86_64-pc-windows-msvc\release\dark.exe --help
+stdout:
+dark 0.0.1
+
+Usage: dark [OPTIONS]
+
+Options:
+  -h, --help       Show this help
+  -V, --version    Show version
+      --debug      Show process memory
+      --self-test  Check navigation and memory without a terminal
+      --self-test-panic  Check terminal cleanup on panic
+
+Keys: 1 Review, 2 Edit, 3 Models, q or Ctrl-C quit
+
+stderr:
+
+exit_code=0
+```
+
+### Review windows: version
+
+```text
+$ D:\workspace\dark\target\verify-windows\x86_64-pc-windows-msvc\release\dark.exe --version
+stdout:
+dark 0.0.1
+
+stderr:
+
+exit_code=0
+```
+
+### Review windows: terminal
+
+```text
+$ C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\workspace\dark\tests\ram\windows-console.ps1 -TargetDirectory D:\workspace\dark\target\verify-windows\x86_64-pc-windows-msvc
+stdout:
+debug q PASS idle_max_5_samples_private_ws_bytes=557056 peak_sampled_private_ws_bytes=557056 threads=4 input_mode_before=503 input_mode_running=504 input_mode_after=503 output_mode_before=3 output_mode_after=3 initial_cursor_visible=True exit=0
+debug ctrlc PASS idle_max_5_samples_private_ws_bytes=561152 peak_sampled_private_ws_bytes=561152 threads=4 input_mode_before=503 input_mode_running=504 input_mode_after=503 output_mode_before=3 output_mode_after=3 initial_cursor_visible=True exit=0
+debug panic PASS idle_max_5_samples_private_ws_bytes=0 peak_sampled_private_ws_bytes=561152 threads=0 input_mode_before=503 input_mode_running=504 input_mode_after=503 output_mode_before=3 output_mode_after=3 initial_cursor_visible=True exit=101
+debug qhidden PASS idle_max_5_samples_private_ws_bytes=561152 peak_sampled_private_ws_bytes=561152 threads=4 input_mode_before=503 input_mode_running=504 input_mode_after=503 output_mode_before=3 output_mode_after=3 initial_cursor_visible=False exit=0
+debug panichidden PASS idle_max_5_samples_private_ws_bytes=0 peak_sampled_private_ws_bytes=552960 threads=0 input_mode_before=503 input_mode_running=504 input_mode_after=503 output_mode_before=3 output_mode_after=3 initial_cursor_visible=False exit=101
+release q PASS idle_max_5_samples_private_ws_bytes=557056 peak_sampled_private_ws_bytes=557056 threads=4 input_mode_before=503 input_mode_running=504 input_mode_after=503 output_mode_before=3 output_mode_after=3 initial_cursor_visible=True exit=0
+release ctrlc PASS idle_max_5_samples_private_ws_bytes=552960 peak_sampled_private_ws_bytes=552960 threads=4 input_mode_before=503 input_mode_running=504 input_mode_after=503 output_mode_before=3 output_mode_after=3 initial_cursor_visible=True exit=0
+release panic PASS idle_max_5_samples_private_ws_bytes=0 peak_sampled_private_ws_bytes=552960 threads=0 input_mode_before=503 input_mode_running=504 input_mode_after=503 output_mode_before=3 output_mode_after=3 initial_cursor_visible=True exit=-1073740791
+release qhidden PASS idle_max_5_samples_private_ws_bytes=548864 peak_sampled_private_ws_bytes=548864 threads=4 input_mode_before=503 input_mode_running=504 input_mode_after=503 output_mode_before=3 output_mode_after=3 initial_cursor_visible=False exit=0
+release panichidden PASS idle_max_5_samples_private_ws_bytes=0 peak_sampled_private_ws_bytes=561152 threads=0 input_mode_before=503 input_mode_running=504 input_mode_after=503 output_mode_before=3 output_mode_after=3 initial_cursor_visible=False exit=-1073740791
+
+stderr:
+
+exit_code=0
+```
+
+### Review musl: environment
+
+```text
+$ bash -c id\ -un\;\ uname\ -srm\;\ echo\ \"CARGO_TARGET_DIR=\$CARGO_TARGET_DIR\"\;\ command\ -v\ cargo\;\ cargo\ --version\;\ rustc\ --version\;\ command\ -v\ cc
+lhnhidev
+Linux 6.6.114.1-microsoft-standard-WSL2 x86_64
+CARGO_TARGET_DIR=/home/lhnhidev/dark-target-musl
+/home/lhnhidev/.cargo/bin/cargo
+cargo 1.99.1 (5f94df478 2026-08-27)
+rustc 1.99.1 (58cf8f9c3 2026-10-13)
+/usr/bin/cc
+exit_code=0
+log_exit_code=0
+```
+
+### Review musl: fmt
+
+```text
+$ cargo fmt --check
+exit_code=0
+log_exit_code=0
+```
+
+### Review musl: clippy
+
+```text
+$ cargo clippy --locked --all-targets --target x86_64-unknown-linux-musl -- -D warnings
+    Checking dark v0.0.1 (/mnt/d/workspace/dark)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.45s
+exit_code=0
+log_exit_code=0
+```
+
+### Review musl: test
+
+```text
+$ cargo test --locked --target x86_64-unknown-linux-musl
+   Compiling dark v0.0.1 (/mnt/d/workspace/dark)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.88s
+     Running unittests src/main.rs (/home/lhnhidev/dark-target-musl/x86_64-unknown-linux-musl/debug/deps/dark-9d78885c4b36c6a3)
+
+running 13 tests
+test app::tests::ignores_repeats_releases_and_modified_shortcuts ... ok
+test app::tests::quit_keys_stop_without_redrawing ... ok
+test memory::tests::parses_kernel_kib_as_bytes ... ok
+test memory::tests::rejects_missing_units_malformed_values_and_overflow ... ok
+test app::tests::switches_screens_and_redraws_only_on_change ... ok
+test ui::renderer::tests::changing_screen_clears_old_lines_even_when_narrow ... ok
+test ui::renderer::tests::failed_flush_forces_full_redraw ... ok
+test ui::renderer::tests::tab_stops_follow_existing_unicode_columns ... ok
+test ui::renderer::tests::tabs_expand_to_next_stop_and_controls_are_safe ... ok
+test ui::renderer::tests::wide_clusters_require_two_columns ... ok
+test ui::renderer::tests::unchanged_frame_writes_nothing_and_resize_redraws ... ok
+test ui::renderer::tests::status_preserves_complete_unicode_clusters ... ok
+test ui::renderer::tests::long_combining_cluster_remains_complete ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/cli.rs (/home/lhnhidev/dark-target-musl/x86_64-unknown-linux-musl/debug/deps/cli-0762b9bbec87bad5)
+
+running 3 tests
+test rejects_unknown_argument_instead_of_opening_the_terminal ... ok
+test help_describes_user_options_and_keys_without_a_terminal ... ok
+test version_uses_package_version_without_a_terminal ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/ram.rs (/home/lhnhidev/dark-target-musl/x86_64-unknown-linux-musl/debug/deps/ram-4a27f58c0a3c657f)
+
+running 1 test
+test idle::release_binary_stays_within_memory_budget_after_navigation ... ignored, RAM budget measures release binary; run cargo test --release
+
+test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+exit_code=0
+log_exit_code=0
+```
+
+### Review musl: test-release
+
+```text
+$ cargo test --locked --release --target x86_64-unknown-linux-musl -- --nocapture
+   Compiling dark v0.0.1 (/mnt/d/workspace/dark)
+    Finished `release` profile [optimized] target(s) in 6.22s
+     Running unittests src/main.rs (/home/lhnhidev/dark-target-musl/x86_64-unknown-linux-musl/release/deps/dark-0378c2c630be6fa5)
+
+running 13 tests
+test app::tests::ignores_repeats_releases_and_modified_shortcuts ... ok
+test app::tests::switches_screens_and_redraws_only_on_change ... ok
+test app::tests::quit_keys_stop_without_redrawing ... ok
+test memory::tests::parses_kernel_kib_as_bytes ... ok
+test memory::tests::rejects_missing_units_malformed_values_and_overflow ... ok
+test ui::renderer::tests::changing_screen_clears_old_lines_even_when_narrow ... ok
+test ui::renderer::tests::failed_flush_forces_full_redraw ... ok
+test ui::renderer::tests::status_preserves_complete_unicode_clusters ... ok
+test ui::renderer::tests::tab_stops_follow_existing_unicode_columns ... ok
+test ui::renderer::tests::tabs_expand_to_next_stop_and_controls_are_safe ... ok
+test ui::renderer::tests::unchanged_frame_writes_nothing_and_resize_redraws ... ok
+test ui::renderer::tests::wide_clusters_require_two_columns ... ok
+test ui::renderer::tests::long_combining_cluster_remains_complete ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/cli.rs (/home/lhnhidev/dark-target-musl/x86_64-unknown-linux-musl/release/deps/cli-d8e6ba926a08d80c)
+
+running 3 tests
+test rejects_unknown_argument_instead_of_opening_the_terminal ... ok
+test help_describes_user_options_and_keys_without_a_terminal ... ok
+test version_uses_package_version_without_a_terminal ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/ram.rs (/home/lhnhidev/dark-target-musl/x86_64-unknown-linux-musl/release/deps/ram-3da0f2969331c075)
+
+running 1 test
+memory_metric=rss
+idle_bytes=544768
+peak_sampled_bytes=544768
+screens=3
+
+test idle::release_binary_stays_within_memory_budget_after_navigation ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.50s
+
+exit_code=0
+log_exit_code=0
+```
+
+### Review musl: build-debug
+
+```text
+$ cargo build --locked --target x86_64-unknown-linux-musl
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.05s
+exit_code=0
+log_exit_code=0
+```
+
+### Review musl: build-release
+
+```text
+$ cargo build --locked --release --target x86_64-unknown-linux-musl
+    Finished `release` profile [optimized] target(s) in 0.04s
+exit_code=0
+log_exit_code=0
+```
+
+### Review musl: binary-size
+
+```text
+$ stat --format=%s /home/lhnhidev/dark-target-musl/x86_64-unknown-linux-musl/release/dark
+537464
+exit_code=0
+log_exit_code=0
+```
+
+### Review musl: self-test
+
+```text
+$ /home/lhnhidev/dark-target-musl/x86_64-unknown-linux-musl/release/dark --self-test
+memory_metric=rss
+idle_bytes=503808
+peak_sampled_bytes=503808
+screens=3
+exit_code=0
+log_exit_code=0
+```
+
+### Review musl: help
+
+```text
+$ /home/lhnhidev/dark-target-musl/x86_64-unknown-linux-musl/release/dark --help
+dark 0.0.1
+
+Usage: dark [OPTIONS]
+
+Options:
+  -h, --help       Show this help
+  -V, --version    Show version
+      --debug      Show process memory
+      --self-test  Check navigation and memory without a terminal
+      --self-test-panic  Check terminal cleanup on panic
+
+Keys: 1 Review, 2 Edit, 3 Models, q or Ctrl-C quit
+exit_code=0
+log_exit_code=0
+```
+
+### Review musl: version
+
+```text
+$ /home/lhnhidev/dark-target-musl/x86_64-unknown-linux-musl/release/dark --version
+dark 0.0.1
+exit_code=0
+log_exit_code=0
+```
+
+### Review musl: terminal
+
+```text
+$ python3 tests/ram/linux-terminal.py /home/lhnhidev/dark-target-musl/x86_64-unknown-linux-musl
+debug q PASS idle_max_5_samples_rss_bytes=1003520 peak_sampled_rss_bytes=1003520 exit=0
+debug ctrlc PASS idle_max_5_samples_rss_bytes=1028096 peak_sampled_rss_bytes=1028096 exit=0
+debug panic PASS idle_max_5_samples_rss_bytes=n/a peak_sampled_rss_bytes=876544 exit=101
+release q PASS idle_max_5_samples_rss_bytes=512000 peak_sampled_rss_bytes=512000 exit=0
+release ctrlc PASS idle_max_5_samples_rss_bytes=524288 peak_sampled_rss_bytes=524288 exit=0
+release panic PASS idle_max_5_samples_rss_bytes=n/a peak_sampled_rss_bytes=540672 exit=-6
+exit_code=0
+log_exit_code=0
+```
+
+### Review macOS: check only
+
+```text
+$ cargo check --locked --target aarch64-apple-darwin
+    Checking dark v0.0.1 (D:\workspace\dark)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.15s
+exit_code=0
+```
+
+### Thông báo tham số sai sau review
+
+```text
+$ dark --not-a-dark-option
+dark: unknown argument: --not-a-dark-option. Try --help.
+exit_code=1
+```
+
+Windows và WSL musl đều trả cùng thông báo một dòng ở phép thử cuối.

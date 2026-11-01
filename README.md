@@ -14,6 +14,8 @@ Project trên máy phát triển: `D:\workspace\dark`. Cần Rust stable; Window
 cargo build --release
 .\target\release\dark.exe
 .\target\release\dark.exe --debug
+.\target\release\dark.exe --help
+.\target\release\dark.exe --version
 ```
 
 Linux/macOS chạy `./target/release/dark`. Phím `1`/`2`/`3` chuyển Review/Edit/Models; `q` hoặc `Ctrl-C` thoát. `--debug` hiện bộ nhớ của chính ứng dụng, không tính terminal hoặc tiến trình con. Windows đo private working set; Linux/macOS đo RSS. Nếu API không hỗ trợ, thanh trạng thái hiện `n/a` kèm lý do.
@@ -48,7 +50,7 @@ python3 tests/ram/linux-terminal.py "$CARGO_TARGET_DIR"
 
 Script Linux cần Python 3 và PTY, kiểm tra phím/resize/thoát/panic trên terminal thật, đo RSS qua `/proc` và phục hồi thuộc tính terminal. Ngưỡng RAM chỉ áp dụng cho bản release. Trên Linux ngoài WSL, thay đường dẫn project cho đúng nơi checkout.
 
-Bản GNU trên WSL hiện chưa đạt ổn định ngưỡng idle 2 MB. Thử nghiệm musl đã đạt, được đề xuất cho phát hành Linux; GNU vẫn dùng cho phát triển. Chưa đổi target mặc định hoặc đóng M0. Có thể tái lập musl trong thư mục riêng:
+Bản GNU trên WSL hiện chưa đạt ổn định ngưỡng idle 2 MB. Musl đã được duyệt cho bản phát hành Linux; GNU vẫn dùng cho phát triển. Chưa đổi target mặc định hoặc đóng M0. Có thể tái lập musl trong thư mục riêng:
 
 ```bash
 rustup target add x86_64-unknown-linux-musl
@@ -61,6 +63,15 @@ python3 tests/ram/linux-memory.py "$HOME/dark-target/release/dark" "$CARGO_TARGE
 ```
 
 Script so sánh vẫn trả mã lỗi nếu bản GNU vượt ngân sách, đồng thời báo riêng musl đạt; private/PSS là số đo bổ sung, không thay VmRSS để xét ngưỡng. Xem bảng so sánh, output và lưu ý hiệu năng bộ cấp phát ở [M0_VERIFICATION.md](docs/M0_VERIFICATION.md).
+
+Các runner đã được commit để tái lập trọn bộ kiểm tra và lưu output trong `.dark/`:
+
+```text
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify-windows.ps1
+bash scripts/verify-linux.sh musl
+```
+
+Xem [DEVELOPMENT.md](docs/DEVELOPMENT.md) cho đường dẫn build, thiết lập Rust, phép đo baseline và thao tác terminal WSL. `--help`/`--version` không cần terminal; lỗi tham số nêu đúng giá trị sai và gợi ý trợ giúp.
 
 ## Vì sao có dark
 
@@ -165,6 +176,7 @@ dark --debug    # hiện RSS, token, chi phí
 | [PLANNING.md](docs/PLANNING.md) | Milestone, tiêu chí hoàn thành, cách đo chất lượng, quyết định còn mở |
 | [M0_VERIFICATION.md](docs/M0_VERIFICATION.md) | Output kiểm tra M0, kích thước binary, bộ nhớ và nền tảng chưa kiểm chứng |
 | [AGENT_WORKFLOW.md](docs/AGENT_WORKFLOW.md) | Vai trò, model và quy trình làm việc của agent |
+| [DEVELOPMENT.md](docs/DEVELOPMENT.md) | Lệnh kiểm tra tracked, môi trường Windows/WSL, đường dẫn build và đo RAM |
 
 ## Giấy phép
 

@@ -129,6 +129,8 @@ dark/
 - Tự viết renderer theo dòng: chỉ nhớ hash của từng dòng ở frame trước, dòng nào đổi thì vẽ lại dòng đó bằng mã ANSI. Hỗ trợ Windows qua `crossterm`.
 - Phương án dự phòng: dùng `ratatui` nếu tự viết tốn quá nhiều công (tốn thêm khoảng 0,5–1,5 MB cho 2 bộ đệm ô).
 - M0 đã chọn renderer tự viết: một danh sách hash theo dòng và một chuỗi tạm tái sử dụng, không giữ hai frame. Resize làm mất hiệu lực cache; chỉ ghi nhận frame sau khi flush thành công. Lỗi ghi làm mất hiệu lực cache để lần sau vẽ lại đầy đủ.
+- Cắt dòng theo cụm grapheme và độ rộng cột, không theo byte UTF-8. `unicode-width 0.2.3` tính độ rộng; `unicode-segmentation 1.13.3` giữ dấu tổ hợp/emoji nguyên cụm. Cả hai tắt default features, khóa trong Cargo.lock và không thêm dependency gián tiếp vào đồ thị resolve. Không bật bảng CJK mở rộng; CJK rộng thông thường vẫn được tính hai cột và có test.
+- Tab M0 mở rộng thành khoảng trắng theo mốc 8 cột; cấu hình tab để M1. Giữ Unicode tiếng Việt/emoji/CJK, thay ký tự điều khiển bằng khoảng trắng, chừa ô cuối để tránh cuộn terminal. Có test độ rộng hẹp, dấu tổ hợp, emoji ZWJ/biến thể/cờ và tab sau ký tự rộng.
 - Terminal có guard khi thoát/lỗi và panic hook phục hồi trước khi in chẩn đoán, kể cả release `panic="abort"`. Windows lưu và phục hồi console mode gốc. Không thể phục hồi sau khi hệ điều hành cưỡng chế kết thúc process.
 
 ### 5.3 Review engine

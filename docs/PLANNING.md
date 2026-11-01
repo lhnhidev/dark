@@ -63,6 +63,8 @@ gantt
 
 M0 chưa đóng: người dùng sẽ tự kiểm tra lại Windows trước khi quyết định đóng. Linux musl thử nghiệm đã qua format, Clippy, test debug/release, TUI và ngân sách RAM trong WSL; đề xuất cho bản phát hành Linux, chưa đổi target mặc định. Bản GNU phát triển ở `~/dark-target` được giữ nguyên; musl ở `~/dark-target-musl`. GNU vẫn còn vượt ngưỡng idle và kết quả đó được giữ nguyên trong báo cáo. Windows headless và console release đã đạt ngân sách. macOS ARM64 mới qua `cargo check --target aarch64-apple-darwin`; chưa build hoàn chỉnh và chưa chạy thực tế. Chưa push hoặc tag M0. Xem output và cách so sánh VmRSS/private/PSS tại [M0_VERIFICATION.md](M0_VERIFICATION.md).
 
+Sau review code, đã sửa clipping Unicode/grapheme/tab 8, thêm help/version và lỗi tham số dễ hiểu, bỏ BOM, đưa script vào scripts/ và rút gọn AGENTS.md. Windows và WSL musl đều đạt 17 test release cùng kiểm tra terminal thật. Binary mới Windows 212.480 byte, musl 537.464 byte; mọi ngưỡng giữ nguyên. Chi tiết chênh lệch trước–sau ở cuối báo cáo kiểm chứng. Vận hành hiện tại: [DEVELOPMENT.md](DEVELOPMENT.md).
+
 Ngân sách M0 tính theo byte: idle **< 2.000.000**, giới hạn cứng **< 10.000.000**, binary **< 3.000.000**. RAM được đo trên binary release, không phải test runner. Windows dùng private working set (`PROCESS_MEMORY_COUNTERS_EX2`), Linux dùng `VmRSS`; các số đo khác nhau phải ghi đúng tên. Windows không hỗ trợ EX2 thì hiện `n/a` và lý do, không đổi sang số đo khác. Linux được chạy trong WSL nếu môi trường có Rust; nếu chưa chạy được phải ghi rõ. macOS build khi có môi trường phù hợp và ghi rõ chưa kiểm chứng thực tế.
 
 ### M1 — Review không AI
