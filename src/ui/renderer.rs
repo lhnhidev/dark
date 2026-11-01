@@ -1,5 +1,6 @@
 use super::{
     layout::{self, Layout},
+    syntax::{self, Lang, State, Token},
     theme as t,
 };
 use crate::app::Screen;
@@ -70,6 +71,9 @@ pub struct DiffCell<'a> {
     pub text: &'a str,
     pub kind: DiffKind,
     pub spans: &'a [Range<usize>],
+    pub lang: Lang,
+    /// Syntax state at the start of this line for this side.
+    pub state: State,
 }
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum DiffKind {
@@ -856,32 +860,50 @@ fn cell(l: &mut Line<'_>, cell: Option<&DiffCell<'_>>, width: usize) {
     l.put(" ", 1, style(t::TEXT, bg));
     l.put(sign, 1, style(fg, bg));
     l.put(" ", 1, style(t::TEXT, bg));
-    let mut offset = 0;
-    for span in c.spans {
-        if span.start < offset
-            || span.end > c.text.len()
-            || !c.text.is_char_boundary(span.start)
-            || !c.text.is_char_boundary(span.end)
-        {
-            continue;
+    let lang = if l.color { c.lang } else { Lang::Plain };
+    let mut state = c.state;
+    let mut span_at = 0;
+    let mut last_end = 0;
+    syntax::highlight(lang, &mut state, c.text, |range, token| {
+        let (fg, bold) = match token {
+            Token::Text => (t::TEXT, false),
+            Token::Keyword => (t::SYNTAX_KEYWORD, false),
+            Token::String => (t::SYNTAX_STRING, false),
+            Token::Comment => (t::SYNTAX_COMMENT, false),
+            Token::Function => (t::SYNTAX_FUNCTION, false),
+            Token::Constant => (t::SYNTAX_CONSTANT, false),
+            Token::Type => (t::SYNTAX_TYPE, false),
+            Token::Tag => (t::SYNTAX_TAG, false),
+            Token::Heading => (t::SYNTAX_CONSTANT, true),
+        };
+        let mut pos = range.start;
+        while pos < range.end {
+            // Skip word spans that are invalid or already passed.
+            while let Some(span) = c.spans.get(span_at) {
+                let valid = span.start >= last_end
+                    && span.start <= span.end
+                    && span.end <= c.text.len()
+                    && c.text.is_char_boundary(span.start)
+                    && c.text.is_char_boundary(span.end);
+                if valid && span.end > pos {
+                    break;
+                }
+                if valid {
+                    last_end = span.end;
+                }
+                span_at += 1;
+            }
+            let (piece_end, piece_bg) = match c.spans.get(span_at) {
+                Some(span) if span.start <= pos => (range.end.min(span.end), word),
+                Some(span) => (range.end.min(span.start), bg),
+                None => (range.end, bg),
+            };
+            let mut s = style(fg, piece_bg);
+            s.bold = bold;
+            l.put(&c.text[pos..piece_end], end.saturating_sub(l.col), s);
+            pos = piece_end;
         }
-        l.put(
-            &c.text[offset..span.start],
-            end.saturating_sub(l.col),
-            style(t::TEXT, bg),
-        );
-        l.put(
-            &c.text[span.start..span.end],
-            end.saturating_sub(l.col),
-            style(t::TEXT, word),
-        );
-        offset = span.end;
-    }
-    l.put(
-        &c.text[offset..],
-        end.saturating_sub(l.col),
-        style(t::TEXT, bg),
-    );
+    });
     l.fill(end, style(t::TEXT, bg));
 }
 
@@ -1172,5 +1194,82 @@ mod tests {
             assert!(line.contains("accept"), "{line}");
             assert!(line.contains("reject"), "{line}");
         }
+    }
+
+    fn diff_view_line(cell: DiffCell<'_>, color: bool) -> String {
+        let rows = [DiffRow {
+            old: Some(cell),
+            new: None,
+            header: None,
+            selected: false,
+        }];
+        let view = View {
+            show_files: false,
+            show_diff: true,
+            unified: true,
+            lines: &rows,
+            ..View::default()
+        };
+        let mut line = String::new();
+        make_line(&mut line, &view, 100, 24, 2, (color, true, 8));
+        line
+    }
+
+    #[test]
+    fn keyword_gets_syntax_color_over_line_background() {
+        let line = diff_view_line(
+            DiffCell {
+                number: Some(1),
+                text: "let x",
+                kind: DiffKind::Added,
+                spans: &[],
+                lang: Lang::Rust,
+                state: State::default(),
+            },
+            true,
+        );
+        assert!(
+            line.contains("[38;2;255;123;114m[48;2;18;37;29mlet"),
+            "{line:?}"
+        );
+    }
+
+    #[test]
+    fn word_span_keeps_word_background_with_syntax_color() {
+        let span = 0..3;
+        let spans = std::slice::from_ref(&span);
+        let line = diff_view_line(
+            DiffCell {
+                number: Some(1),
+                text: "let x",
+                kind: DiffKind::Added,
+                spans,
+                lang: Lang::Rust,
+                state: State::default(),
+            },
+            true,
+        );
+        assert!(
+            line.contains("[38;2;255;123;114m[48;2;22;57;35mlet"),
+            "{line:?}"
+        );
+        assert!(line.contains("[48;2;18;37;29m"), "{line:?}");
+    }
+
+    #[test]
+    fn no_color_emits_no_syntax_codes() {
+        let line = diff_view_line(
+            DiffCell {
+                number: Some(1),
+                text: "let x = \"a\"; // c",
+                kind: DiffKind::Added,
+                spans: &[],
+                lang: Lang::Rust,
+                state: State::default(),
+            },
+            false,
+        );
+        assert!(line.contains("let x"));
+        assert!(!line.contains("38;"), "{line:?}");
     }
 }

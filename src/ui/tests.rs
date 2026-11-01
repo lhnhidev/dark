@@ -118,6 +118,8 @@ fn cell<'a>(n: usize, text: &'a str, kind: DiffKind) -> Option<DiffCell<'a>> {
         text,
         kind,
         spans: &[],
+        lang: crate::ui::syntax::Lang::Plain,
+        state: crate::ui::syntax::State::default(),
     })
 }
 

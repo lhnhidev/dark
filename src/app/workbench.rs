@@ -1,5 +1,6 @@
 use crate::git::Repo;
 use crate::review::{FileDiff, LineKind, Review, SnapshotOptions};
+use crate::ui::syntax::{self, State};
 use crate::ui::{
     DiffCell, DiffKind, DiffRow, FileEntry, FileGroup, Layout, Overlay, Renderer, View,
 };
@@ -549,9 +550,56 @@ impl Workbench {
                 }
             })
             .collect();
+        let lang = self
+            .review
+            .as_ref()
+            .and_then(|r| r.files.get(self.selected))
+            .map_or(syntax::Lang::Plain, |f| {
+                syntax::lang_for_path(&f.display_path)
+            });
+        // Syntax state at the start of each line (old side, new side), per visible hunk.
+        let mut starts: Vec<(usize, Vec<(State, State)>)> = Vec::new();
+        if lang != syntax::Lang::Plain {
+            for row in &visible {
+                if starts.iter().any(|(hunk, _)| *hunk == row.hunk) {
+                    continue;
+                }
+                let upto = visible
+                    .iter()
+                    .filter(|r| r.hunk == row.hunk)
+                    .flat_map(|r| [r.old, r.new])
+                    .flatten()
+                    .max();
+                let mut per_line = Vec::new();
+                let (mut old, mut new) = (State::default(), State::default());
+                if let Some(upto) = upto {
+                    for line in &self.diff.hunks[row.hunk].lines[..=upto] {
+                        per_line.push((old, new));
+                        match line.kind {
+                            LineKind::Context => {
+                                syntax::highlight(lang, &mut old, &line.text, |_, _| {});
+                                syntax::highlight(lang, &mut new, &line.text, |_, _| {});
+                            }
+                            LineKind::Delete => {
+                                syntax::highlight(lang, &mut old, &line.text, |_, _| {})
+                            }
+                            LineKind::Add => {
+                                syntax::highlight(lang, &mut new, &line.text, |_, _| {})
+                            }
+                        }
+                    }
+                }
+                starts.push((row.hunk, per_line));
+            }
+        }
         let mut lines = Vec::new();
         for (row, spans) in visible.iter().zip(&spans) {
             let h = &self.diff.hunks[row.hunk];
+            let hunk_starts = starts
+                .iter()
+                .find(|(hunk, _)| *hunk == row.hunk)
+                .map(|(_, v)| v.as_slice())
+                .unwrap_or(&[]);
             let cell = |index: usize, old: bool| {
                 let line = &h.lines[index];
                 DiffCell {
@@ -572,6 +620,14 @@ impl Workbench {
                             }
                         })
                         .unwrap_or(&[]),
+                    lang,
+                    state: hunk_starts.get(index).map_or_else(State::default, |s| {
+                        if old {
+                            s.0
+                        } else {
+                            s.1
+                        }
+                    }),
                 }
             };
             lines.push(DiffRow {

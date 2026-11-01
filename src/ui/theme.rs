@@ -18,6 +18,13 @@ pub const REMOVED_SIGN: (u8, u8, u8) = (0xf8, 0x51, 0x49);
 pub const FILE_ADDED: (u8, u8, u8) = (0x77, 0xc1, 0x85);
 pub const FILE_DELETED: (u8, u8, u8) = (0xfa, 0x8e, 0x89);
 pub const FILE_MODIFIED: (u8, u8, u8) = (0xd3, 0xac, 0x5f);
+pub const SYNTAX_KEYWORD: (u8, u8, u8) = (0xff, 0x7b, 0x72);
+pub const SYNTAX_STRING: (u8, u8, u8) = (0xa5, 0xd6, 0xff);
+pub const SYNTAX_COMMENT: (u8, u8, u8) = (0x8b, 0x94, 0x9e);
+pub const SYNTAX_FUNCTION: (u8, u8, u8) = (0xd2, 0xa8, 0xff);
+pub const SYNTAX_CONSTANT: (u8, u8, u8) = (0x79, 0xc0, 0xff);
+pub const SYNTAX_TYPE: (u8, u8, u8) = (0xff, 0xa6, 0x57);
+pub const SYNTAX_TAG: (u8, u8, u8) = (0x7e, 0xe7, 0x87);
 
 /// Minimum max-min channel spread for a color to keep its hue in the 256 fallback.
 const CHROMATIC_SPREAD: u8 = 16;
@@ -124,7 +131,14 @@ mod tests {
                 REMOVED_SIGN,
                 FILE_ADDED,
                 FILE_DELETED,
-                FILE_MODIFIED
+                FILE_MODIFIED,
+                SYNTAX_KEYWORD,
+                SYNTAX_STRING,
+                SYNTAX_COMMENT,
+                SYNTAX_FUNCTION,
+                SYNTAX_CONSTANT,
+                SYNTAX_TYPE,
+                SYNTAX_TAG
             ],
             [
                 (13, 17, 23),
@@ -144,7 +158,14 @@ mod tests {
                 (248, 81, 73),
                 (119, 193, 133),
                 (250, 142, 137),
-                (211, 172, 95)
+                (211, 172, 95),
+                (255, 123, 114),
+                (165, 214, 255),
+                (139, 148, 158),
+                (210, 168, 255),
+                (121, 192, 255),
+                (255, 166, 87),
+                (126, 231, 135)
             ]
         );
         assert_eq!(color((0, 0, 0), false), Color::AnsiValue(16));

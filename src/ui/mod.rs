@@ -1,5 +1,6 @@
 pub mod layout;
 mod renderer;
+pub mod syntax;
 mod terminal;
 #[cfg(test)]
 mod tests;
