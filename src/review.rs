@@ -72,19 +72,23 @@ pub struct Review {
     turn: Cell<u64>,
 }
 
+fn session_id() -> String {
+    static SERIAL: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    format!(
+        "{:020}-{}-{:020}",
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis(),
+        std::process::id(),
+        SERIAL.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+    )
+}
+
 impl Review {
     pub fn open(repo: Repo, options: SnapshotOptions) -> io::Result<Self> {
         let files = repo.status()?;
-        static SESSION_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
-        let session = format!(
-            "{:020}-{}-{:020}",
-            SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap_or_default()
-                .as_millis(),
-            std::process::id(),
-            SESSION_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
-        );
+        let session = session_id();
         let untracked_count = files.iter().filter(|f| f.untracked).count();
         let mut oversized = Vec::new();
         let mut skipped = Vec::new();
@@ -136,14 +140,7 @@ impl Review {
                     .repo
                     .remove_generated(&self.permission_path(Path::new("")));
                 let _ = self.repo.remove_generated(&active);
-                self.session = format!(
-                    "{:020}-{}",
-                    SystemTime::now()
-                        .duration_since(UNIX_EPOCH)
-                        .unwrap_or_default()
-                        .as_nanos(),
-                    std::process::id()
-                );
+                self.session = session_id();
                 return Err(failure);
             }
         };

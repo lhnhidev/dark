@@ -404,6 +404,27 @@ fn failed_snapshot_cleans_partial_metadata_and_can_retry() {
     fs::write(f.0.join("file.txt"), b"retry works\n").unwrap();
     r.skip_oversized(10).unwrap();
     assert!(!r.startup.is_empty());
+    let retry_tree = r.startup.clone();
+    drop(r);
+    fs::write(f.0.join("file.txt"), b"latest session\n").unwrap();
+    let latest = review::Review::open(
+        git::Repo::discover(&f.0).unwrap(),
+        review::SnapshotOptions {
+            retain_sessions: 1,
+            skip_large_untracked: true,
+        },
+    )
+    .unwrap();
+    let latest_tree = latest.startup.clone();
+    assert_ne!(retry_tree, latest_tree);
+    drop(latest);
+    let refs = String::from_utf8(f.git(&[
+        "for-each-ref",
+        "--format=%(objectname)",
+        "refs/dark/snapshots/",
+    ]))
+    .unwrap();
+    assert_eq!(refs.lines().collect::<Vec<_>>(), vec![latest_tree.as_str()]);
 }
 
 #[test]

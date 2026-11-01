@@ -365,6 +365,8 @@ fn make_line(
         } else {
             let hints: &[(&str, &str)] = if v.tab == 0 {
                 &[
+                    ("a", "accept"),
+                    ("x", "reject"),
                     ("l", "danh sách file"),
                     ("r", "khung diff"),
                     ("n/N", "hunk"),
@@ -980,5 +982,21 @@ mod tests {
         let mut line = String::new();
         make_line(&mut line, &view, 160, 44, 1, (false, false, 8));
         assert!(line.contains("Changes 1 file · 1/1 đã xem"), "{line}");
+    }
+
+    #[test]
+    fn primary_review_actions_are_discoverable_at_both_capture_widths() {
+        let view = View {
+            show_files: true,
+            show_diff: true,
+            status: "0/30 file đã xem",
+            ..View::default()
+        };
+        for width in [80, 160] {
+            let mut line = String::new();
+            make_line(&mut line, &view, width, 24, 23, (false, false, 8));
+            assert!(line.contains("accept"), "{line}");
+            assert!(line.contains("reject"), "{line}");
+        }
     }
 }
