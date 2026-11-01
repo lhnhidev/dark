@@ -675,9 +675,9 @@ fn file_row(l: &mut Line<'_>, file: &FileEntry<'_>, end: usize) {
             .as_ref()
             .map_or(0, |r| UnicodeWidthStr::width(r.as_str()))
         + parts.saturating_sub(1);
-    // Reserve one gap before the counts and one margin after them.
+    // Reserve one gap before the counts; they end at the content edge.
     let reserved = if counts_width > 0 {
-        counts_width + 2
+        counts_width + 1
     } else {
         0
     };
@@ -691,7 +691,7 @@ fn file_row(l: &mut Line<'_>, file: &FileEntry<'_>, end: usize) {
         l.put(" ✓", 2, s);
     }
     if counts_width > 0 {
-        l.fill(end.saturating_sub(counts_width + 1), s);
+        l.fill(end.saturating_sub(counts_width), s);
         if let Some(a) = &added {
             l.put(a, end.saturating_sub(l.col), style(t::FILE_ADDED, s.bg));
         }
