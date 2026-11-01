@@ -66,6 +66,14 @@ Nhấn 1/2/3 để đổi màn hình, q hoặc Ctrl-C để thoát. Trong termin
 
 `dark --self-test` chạy không cần terminal: dùng cùng trạng thái app và renderer, đi qua các màn hình và resize rồi lấy nhiều mẫu bộ nhớ. Bài test trong `tests/ram/` chỉ áp ngân sách khi chạy `cargo test --release`; bản debug được bỏ qua kèm lý do. Self-test không thay thế kiểm tra terminal thật.
 
+Từ M1, `dark --self-test-review` mở repo ở thư mục hiện tại, tạo snapshot, tải diff và vẽ ở 160/120/100/80 cột, rồi báo RAM của dark. Lệnh này tạo output/snapshot như phiên Review bình thường; chỉ chạy bài tự động trong repo fixture riêng. `tests/ram/review.rs` tạo repo 30 file/3.000 dòng đổi và áp đúng ngưỡng release, không thay bằng self-test khung trống.
+
+Các cấu hình M1 dùng biến môi trường: `DARK_SNAPSHOT_KEEP` (số phiên giữ, mặc định 10), `DARK_TAB_WIDTH` (1–16, mặc định 8), `DARK_EDITOR` (ưu tiên hơn `VISUAL`/`EDITOR`, hỗ trợ `{file}`/`{line}`). Chưa đọc file TOML của các milestone sau. `NO_COLOR` tắt màu khi biến được đặt, kể cả giá trị rỗng.
+
+Đo riêng dependency word diff trên Windows: `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/measure-word-diff.ps1`. Probe cùng dữ liệu/flags trước và sau, không dùng số đó thay cho RAM ứng dụng thật; xem [M1_VERIFICATION.md](M1_VERIFICATION.md).
+
+Ghi lại terminal Linux thật: `python3 scripts/capture-review.py /absolute/path/to/dark`. Fixture được tạo trong thư mục tạm; output `.ansi`, `.txt`, `.html` ở `docs/ui/m1/`. HTML tái dựng từ ANSI đã ghi, không phải ảnh chụp. Các script terminal Windows/Linux cũng dùng fixture riêng để tránh tạo snapshot trong repo làm việc.
+
 ## Benchmark so với công cụ review khác
 
 `tests/bench/compare-review-tools.py` tự tạo repo mẫu 30 file có diff, mở từng công cụ trong PTY, gửi một phím, chờ idle rồi đo private, RSS, PSS của cả cây process. Chỉ chạy trên Linux (trên Windows dùng WSL); chỉ cần Python 3 và git.

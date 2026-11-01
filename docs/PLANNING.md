@@ -70,15 +70,17 @@ Mã tính năng (C, R, E, V, G, P, K, S) theo [FEATURES.md](FEATURES.md).
 Output và số đo: [M0_VERIFICATION.md](M0_VERIFICATION.md).
 
 ### M1 — Khung giao diện + Review
-- [ ] Thanh tab, thanh trạng thái, khung active, dòng đang chọn đúng [UI_SPEC.md](UI_SPEC.md) §3; tab 6 và 7 hiện "Coming soon".
-- [ ] Theme nằm trong một module, có test đúng từng mã hex; hỗ trợ terminal 256 màu và `NO_COLOR`.
-- [ ] Trên một repo thật: snapshot, danh sách file đổi đúng (thêm, sửa, xóa, untracked), nhóm Staged/Changes/Untracked.
-- [ ] Diff 2 cột có nhấn mạnh chữ đổi trong dòng; ô trống đúng màu; khung diff < 120 cột tự về 1 cột; `v` đổi chế độ.
-- [ ] `a`/`x`: sau khi reject, `git diff` khớp đúng phần còn lại. `u` hoàn tác cả lượt có xác nhận, không hỏng index/nhánh.
-- [ ] `l`, `r`, `Tab`, `n`/`N`, `e` hoạt động như UI_SPEC §4.4.
-- [ ] Repo không phải git, file nhị phân, file lớn, tên file Unicode: báo rõ, không crash.
-- [ ] Giao diện ở 160×44 khớp [ui/1-review.png](ui/1-review.png) (trừ ghi chú AI, thuộc M5); kiểm tra thêm ở 120, 100, 80 cột.
-- [ ] RAM review repo mẫu (~30 file, ~3.000 dòng đổi) < 2.000.000 byte trên Windows và Linux musl; chạy lại `tests/bench/compare-review-tools.py`, cập nhật ARCHITECTURE §6.2.
+
+Triển khai và kiểm chứng nội bộ: xem [M1_VERIFICATION.md](M1_VERIFICATION.md). **Chờ chủ dự án chạy thử; chưa đóng milestone, chưa tạo tag.** Các phần M2/M3/M5 trong ảnh được vô hiệu hóa theo phạm vi đã duyệt.
+- [x] Thanh tab, thanh trạng thái, khung active, dòng đang chọn đúng [UI_SPEC.md](UI_SPEC.md) §3; tab 6 và 7 hiện "Coming soon".
+- [x] Theme nằm trong một module, có test đúng từng mã hex; hỗ trợ terminal 256 màu và `NO_COLOR`.
+- [x] Trên một repo thật: snapshot, danh sách file đổi đúng (thêm, sửa, xóa, untracked), nhóm Staged/Changes/Untracked.
+- [x] Diff 2 cột có nhấn mạnh chữ đổi trong dòng; ô trống đúng màu; khung diff < 120 cột tự về 1 cột; `v` đổi chế độ.
+- [x] `a`/`x`: sau khi reject, `git diff` khớp đúng phần còn lại. `u` hoàn tác cả lượt có xác nhận, không hỏng index/nhánh.
+- [x] `l`, `r`, `Tab`, `n`/`N`, `e` hoạt động như UI_SPEC §4.4.
+- [x] Repo không phải git, file nhị phân, file lớn, tên file Unicode: báo rõ, không crash.
+- [x] Giao diện ở 160×44 khớp [ui/1-review.png](ui/1-review.png) (trừ ghi chú AI, thuộc M5); kiểm tra thêm ở 120, 100, 80 cột.
+- [x] RAM review repo mẫu (~30 file, ~3.000 dòng đổi) < 2.000.000 byte trên Windows và Linux musl; chạy lại `tests/bench/compare-review-tools.py`, cập nhật ARCHITECTURE §6.2.
 
 ### M2 — Edit
 - [ ] Cây thư mục tải dần, bỏ qua `.gitignore`, đánh dấu file/thư mục đã đổi; `Ctrl-B` ẩn/hiện.
@@ -162,8 +164,6 @@ Làm song song: thu góp ý từ v0.1 để quyết định thứ tự M7–M9; 
 
 | Câu hỏi | Lựa chọn | Thời điểm |
 |---|---|---|
-| Snapshot lưu thế nào | Ref riêng `refs/dark/...` / stash / commit tạm | Kế hoạch M1 |
-| Thuật toán diff theo chữ trong dòng | Tự viết / crate nhỏ như `similar` hoặc `imara-diff` | Kế hoạch M1, kèm số đo |
 | Cấu trúc bộ đệm của editor | Mảng dòng / rope như `ropey` | Kế hoạch M2, kèm số đo |
 | Clipboard ngoài Windows | OSC 52 / clipboard nội bộ | Kế hoạch M2 |
 | Chờ phím + pipe trên Windows | Luồng đọc pipe nhỏ / overlapped I/O | Kế hoạch M5 |
@@ -171,7 +171,7 @@ Làm song song: thu góp ý từ v0.1 để quyết định thứ tự M7–M9; 
 | Trên Windows mặc định mở `darkw` hay bản terminal | Theo kết quả M4 | Cuối M4 |
 | Tên chính thức | Để sau | Trước M6 |
 
-Đã chốt: renderer tự viết (không dùng ratatui); musl cho bản phát hành Linux; theme theo Hunk; reject là `x` vì `r` dùng để ẩn/hiện khung diff.
+Đã chốt: renderer tự viết (không dùng ratatui); musl cho bản phát hành Linux; theme theo Hunk; reject là `x` vì `r` dùng để ẩn/hiện khung diff. M1 lưu snapshot bằng ref riêng `refs/dark/snapshots/<session>/<turn>` và index tạm, tách mốc phục hồi lúc mở phiên khỏi mốc review HEAD; word diff dùng `similar 2.7.0`/Myers có giới hạn. Chi tiết và số đo ở [M1_VERIFICATION.md](M1_VERIFICATION.md).
 
 ## 8. Rủi ro cần theo dõi
 

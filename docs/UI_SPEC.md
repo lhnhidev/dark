@@ -107,6 +107,8 @@ Màu cú pháp (chỉ dùng từ M9, theo GitHub Dark Default): từ khóa `#ff7
 - Dưới cùng: nhãn `Commit message` (`muted`), ô nhập một dòng (nền `background`, viền `border`, viền `accent` khi đang gõ), gợi ý `Space stage · c commit`.
 - Phím: `↑`/`↓` hoặc `j`/`k` chọn file · `Enter` mở diff · `Space` stage/unstage file · `s` stage tất cả · `c` tới ô commit message, `Enter` trong ô để commit · `d` bỏ toàn bộ thay đổi của file (**có hỏi xác nhận**).
 
+**Trong M1:** vùng commit giữ nguyên vị trí nhưng vô hiệu hóa, có nhãn `Có ở M3`, dùng `line_number`. Các phím stage/commit/bỏ cả file chỉ báo chưa có ở M1, không thay đổi index. File có cả staged và unstaged có thể hiện trong hai nhóm nhưng tổng file và tiến độ chỉ đếm một lần.
+
 ### 4.2 Khung phải: diff (80%)
 - `r` ẩn/hiện. Hai khung đều ẩn: hiện dòng giữa màn hình "Ấn l hoặc r để hiện lại".
 - Tiêu đề: đường dẫn file (`text`) · `hunk i/n` · bên phải `+N −N` · chế độ `split`/`unified`.
@@ -147,6 +149,8 @@ Màu cú pháp (chỉ dùng từ M9, theo GitHub Dark Default): từ khóa `#ff7
 | `e` | Mở file trong editor ngoài |
 | `v` | Đổi split / unified |
 | `q` | Thoát |
+
+**Trong M1:** `Enter` ở danh sách mở diff; `Enter` ở diff báo sửa nội bộ có ở M2 và gợi ý `e`. `?` và `/` báo có ở M5 trên thanh trạng thái, không im lặng. Khi chưa có ghi chú AI, thanh trạng thái vẫn chỉ dẫn `a accept` và `x reject`; màn hẹp ưu tiên giữ hai phím này. `u` ghi rõ khôi phục về **lúc mở phiên dark**, liệt kê file bị ảnh hưởng và cảnh báo gồm cả thay đổi người dùng tự làm sau khi mở; file đổi tiếp trong lúc xác nhận thì hủy thao tác và yêu cầu xem lại.
 
 ## 5. Tab 2 · Edit
 

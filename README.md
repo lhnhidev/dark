@@ -2,7 +2,7 @@
 
 **Review từng thay đổi agent AI tạo ra: giữ phần đúng, bỏ phần sai, sửa ngay, góp ý ngược lại cho agent. Dùng agent bạn đang có, chỉ tốn vài MB RAM.**
 
-> **Trạng thái:** đang phát triển. M0 (khung ứng dụng) đã xong; M1 (khung giao diện + Review) là bước tiếp theo. Xem [PLANNING.md](docs/PLANNING.md).
+> **Trạng thái:** M1 (khung giao diện + Review) đã triển khai, chờ chủ dự án chạy thử trước khi đóng milestone. Xem [báo cáo M1](docs/M1_VERIFICATION.md) và [PLANNING.md](docs/PLANNING.md).
 > Tên "dark" là tên tạm, sẽ chốt trước v0.2.
 
 ![Tab Review](docs/ui/1-review.png)
@@ -58,7 +58,7 @@ Chi tiết: [PLANNING.md](docs/PLANNING.md).
 
 ## Chạy bản hiện tại
 
-Bản M0 chỉ có khung: ba màn trống, chuyển bằng `1`/`2`/`3`, thoát bằng `q` hoặc `Ctrl-C`.
+Bản M1 có bảy tab; Review hoạt động, các tab còn lại chờ milestone tương ứng. Chạy dark trong repo Git cần review. Diff so với HEAD nên vẫn hiện thay đổi đã có trước khi mở app; snapshot phục hồi lưu trạng thái lúc mở phiên.
 
 ```powershell
 cargo build --release
@@ -68,6 +68,14 @@ cargo build --release
 ```
 
 Cần Rust stable; Windows dùng toolchain MSVC và bộ C++ của Visual Studio. Lệnh kiểm tra, runner Windows/WSL, bản musl và cách đo RAM: [DEVELOPMENT.md](docs/DEVELOPMENT.md).
+
+Trong Review: `a` giữ hunk, `x` bỏ hunk chưa stage, `n`/`N` chuyển hunk, `l`/`r` ẩn/hiện khung, `Tab` đổi khung, `v` đổi split/unified, `e` mở editor ngoài. `u` hỏi trước khi khôi phục về **lúc mở phiên**, gồm cả thay đổi bạn tự làm sau đó; index và nhánh giữ nguyên. Hunk chứa thay đổi đã stage bị chặn reject trong M1, không tự unstage.
+
+`DARK_SNAPSHOT_KEEP` đặt số phiên snapshot cần giữ (mặc định 10; phiên đang mở được bảo vệ). `DARK_TAB_WIDTH` đặt tab stop 1–16 (mặc định 8). `DARK_EDITOR`, rồi `VISUAL`/`EDITOR`, chọn editor ngoài; hỗ trợ `{file}` và `{line}`, ví dụ `code --wait --goto {file}:{line}`. Tham số được truyền trực tiếp, không chạy qua shell.
+
+Bản ghi terminal thật: [160×44](docs/ui/m1/160x44.html), [80×24](docs/ui/m1/80x24.html), đặt cạnh [ảnh thiết kế](docs/ui/1-review.png). Các phần khác ảnh và giới hạn hiện tại được liệt kê trong [báo cáo M1](docs/M1_VERIFICATION.md).
+
+Để kiểm tra chính code M1 mà không sửa repo nguồn: `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/try-m1.ps1` tạo bản sao review độc lập và mở binary release đã kiểm chứng.
 
 ## Tài liệu
 

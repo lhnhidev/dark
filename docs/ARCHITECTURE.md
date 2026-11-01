@@ -115,9 +115,9 @@ src/
 │   ├── layout.rs      # thanh tab, thanh trạng thái, chia khung, viền active, màn hẹp                      [M1]
 │   └── widgets/       # danh sách có dòng chọn, ô nhập, nút, hộp xác nhận, khung ghi chú                  [M1+]
 ├── screens/           # review, edit, vibe, git, models, soon (View/Help)                                [M1–M6]
-├── review/            # snapshot, đọc diff, tách hunk, căn dòng 2 cột, accept/reject, hoàn tác            [M1]
-├── diff/              # diff theo chữ trong dòng                                                         [M1]
-├── git/               # status theo nhóm, stage/unstage, commit, log --graph theo trang                  [M1–M3]
+├── review.rs          # snapshot raw bytes, đọc/tách hunk, reject và phục hồi có kiểm tra                 [M1 ✓]
+├── diff.rs            # word diff Unicode, similar/Myers, giới hạn thời gian và kích thước               [M1 ✓]
+├── git.rs             # status theo nhóm, index đọc riêng; stage/commit/log còn chờ M3                    [M1 ✓, M3]
 ├── editor/            # bộ đệm, con trỏ theo grapheme, undo, chọn chữ, clipboard, tìm, lưu an toàn        [M2]
 ├── tree/              # cây thư mục tải dần, tôn trọng .gitignore                                       [M2]
 ├── companion/         # phát hiện agent CLI, gọi CLI, nhường/chia màn hình, theo dõi thay đổi            [M3]
@@ -128,7 +128,7 @@ src/
 ├── skills/            # cài/gỡ skill dark-notes, dark-feedback vào thư mục của từng agent                [M5]
 ├── credentials/       # lưu/đọc API key qua kho mật khẩu hệ điều hành                                    [M6]
 ├── memory/            # đo bộ nhớ theo nền tảng                                                         [M0 ✓]
-└── proc/              # chạy process con, đọc pipe (CREATE_NO_WINDOW trên Windows)                      [M1+]
+└── proc.rs            # process đồng bộ có timeout, output trên đĩa, CREATE_NO_WINDOW                   [M1 ✓]
 src/bin/darkw.rs       # file chạy cửa sổ riêng (subsystem windows)                                       [M4]
 skills/                # nội dung skill dark-notes, dark-feedback đi kèm (văn bản thuần, không script)      [M5]
 docs/ui/               # ảnh tham chiếu giao diện                                                         [✓]
@@ -151,12 +151,16 @@ scripts/, tests/       # runner kiểm chứng, test RAM, test bố cục, bench
 - **Hai backend dùng chung renderer:** terminal (`dark`) và cửa sổ (`darkw`, xem 5.9).
 
 ### 5.3 Review engine (M1)
-- **Snapshot:** trước mỗi lượt agent, ghi một ref git riêng (ví dụ `refs/dark/snapshots/<n>`) trỏ tới trạng thái working tree, không đụng index hay nhánh của người dùng. Ở chế độ đi kèm, snapshot tạo khi mở dark hoặc khi gọi agent từ tab Vibe.
-- **Diff:** `git diff` so với snapshot, tách hunk; chỉ giữ hunk của file đang xem.
+- **Snapshot M1:** ref `refs/dark/snapshots/<session>/<turn>` trỏ tới tree chứa raw bytes của working tree lúc mở phiên, kể cả untracked không bị ignore đã được phép lưu. Dùng `GIT_INDEX_FILE` riêng; không sửa index thật, HEAD hay stash. Những lệnh Git đọc cũng dùng bản sao index riêng, giữ nguyên mtime để bảo toàn cơ chế phát hiện racy-clean của Git.
+- **Hai mốc:** snapshot lúc mở phiên dành cho phục hồi; diff M1 so với HEAD để không giấu thay đổi đã có sẵn. Chưa tự nhận biết lúc agent ngoài app bắt đầu lượt; snapshot trước lượt do dark gọi agent thuộc milestone sau.
+- **Giữ snapshot:** mặc định 10 phiên, cấu hình bằng `DARK_SNAPSHOT_KEEP`; bảo vệ phiên đang mở, xóa ref và metadata của phiên hết hạn. Git object không còn ref được `git gc` dọn theo cơ chế bình thường, dark không ép chạy GC. Output tạm được dọn; journal lỗi giữ lại để phục hồi tới khi hết chính sách giữ phiên.
+- **Ref riêng và push:** `refs/dark/*` không phải nhánh/tag, không hiện trong `git branch`/`git tag` và không gửi trong push mặc định thông thường (có test remote bare cục bộ). `git push --mirror` hoặc refspec tùy chỉnh bao trùm `refs/*` vẫn có thể gửi chúng.
+- **Untracked lớn/nhiều:** trên 50 MiB/file hoặc trên 1.000 file phải cảnh báo và cho chọn bỏ qua/hủy tạo snapshot; file bị bỏ qua chỉ đọc. Kiểm tra lại giới hạn trước snapshot phục hồi của reject/undo, không âm thầm ghi file lớn vào object store.
+- **Diff:** đọc từng file, giữ patch/hunk của file đang xem; dữ liệu Git lớn nằm trên đĩa. Hiện patch trên 512 KiB, untracked trên 256 KiB, file nhị phân hoặc không UTF-8 được báo chỉ đọc qua editor ngoài; chưa có paging cho các trường hợp này.
 - **Căn dòng 2 cột:** trong mỗi hunk, ghép dòng xóa với dòng thêm tương ứng; bên thiếu dòng hiện ô trống. Khung < 120 cột thì về 1 cột.
-- **Diff theo chữ (`diff/`):** với mỗi cặp dòng xóa/thêm, tìm phần chữ khác nhau để tô nền đậm hơn. Chỉ tính cho hunk đang hiển thị. Tự viết hay dùng crate nhỏ (`similar`, `imara-diff`) chốt ở kế hoạch M1.
-- **Accept:** giữ nguyên working tree, đánh dấu đã xem. **Reject:** áp ngược patch của hunk vào working tree.
-- **Hoàn tác cả lượt:** khôi phục working tree về snapshot, có xác nhận; không xóa file người dùng tạo ngoài phạm vi lượt AI mà không hỏi.
+- **Diff theo chữ:** `similar 2.7.0`/Myers, tắt default features; token giữ từ, dấu câu và khoảng trắng, biên tô màu giữ nguyên grapheme. Chỉ tính phần đang hiển thị; dòng trên 1.000 Unicode scalar, hunk trên 200 dòng hoặc hết 10 ms/cặp thì giữ màu theo dòng. Không ảnh hưởng nội dung patch hay ngữ cảnh AI. Số đo dependency riêng ở [M1_VERIFICATION.md](M1_VERIFICATION.md).
+- **Accept:** giữ nguyên working tree, đánh dấu theo danh tính/nội dung hunk; refresh làm mất dấu khi nội dung đổi. **Reject:** kiểm tra stale và áp ngược patch vào working tree, không dùng chế độ áp một phần. Hunk chạm thay đổi đã stage bị chặn và gợi ý unstage trước; không sửa index.
+- **Hoàn tác M1:** xác nhận rõ về lúc mở phiên, gồm cả thay đổi người dùng tự làm; danh sách và token raw hash/quyền file được kiểm tra trước/sau lập plan và trước ghi. Chuẩn bị bản thay thế cùng backup trên đĩa, rename từng file và rollback khi gặp lỗi; không bảo đảm giao dịch nguyên tử toàn bộ nhiều file khi process/máy bị ngắt. File untracked mới ngoài snapshot được giữ lại. Journal/ref phục hồi được giữ khi lỗi.
 - Mọi thao tác ghi kiểm tra lỗi của git và báo rõ, không để repo ở trạng thái nửa vời.
 
 ### 5.4 Git panel và tab Git commit (M1–M3)
@@ -253,6 +257,8 @@ Bản phát hành Linux dùng musl; GNU dùng khi phát triển. Bộ cấp phá
 | Hunk (bản đóng gói Bun, chạy thẳng) | ~191 MB | ~238 MB | ~275 MB | ~193 MB |
 
 RSS của dark GNU gồm ~1,6 MB glibc dùng chung; bản musl phát hành có RSS ~0,5 MB. **Chưa công bằng cho đối thủ:** dark M0 chưa tải diff; phải đo lại sau M1 bằng đúng script này trước khi dùng con số để giới thiệu.
+
+**Chạy lại M1 (01/11/2026, WSL musl):** cùng script, repo 30 file/960 dòng thêm/510 dòng xóa, PTY 160×45, 3 lượt sau warm-up; dark tải và xuất diff thật. Median private **888.832 byte**, RSS **892.928 byte**, PSS **888.832 byte**. Đỉnh mẫu RSS cả cây process **6.168.576 byte** (tối đa 3 process), không thay cho số app riêng khi xét ngân sách. Chưa có executable tuicr/Hunk trong WSL hiện tại nên chưa đo lại đối thủ; bảng trên vẫn là lịch sử M0, không phải phép so sánh mới. Số đo Windows/musl và giới hạn đầy đủ: [M1_VERIFICATION.md](M1_VERIFICATION.md).
 
 ### 6.3 Mục tiêu
 
