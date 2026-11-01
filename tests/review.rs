@@ -240,6 +240,154 @@ fn recovery_limits_are_checked_again_before_reject() {
     assert_eq!(fs::read(f.0.join("file.txt")).unwrap(), b"changed\n");
 }
 
+#[test]
+fn successful_operations_remove_transient_output_and_drop_removes_scratch() {
+    let f = Fixture::new();
+    let mut r = f.open();
+    fs::write(f.0.join("file.txt"), b"changed\n").unwrap();
+    let token = r.undo_token().unwrap();
+    r.undo_checked(&token).unwrap();
+    for entry in fs::read_dir(f.0.join(".dark")).unwrap() {
+        let entry = entry.unwrap();
+        let name = entry.file_name().to_string_lossy().into_owned();
+        assert!(
+            !["undo-", "reject-", "snapshot-"]
+                .iter()
+                .any(|prefix| name.starts_with(prefix)),
+            "leftover {name}"
+        );
+        if name.starts_with("process-") {
+            assert_eq!(fs::read_dir(entry.path()).unwrap().count(), 0);
+        }
+    }
+    drop(r);
+    assert!(fs::read_dir(f.0.join(".dark")).unwrap().all(|entry| entry
+        .unwrap()
+        .file_name()
+        .to_string_lossy()
+        .starts_with("permissions-")));
+}
+
+#[test]
+fn retention_cleans_expired_metadata_but_preserves_live_sessions() {
+    let f = Fixture::new();
+    let r1 = f.open();
+    let r2 = review::Review::open(
+        git::Repo::discover(&f.0).unwrap(),
+        review::SnapshotOptions {
+            retain_sessions: 1,
+            skip_large_untracked: false,
+        },
+    )
+    .unwrap();
+    assert_eq!(
+        String::from_utf8(f.git(&[
+            "for-each-ref",
+            "--format=%(refname)",
+            "refs/dark/snapshots/"
+        ]))
+        .unwrap()
+        .lines()
+        .count(),
+        2
+    );
+    drop(r1);
+    drop(r2);
+    let _r3 = review::Review::open(
+        git::Repo::discover(&f.0).unwrap(),
+        review::SnapshotOptions {
+            retain_sessions: 1,
+            skip_large_untracked: false,
+        },
+    )
+    .unwrap();
+    assert_eq!(
+        String::from_utf8(f.git(&[
+            "for-each-ref",
+            "--format=%(refname)",
+            "refs/dark/snapshots/"
+        ]))
+        .unwrap()
+        .lines()
+        .count(),
+        1
+    );
+    assert_eq!(
+        fs::read_dir(f.0.join(".dark"))
+            .unwrap()
+            .filter(|e| e
+                .as_ref()
+                .unwrap()
+                .file_name()
+                .to_string_lossy()
+                .starts_with("permissions-"))
+            .count(),
+        1
+    );
+}
+
+#[test]
+fn failed_snapshot_cleans_partial_metadata_and_can_retry() {
+    let f = Fixture::new();
+    fs::File::create(f.0.join("huge.bin"))
+        .unwrap()
+        .set_len(50 * 1024 * 1024 + 1)
+        .unwrap();
+    let mut r = f.open();
+    fs::write(f.0.join("a-first.txt"), b"saved before failure").unwrap();
+    fs::remove_file(f.0.join("file.txt")).unwrap();
+    fs::create_dir(f.0.join("file.txt")).unwrap();
+    assert!(r.skip_oversized(10).is_err());
+    assert!(fs::read_dir(f.0.join(".dark")).unwrap().all(|e| !e
+        .unwrap()
+        .file_name()
+        .to_string_lossy()
+        .starts_with("permissions-")));
+    fs::remove_dir(f.0.join("file.txt")).unwrap();
+    fs::write(f.0.join("file.txt"), b"retry works\n").unwrap();
+    r.skip_oversized(10).unwrap();
+    assert!(!r.startup.is_empty());
+}
+
+#[test]
+fn private_snapshot_refs_are_not_in_default_push_to_local_remote() {
+    let f = Fixture::new();
+    let remote = f.0.join(".dark/remote.git");
+    fs::create_dir_all(&remote).unwrap();
+    f.git(&["init", "--bare", "-q", remote.to_str().unwrap()]);
+    f.git(&["remote", "add", "origin", remote.to_str().unwrap()]);
+    f.git(&["config", "push.default", "current"]);
+    let _r = f.open();
+    assert!(f
+        .git(&["branch", "--list"])
+        .windows(10)
+        .all(|w| w != b"refs/dark/"));
+    assert!(f.git(&["tag", "--list"]).is_empty());
+    f.git(&["push", "-u", "origin"]);
+    assert!(f
+        .git(&[
+            "--git-dir",
+            remote.to_str().unwrap(),
+            "for-each-ref",
+            "--format=%(refname)",
+            "refs/dark/"
+        ])
+        .is_empty());
+}
+
+#[test]
+fn more_than_one_thousand_untracked_files_requires_skip() {
+    let f = Fixture::new();
+    for n in 0..1001 {
+        fs::write(f.0.join(format!("untracked-{n}.txt")), b"x").unwrap();
+    }
+    let r = f.open();
+    assert!(r.needs_confirmation);
+    assert_eq!(r.untracked_count, 1001);
+    assert_eq!(r.oversized.len(), 1001);
+    assert!(r.startup.is_empty());
+}
+
 #[cfg(windows)]
 #[test]
 fn undo_failure_rolls_back_previously_restored_files() {

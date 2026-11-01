@@ -71,3 +71,32 @@ pub fn reject_link(path: &Path) -> io::Result<()> {
     }
     Ok(())
 }
+
+pub fn process_alive(pid: u32) -> bool {
+    #[cfg(windows)]
+    unsafe {
+        use windows_sys::Win32::Foundation::CloseHandle;
+        use windows_sys::Win32::System::Threading::{
+            GetExitCodeProcess, OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION,
+        };
+        let handle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid);
+        if handle.is_null() {
+            return false;
+        }
+        let mut code = 0;
+        let alive = GetExitCodeProcess(handle, &mut code) != 0 && code == 259;
+        CloseHandle(handle);
+        alive
+    }
+    #[cfg(unix)]
+    {
+        unsafe extern "C" {
+            fn kill(pid: i32, signal: i32) -> i32;
+        }
+        unsafe { kill(pid as i32, 0) == 0 }
+    }
+    #[cfg(not(any(windows, unix)))]
+    {
+        pid == std::process::id()
+    }
+}

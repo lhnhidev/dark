@@ -67,7 +67,6 @@ pub struct Review {
     pub needs_confirmation: bool,
     pub oversized: Vec<OversizedFile>,
     pub untracked_count: usize,
-    pub snapshot_time: String,
     session: String,
     skipped: Vec<PathBuf>,
     turn: Cell<u64>,
@@ -76,13 +75,15 @@ pub struct Review {
 impl Review {
     pub fn open(repo: Repo, options: SnapshotOptions) -> io::Result<Self> {
         let files = repo.status()?;
+        static SESSION_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
         let session = format!(
-            "{:020}-{}",
+            "{:020}-{}-{:020}",
             SystemTime::now()
                 .duration_since(UNIX_EPOCH)
                 .unwrap_or_default()
                 .as_millis(),
-            std::process::id()
+            std::process::id(),
+            SESSION_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
         );
         let untracked_count = files.iter().filter(|f| f.untracked).count();
         let mut oversized = Vec::new();
@@ -107,7 +108,6 @@ impl Review {
             needs_confirmation,
             oversized,
             untracked_count,
-            snapshot_time: session[..20].to_owned(),
             session,
             skipped,
             turn: Cell::new(0),
@@ -126,9 +126,16 @@ impl Review {
     }
 
     fn finish_snapshot(&mut self, retention: usize) -> io::Result<()> {
+        let active = self.active_path();
+        crate::proc::reject_link(&active)?;
+        fs::write(&active, std::process::id().to_string())?;
         self.startup = match self.snapshot("startup") {
             Ok(tree) => tree,
             Err(failure) => {
+                let _ = self
+                    .repo
+                    .remove_generated(&self.permission_path(Path::new("")));
+                let _ = self.repo.remove_generated(&active);
                 self.session = format!(
                     "{:020}-{}",
                     SystemTime::now()
@@ -162,12 +169,91 @@ impl Review {
         sessions.sort_unstable();
         sessions.dedup();
         let expired = sessions.len().saturating_sub(keep);
+        let expired: Vec<&str> = sessions[..expired]
+            .iter()
+            .copied()
+            .filter(|session| {
+                let active = self.repo.root.join(format!(".dark/active-{session}"));
+                let live = fs::read_to_string(active)
+                    .ok()
+                    .and_then(|s| s.parse().ok())
+                    .is_some_and(crate::proc::process_alive);
+                !live
+            })
+            .collect();
         for reference in refs.lines().filter(|r| {
-            sessions[..expired]
+            expired
                 .iter()
                 .any(|s| r.starts_with(&format!("refs/dark/snapshots/{s}/")))
         }) {
             self.repo.git(&["update-ref", "-d", reference])?;
+        }
+        for session in expired {
+            for name in [
+                format!("permissions-{session}"),
+                format!("active-{session}"),
+                format!("snapshot-index-{session}"),
+                format!("snapshot-paths-{session}"),
+                format!("undo-token-{session}"),
+                format!("reject-{session}.patch"),
+            ] {
+                self.repo
+                    .remove_generated(&self.repo.root.join(".dark").join(name))?;
+            }
+            for entry in fs::read_dir(self.repo.root.join(".dark"))? {
+                let entry = entry?;
+                if entry
+                    .file_name()
+                    .to_string_lossy()
+                    .starts_with(&format!("undo-{session}-"))
+                {
+                    self.repo.remove_generated(&entry.path())?;
+                }
+            }
+        }
+        // A crashed process can leave disposable outputs without a completed ref.
+        // Preserve recovery journals for retained sessions, and never clean a live process.
+        for entry in fs::read_dir(self.repo.root.join(".dark"))? {
+            let entry = entry?;
+            let name = entry.file_name().to_string_lossy().into_owned();
+            if let Some(pid) = name
+                .strip_prefix("process-")
+                .and_then(|tail| tail.split('-').next())
+                .and_then(|pid| pid.parse().ok())
+            {
+                if !crate::proc::process_alive(pid) {
+                    self.repo.remove_generated(&entry.path())?;
+                }
+            }
+            if let Some(session) = name
+                .strip_prefix("active-")
+                .or_else(|| name.strip_prefix("permissions-"))
+            {
+                let active = self.repo.root.join(format!(".dark/active-{session}"));
+                let live = fs::read_to_string(&active)
+                    .ok()
+                    .and_then(|s| s.parse().ok())
+                    .is_some_and(crate::proc::process_alive);
+                if live {
+                    continue;
+                }
+                for name in [
+                    format!("active-{session}"),
+                    format!("snapshot-index-{session}"),
+                    format!("snapshot-index-{session}.lock"),
+                    format!("snapshot-paths-{session}"),
+                    format!("undo-token-{session}"),
+                    format!("reject-{session}.patch"),
+                ] {
+                    self.repo
+                        .remove_generated(&self.repo.root.join(".dark").join(name))?;
+                }
+                if !sessions.contains(&session) {
+                    self.repo.remove_generated(
+                        &self.repo.root.join(format!(".dark/permissions-{session}")),
+                    )?;
+                }
+            }
         }
         Ok(())
     }
@@ -195,6 +281,7 @@ impl Review {
             .repo
             .root
             .join(format!(".dark/snapshot-index-{}", self.session));
+        let mut cleanup = RestoreTemps(vec![index.clone(), index.with_extension("lock")]);
         let _ = fs::remove_file(&index);
         self.repo
             .command(&["read-tree", "--empty"].map(OsString::from), Some(&index))?;
@@ -214,6 +301,7 @@ impl Review {
             .repo
             .root
             .join(format!(".dark/snapshot-paths-{}", self.session));
+        cleanup.0.push(listing.clone());
         crate::proc::reject_link(&listing)?;
         fs::copy(output, &listing)?;
         let mut reader = BufReader::new(File::open(listing)?);
@@ -334,6 +422,7 @@ impl Review {
             let mut contents = Vec::new();
             file.take(256 * 1024 + 1).read_to_end(&mut contents)?;
             if contents.contains(&0) {
+                self.repo.clear_output();
                 return Ok(FileDiff {
                     binary: true,
                     ..FileDiff::default()
@@ -349,6 +438,7 @@ impl Review {
                 patch.extend_from_slice(b"\n\\ No newline at end of file\n");
             }
         }
+        self.repo.clear_output();
         Ok(parse_diff(patch))
     }
 
@@ -427,6 +517,7 @@ impl Review {
             .repo
             .root
             .join(format!(".dark/reject-{}.patch", self.session));
+        let _cleanup = RestoreTemps(vec![patch_path.clone()]);
         crate::proc::reject_link(&patch_path)?;
         let mut patch = File::create(&patch_path)?;
         patch.write_all(&shown.patch[..first])?;
@@ -493,6 +584,7 @@ impl Review {
             .repo
             .root
             .join(format!(".dark/undo-token-{}", self.session));
+        let _cleanup = RestoreTemps(vec![manifest.clone()]);
         crate::proc::reject_link(&manifest)?;
         let mut file = File::create(&manifest)?;
         for (_, _, path) in self.tree_entries()? {
@@ -647,6 +739,7 @@ impl Review {
                 )));
             }
         }
+        self.repo.remove_generated(&journal)?;
         self.refresh()
     }
 
@@ -674,6 +767,18 @@ impl Review {
             .root
             .join(format!(".dark/permissions-{}", self.session))
             .join(path)
+    }
+    fn active_path(&self) -> PathBuf {
+        self.repo
+            .root
+            .join(format!(".dark/active-{}", self.session))
+    }
+}
+
+impl Drop for Review {
+    fn drop(&mut self) {
+        let _ = self.repo.remove_generated(&self.active_path());
+        self.repo.clear_output();
     }
 }
 

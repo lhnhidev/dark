@@ -4,10 +4,11 @@ use std::io::{self, BufRead, BufReader, Read};
 use std::path::{Component, Path, PathBuf};
 use std::process::Command;
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct Repo {
     pub root: PathBuf,
     index_path: PathBuf,
+    scratch: PathBuf,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -48,11 +49,9 @@ impl Repo {
             .current_dir(path)
             .args(["rev-parse", "--show-toplevel"]);
         static DISCOVER_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
-        let scratch = std::env::temp_dir().join(format!(
-            "dark-discover-{}-{}",
-            std::process::id(),
-            DISCOVER_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
-        ));
+        let instance = DISCOVER_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let scratch =
+            std::env::temp_dir().join(format!("dark-discover-{}-{}", std::process::id(), instance));
         let result = crate::proc::run(&mut command, &scratch, 16384)?;
         if !result.success {
             return Err(error("Open a Git working tree to review changes"));
@@ -83,7 +82,12 @@ impl Repo {
         )?
         .join("index");
         let _ = fs::remove_dir_all(scratch);
-        Ok(Self { root, index_path })
+        let scratch = root.join(format!(".dark/process-{}-{instance}", std::process::id()));
+        Ok(Self {
+            root,
+            index_path,
+            scratch,
+        })
     }
 
     pub fn command(&self, args: &[OsString], index: Option<&Path>) -> io::Result<PathBuf> {
@@ -104,11 +108,9 @@ impl Repo {
             .env("GIT_TERMINAL_PROMPT", "0")
             .env("GIT_OPTIONAL_LOCKS", "0");
         crate::proc::reject_link(&self.root.join(".dark"))?;
-        let directory = self
-            .root
-            .join(format!(".dark/process-{}", std::process::id()));
-        fs::create_dir_all(&directory)?;
-        crate::proc::reject_link(&directory)?;
+        let directory = &self.scratch;
+        fs::create_dir_all(directory)?;
+        crate::proc::reject_link(directory)?;
         if let Some(index) = index {
             command.env("GIT_INDEX_FILE", index);
         } else {
@@ -122,7 +124,8 @@ impl Repo {
             }
             command.env("GIT_INDEX_FILE", private);
         }
-        let result = crate::proc::run(&mut command, &directory, 64 * 1024 * 1024)?;
+        let result = crate::proc::run(&mut command, directory, 64 * 1024 * 1024)?;
+        let _ = fs::remove_file(directory.join("read-index"));
         if !result.success {
             let mut message = String::new();
             File::open(directory.join("stderr"))?
@@ -145,11 +148,38 @@ impl Repo {
         }
         let mut data = Vec::new();
         file.take(2_000_001).read_to_end(&mut data)?;
+        self.clear_output();
         Ok(data)
     }
 
     pub fn text(&self, args: &[&str]) -> io::Result<String> {
         Ok(String::from_utf8_lossy(&self.git(args)?).trim().to_owned())
+    }
+
+    pub fn clear_output(&self) {
+        for name in ["stdout", "stderr", "read-index"] {
+            let _ = fs::remove_file(self.scratch.join(name));
+        }
+    }
+
+    pub fn remove_generated(&self, path: &Path) -> io::Result<()> {
+        crate::proc::reject_link(&self.root.join(".dark"))?;
+        crate::proc::reject_link(path)?;
+        if !path.exists() {
+            return Ok(());
+        }
+        let base = self.root.join(".dark").canonicalize()?;
+        let resolved = path.canonicalize()?;
+        if resolved == base || !resolved.starts_with(&base) {
+            return Err(error(
+                "Refusing to remove output outside the generated directory",
+            ));
+        }
+        if resolved.is_dir() {
+            fs::remove_dir_all(resolved)
+        } else {
+            fs::remove_file(resolved)
+        }
     }
     pub fn branch(&self) -> String {
         self.text(&["symbolic-ref", "--short", "HEAD"])
@@ -298,5 +328,11 @@ impl Repo {
             }
         }
         Ok(files)
+    }
+}
+
+impl Drop for Repo {
+    fn drop(&mut self) {
+        let _ = self.remove_generated(&self.scratch);
     }
 }
