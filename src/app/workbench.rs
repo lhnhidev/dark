@@ -184,7 +184,11 @@ impl Workbench {
             }
             Err(error) => {
                 self.diff = FileDiff::default();
-                self.message = format!("Không tải được diff: {error}");
+                self.message = if error.to_string().contains("external editor") {
+                    "Diff quá lớn: nhấn e để xem trong editor ngoài. File được giữ nguyên.".into()
+                } else {
+                    format!("Không tải được diff: {error}")
+                };
             }
         }
     }

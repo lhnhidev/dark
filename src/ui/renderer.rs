@@ -507,13 +507,21 @@ fn file_line(l: &mut Line<'_>, v: &View<'_>, row: u16, height: u16, width: usize
     let panel = style(t::TEXT, t::PANEL);
     let normal = style(t::TEXT, t::BACKGROUND);
     if row == 1 {
-        let count: usize = v.groups.iter().map(|g| g.files.len()).sum();
-        let viewed: usize = v
+        let count = v
+            .groups
+            .iter()
+            .flat_map(|g| g.files)
+            .map(|f| f.path)
+            .collect::<std::collections::HashSet<_>>()
+            .len();
+        let viewed = v
             .groups
             .iter()
             .flat_map(|g| g.files)
             .filter(|f| f.viewed)
-            .count();
+            .map(|f| f.path)
+            .collect::<std::collections::HashSet<_>>()
+            .len();
         let full = format!(" Changes {count} file · {viewed}/{count} đã xem");
         let compact = format!("Changes {count} · {viewed}/{count}");
         let label = if UnicodeWidthStr::width(full.as_str()) <= width {
@@ -936,5 +944,41 @@ mod tests {
         let output = String::from_utf8(output).unwrap();
         assert!(output.contains("187;128;9"), "{output:?}");
         assert!(output.contains("\x1b[2K"));
+    }
+
+    #[test]
+    fn partially_staged_file_is_counted_once_across_groups() {
+        let entries = [FileEntry {
+            path: "same.rs",
+            status: 'M',
+            staged: true,
+            selected: true,
+            viewed: true,
+            added: 1,
+            removed: 1,
+        }];
+        let groups = [
+            FileGroup {
+                name: "Staged",
+                collapsed: false,
+                selected: false,
+                files: &entries,
+            },
+            FileGroup {
+                name: "Changes",
+                collapsed: false,
+                selected: false,
+                files: &entries,
+            },
+        ];
+        let view = View {
+            groups: &groups,
+            show_files: true,
+            show_diff: true,
+            ..View::default()
+        };
+        let mut line = String::new();
+        make_line(&mut line, &view, 160, 44, 1, (false, false, 8));
+        assert!(line.contains("Changes 1 file · 1/1 đã xem"), "{line}");
     }
 }

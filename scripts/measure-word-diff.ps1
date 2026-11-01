@@ -1,4 +1,4 @@
-﻿param([string]$OutputDirectory = '.dark/verification/m1/word-diff')
+param([string]$OutputDirectory = '.dark/verification/m1/word-diff')
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 Push-Location $root
@@ -39,4 +39,3 @@ try {
     $env:CARGO_TARGET_DIR = $previousTargetDirectory
     Pop-Location
 }
-
