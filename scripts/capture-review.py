@@ -26,6 +26,34 @@ spec.loader.exec_module(fixture)
 CSI = re.compile(r"\x1b\[([0-9;?]*)([A-Za-z])")
 
 
+def rss(pid):
+    try:
+        for line in Path(f"/proc/{pid}/status").read_text().splitlines():
+            if line.startswith("VmRSS:"):
+                return int(line.split()[1]) * 1024
+    except (OSError, ValueError):
+        pass
+    return 0
+
+
+def child_rss(pid):
+    total = 0
+    pending = [pid]
+    seen = {pid}
+    while pending:
+        parent = pending.pop()
+        try:
+            children = Path(f"/proc/{parent}/task/{parent}/children").read_text().split()
+        except OSError:
+            continue
+        for child in map(int, children):
+            if child not in seen:
+                seen.add(child)
+                total += rss(child)
+                pending.append(child)
+    return total
+
+
 def capture(binary, cols, rows, repo):
     master, slave = pty.openpty()
     fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", rows, cols, 0, 0))
@@ -39,6 +67,7 @@ def capture(binary, cols, rows, repo):
     proc = subprocess.Popen([str(binary)], cwd=repo, stdin=slave, stdout=slave, stderr=slave,
                             env=env, preexec_fn=setup, close_fds=True)
     output = bytearray()
+    app_peak = child_peak = 0
     try:
         deadline = time.monotonic() + 45
         last_data = time.monotonic()
@@ -48,6 +77,8 @@ def capture(binary, cols, rows, repo):
             if ready:
                 output.extend(os.read(master, 65536))
                 last_data = time.monotonic()
+            app_peak = max(app_peak, rss(proc.pid))
+            child_peak = max(child_peak, child_rss(proc.pid))
             if proc.poll() is not None:
                 raise RuntimeError(f"dark exited before capture: {bytes(output)!r}")
             if complete in output and b"Changes" in output and b"session.ts" in output and time.monotonic()-last_data > 0.5:
@@ -58,7 +89,7 @@ def capture(binary, cols, rows, repo):
         proc.wait(timeout=10)
         if proc.returncode != 0:
             raise RuntimeError(f"dark exited with {proc.returncode}")
-        return bytes(output)
+        return bytes(output), app_peak, child_peak
     finally:
         if proc.poll() is None:
             proc.kill()
@@ -77,6 +108,15 @@ def screen(data, cols, rows):
     i = 0
     while i < len(text):
         if text[i] == "\x1b":
+            if text.startswith("\x1b]", i):
+                bel = text.find("\x07", i + 2)
+                st = text.find("\x1b\\", i + 2)
+                ends = [(position, length) for position, length in ((bel, 1), (st, 2)) if position >= 0]
+                if not ends:
+                    break
+                position, length = min(ends)
+                i = position + length
+                continue
             match = CSI.match(text, i)
             if not match:
                 i += 2
@@ -167,13 +207,13 @@ def main():
         repo = Path(temp) / "shop-api"
         fixture.create(repo)
         for cols, rows in ((160,44), (80,24)):
-            data = capture(binary, cols, rows, repo)
+            data, app_peak, child_peak = capture(binary, cols, rows, repo)
             name = f"{cols}x{rows}"
             (destination / (name + ".ansi")).write_bytes(data)
             cells = screen(data, cols, rows)
             (destination / (name + ".txt")).write_text("\n".join("".join(c[0] for c in row).rstrip() for row in cells) + "\n", encoding="utf-8")
             write_html(destination / (name + ".html"), cells, cols, rows)
-            print(f"Captured {name} ({len(data)} bytes)")
+            print(f"Captured {name} ({len(data)} bytes); app_peak_sampled_rss_bytes={app_peak} child_tree_peak_sampled_rss_bytes={child_peak}")
 
 
 if __name__ == "__main__":
