@@ -515,3 +515,194 @@ fn very_large_hunk_is_highlighted_to_the_last_line() {
     let screen = render(&mut w);
     assert!(plain(&screen).contains("w4999"), "last line not drawn");
 }
+
+// Syntax state checkpoints (scan from the nearest checkpoint, not the hunk start).
+
+fn long_hunk_lines(count: usize) -> Vec<review::DiffLine> {
+    use review::{DiffLine, LineKind};
+    (0..count)
+        .map(|i| {
+            let kind = match i % 7 {
+                0 | 1 => LineKind::Delete,
+                2..=4 => LineKind::Add,
+                _ => LineKind::Context,
+            };
+            // Comments open and close on one side only, across checkpoint boundaries.
+            let text = match i % 331 {
+                5 => "let a = 1; /* open".to_string(),
+                200 => "close */ let b = 2;".to_string(),
+                17 => "let s = \"quoted\"; // line".to_string(),
+                _ => format!("let v{i} = {i};"),
+            };
+            DiffLine {
+                kind,
+                old_line: None,
+                new_line: None,
+                text,
+            }
+        })
+        .collect()
+}
+
+fn full_scan(
+    lang: ui::syntax::Lang,
+    lines: &[review::DiffLine],
+) -> Vec<(ui::syntax::State, ui::syntax::State)> {
+    use review::LineKind;
+    let (mut old, mut new) = Default::default();
+    let mut all = Vec::new();
+    for line in lines {
+        all.push((old, new));
+        if line.kind != LineKind::Add {
+            ui::syntax::highlight(lang, &mut old, &line.text, |_, _| {});
+        }
+        if line.kind != LineKind::Delete {
+            ui::syntax::highlight(lang, &mut new, &line.text, |_, _| {});
+        }
+    }
+    all
+}
+
+#[test]
+fn checkpoint_states_equal_full_scan_at_any_scroll_order() {
+    let lang = ui::syntax::Lang::Rust;
+    let lines = long_hunk_lines(2000);
+    let reference = full_scan(lang, &lines);
+    // Distinct states must exist, otherwise the comparison proves nothing.
+    assert!(reference.iter().any(|s| *s != reference[0]));
+    let mut checkpoints = Vec::new();
+    // Deliberately jumps forward, back, to a boundary, and past the end.
+    for first in [0usize, 1500, 255, 256, 257, 1999, 700, 0, 1024, 1990] {
+        let needed: Vec<usize> = (first..(first + 40).min(2000)).collect();
+        let got = app::workbench::states_at(lang, &lines, &mut checkpoints, &needed);
+        for (i, state) in needed.iter().zip(&got) {
+            assert_eq!(*state, reference[*i], "line {i} (first {first})");
+        }
+    }
+    // Sparse, split-style access (two distant groups) is also exact.
+    let needed = [100usize, 101, 1700, 1701];
+    let got = app::workbench::states_at(lang, &lines, &mut checkpoints, &needed);
+    for (i, state) in needed.iter().zip(&got) {
+        assert_eq!(*state, reference[*i], "sparse line {i}");
+    }
+    assert!(checkpoints.len() <= 2000 / 256 + 1);
+}
+
+fn long_comment_fixture() -> Fixture {
+    let mut old = String::new();
+    for i in 0..600 {
+        old.push_str(&format!("let v{i} = {i};\n"));
+    }
+    let mut new = String::new();
+    for i in 0..600 {
+        match i {
+            10 => new.push_str("/* open comment\n"),
+            450 => new.push_str("close */\n"),
+            _ => new.push_str(&format!("let w{i} = {i};\n")),
+        }
+    }
+    let f = Fixture::new(&[("long.ts", &old)]);
+    f.write("long.ts", &new);
+    f
+}
+
+fn comment_covers(w: &mut Workbench, text: &str) -> bool {
+    let runs = color_runs(&render(w));
+    runs_containing(&runs, COMMENT, text) >= 1
+}
+
+#[test]
+fn comment_across_checkpoints_stays_comment_when_scrolling_both_ways() {
+    if std::env::var_os("NO_COLOR").is_some() {
+        return;
+    }
+    let f = long_comment_fixture();
+    for unified in [false, true] {
+        let mut w = Workbench::open(&f.0);
+        if unified {
+            key(&mut w, KeyCode::Char('v'));
+        }
+        // Rows between line 10 and 900 are inside the comment; after 900 they are not.
+        let mut seen_inside = false;
+        for _ in 0..80 {
+            key(&mut w, KeyCode::PageDown);
+            let screen = plain(&render(&mut w));
+            if screen.contains("w300 =") || screen.contains("w350 =") {
+                assert!(
+                    comment_covers(&mut w, "w300 =") || comment_covers(&mut w, "w350 ="),
+                    "unified={unified}"
+                );
+                seen_inside = true;
+            }
+        }
+        assert!(seen_inside, "never scrolled into the comment");
+        for _ in 0..160 {
+            key(&mut w, KeyCode::PageUp);
+            render(&mut w);
+        }
+        for _ in 0..80 {
+            key(&mut w, KeyCode::PageDown);
+            render(&mut w);
+        }
+    }
+}
+
+#[test]
+fn checkpoints_reset_when_file_selection_changes() {
+    if std::env::var_os("NO_COLOR").is_some() {
+        return;
+    }
+    // a.ts opens a comment that never closes; b.ts has plain code.
+    let mut a_old = String::new();
+    let mut b_old = String::new();
+    for i in 0..600 {
+        a_old.push_str(&format!("let a{i} = {i};\n"));
+        b_old.push_str(&format!("let b{i} = {i};\n"));
+    }
+    let a_new = a_old.replacen("let a2 = 2;", "/* open", 1);
+    let b_new = b_old.replace("let b300 = 300;", "let b300 = 301;");
+    let f = Fixture::new(&[("a.ts", &a_old), ("b.ts", &b_old)]);
+    f.write("a.ts", &a_new);
+    f.write("b.ts", &b_new);
+    let mut w = Workbench::open(&f.0);
+    for _ in 0..5 {
+        key(&mut w, KeyCode::PageDown);
+        render(&mut w);
+    }
+    // Move to b.ts and compare to a workbench that never saw a.ts.
+    w.focus_files = true;
+    key(&mut w, KeyCode::Down);
+    assert_eq!(w.selected_path().unwrap(), PathBuf::from("b.ts"));
+    let switched = render(&mut w);
+    let mut fresh = Workbench::open(&f.0);
+    key(&mut fresh, KeyCode::Down);
+    assert_eq!(fresh.selected_path().unwrap(), PathBuf::from("b.ts"));
+    assert_eq!(switched, render(&mut fresh));
+}
+
+#[test]
+fn checkpoints_reset_after_refresh_with_changed_content() {
+    if std::env::var_os("NO_COLOR").is_some() {
+        return;
+    }
+    let mut old = String::new();
+    for i in 0..900 {
+        old.push_str(&format!("let v{i} = {i};\n"));
+    }
+    let opened = old.replacen("let v1 = 1;", "/* open", 1);
+    let f = Fixture::new(&[("r.ts", &old)]);
+    f.write("r.ts", &opened);
+    let mut w = Workbench::open(&f.0);
+    for _ in 0..3 {
+        key(&mut w, KeyCode::PageDown);
+        render(&mut w);
+    }
+    // The comment is removed on disk; refresh must not keep stale states.
+    let closed = old.replacen("let v1 = 1;", "let v1 = 11;", 1);
+    f.write("r.ts", &closed);
+    w.refresh();
+    let after = render(&mut w);
+    let mut fresh = Workbench::open(&f.0);
+    assert_eq!(after, render(&mut fresh));
+    assert_eq!(runs_containing(&color_runs(&after), COMMENT, "v1"), 0);
+}

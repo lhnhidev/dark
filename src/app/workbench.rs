@@ -1,5 +1,5 @@
 use crate::git::Repo;
-use crate::review::{FileDiff, LineKind, Review, SnapshotOptions};
+use crate::review::{DiffLine, FileDiff, LineKind, Review, SnapshotOptions};
 use crate::ui::syntax::{self, State};
 use crate::ui::{
     DiffCell, DiffKind, DiffRow, FileEntry, FileGroup, Layout, Overlay, Renderer, View,
@@ -41,12 +41,78 @@ pub struct Workbench {
     prompt_scroll: usize,
     prompt: Option<Prompt>,
     diff: FileDiff,
+    /// Syntax checkpoints for the displayed diff; cleared whenever it changes.
+    checkpoints: Checkpoints,
     viewed: HashSet<(PathBuf, String)>,
     completed: HashMap<PathBuf, String>,
     project: String,
     branch: String,
     snapshot_time: String,
     retain: usize,
+}
+
+/// (hunk, needed line indexes, states before them)
+type HunkStarts = (usize, Vec<usize>, Vec<(State, State)>);
+
+/// Lines between stored syntax checkpoints.
+const CHECKPOINT_EVERY: usize = 256;
+
+struct Checkpoints {
+    key: (usize, syntax::Lang),
+    /// Per hunk: (old, new) state before line `k * CHECKPOINT_EVERY`, built lazily.
+    hunks: Vec<Vec<(State, State)>>,
+}
+
+impl Default for Checkpoints {
+    fn default() -> Self {
+        Self {
+            key: (usize::MAX, syntax::Lang::Plain),
+            hunks: Vec::new(),
+        }
+    }
+}
+
+/// Syntax states (old, new) before each line in `needed` (sorted, unique).
+/// Scans from the nearest stored checkpoint instead of the hunk start and
+/// extends `checkpoints` as it passes new boundaries.
+pub(crate) fn states_at(
+    lang: syntax::Lang,
+    lines: &[DiffLine],
+    checkpoints: &mut Vec<(State, State)>,
+    needed: &[usize],
+) -> Vec<(State, State)> {
+    let mut result = Vec::with_capacity(needed.len());
+    let (Some(&first), Some(&last)) = (needed.first(), needed.last()) else {
+        return result;
+    };
+    if checkpoints.is_empty() {
+        checkpoints.push((State::default(), State::default()));
+    }
+    let from = (first / CHECKPOINT_EVERY).min(checkpoints.len() - 1);
+    let (mut old, mut new) = checkpoints[from];
+    let mut next = 0;
+    let start = from * CHECKPOINT_EVERY;
+    let stop = (last + 1).min(lines.len());
+    for (index, line) in lines.iter().enumerate().take(stop).skip(start) {
+        if index % CHECKPOINT_EVERY == 0 && index / CHECKPOINT_EVERY == checkpoints.len() {
+            checkpoints.push((old, new));
+        }
+        while needed.get(next) == Some(&index) {
+            result.push((old, new));
+            next += 1;
+        }
+        match line.kind {
+            LineKind::Context => {
+                syntax::highlight(lang, &mut old, &line.text, |_, _| {});
+                syntax::highlight(lang, &mut new, &line.text, |_, _| {});
+            }
+            LineKind::Delete => syntax::highlight(lang, &mut old, &line.text, |_, _| {}),
+            LineKind::Add => syntax::highlight(lang, &mut new, &line.text, |_, _| {}),
+        }
+    }
+    // Indexes past the end of the hunk keep the default state.
+    result.resize(needed.len(), (State::default(), State::default()));
+    result
 }
 
 impl Workbench {
@@ -96,6 +162,7 @@ impl Workbench {
             prompt_scroll: 0,
             prompt,
             diff: FileDiff::default(),
+            checkpoints: Checkpoints::default(),
             viewed: HashSet::new(),
             completed: HashMap::new(),
             project,
@@ -165,6 +232,7 @@ impl Workbench {
     }
 
     pub fn load(&mut self) {
+        self.checkpoints = Checkpoints::default();
         self.hunk = 0;
         self.scroll = 0;
         let Some(review) = &self.review else {
@@ -557,49 +625,43 @@ impl Workbench {
             .map_or(syntax::Lang::Plain, |f| {
                 syntax::lang_for_path(&f.display_path)
             });
-        // Syntax state at the start of each line (old side, new side), per visible hunk.
-        let mut starts: Vec<(usize, Vec<(State, State)>)> = Vec::new();
+        // Syntax state (old side, new side) at the start of each visible line only.
+        let mut starts: Vec<HunkStarts> = Vec::new();
         if lang != syntax::Lang::Plain {
+            if self.checkpoints.key != (self.selected, lang) {
+                self.checkpoints = Checkpoints {
+                    key: (self.selected, lang),
+                    hunks: Vec::new(),
+                };
+            }
+            self.checkpoints
+                .hunks
+                .resize_with(self.diff.hunks.len(), Vec::new);
             for row in &visible {
-                if starts.iter().any(|(hunk, _)| *hunk == row.hunk) {
+                if starts.iter().any(|(hunk, _, _)| *hunk == row.hunk) {
                     continue;
                 }
-                let upto = visible
+                let mut needed: Vec<usize> = visible
                     .iter()
                     .filter(|r| r.hunk == row.hunk)
                     .flat_map(|r| [r.old, r.new])
                     .flatten()
-                    .max();
-                let mut per_line = Vec::new();
-                let (mut old, mut new) = (State::default(), State::default());
-                if let Some(upto) = upto {
-                    for line in &self.diff.hunks[row.hunk].lines[..=upto] {
-                        per_line.push((old, new));
-                        match line.kind {
-                            LineKind::Context => {
-                                syntax::highlight(lang, &mut old, &line.text, |_, _| {});
-                                syntax::highlight(lang, &mut new, &line.text, |_, _| {});
-                            }
-                            LineKind::Delete => {
-                                syntax::highlight(lang, &mut old, &line.text, |_, _| {})
-                            }
-                            LineKind::Add => {
-                                syntax::highlight(lang, &mut new, &line.text, |_, _| {})
-                            }
-                        }
-                    }
-                }
-                starts.push((row.hunk, per_line));
+                    .collect();
+                needed.sort_unstable();
+                needed.dedup();
+                let states = states_at(
+                    lang,
+                    &self.diff.hunks[row.hunk].lines,
+                    &mut self.checkpoints.hunks[row.hunk],
+                    &needed,
+                );
+                starts.push((row.hunk, needed, states));
             }
         }
         let mut lines = Vec::new();
         for (row, spans) in visible.iter().zip(&spans) {
             let h = &self.diff.hunks[row.hunk];
-            let hunk_starts = starts
-                .iter()
-                .find(|(hunk, _)| *hunk == row.hunk)
-                .map(|(_, v)| v.as_slice())
-                .unwrap_or(&[]);
+            let hunk_starts = starts.iter().find(|(hunk, _, _)| *hunk == row.hunk);
             let cell = |index: usize, old: bool| {
                 let line = &h.lines[index];
                 DiffCell {
@@ -621,13 +683,11 @@ impl Workbench {
                         })
                         .unwrap_or(&[]),
                     lang,
-                    state: hunk_starts.get(index).map_or_else(State::default, |s| {
-                        if old {
-                            s.0
-                        } else {
-                            s.1
-                        }
-                    }),
+                    state: hunk_starts
+                        .and_then(|(_, needed, states)| {
+                            needed.binary_search(&index).ok().map(|i| states[i])
+                        })
+                        .map_or_else(State::default, |s| if old { s.0 } else { s.1 }),
                 }
             };
             lines.push(DiffRow {

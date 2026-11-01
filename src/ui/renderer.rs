@@ -216,39 +216,101 @@ struct Line<'a> {
     color: bool,
     truecolor: bool,
     tab_width: usize,
+    /// Style currently active in the terminal; only changes are emitted.
+    fg: Option<(u8, u8, u8)>,
+    bg: Option<(u8, u8, u8)>,
+    bold: bool,
+    reverse: bool,
 }
-impl Line<'_> {
+impl<'a> Line<'a> {
+    fn new(
+        out: &'a mut String,
+        limit: usize,
+        color: bool,
+        truecolor: bool,
+        tab_width: usize,
+    ) -> Self {
+        Self {
+            out,
+            col: 0,
+            limit,
+            color,
+            truecolor,
+            tab_width,
+            fg: None,
+            bg: None,
+            bold: false,
+            reverse: false,
+        }
+    }
+    /// Leave the terminal in its default style at the end of the row.
+    fn finish(&mut self) {
+        if self.color {
+            if self.fg.is_some() || self.bg.is_some() || self.bold {
+                let _ = write!(self.out, "{}", ResetColor);
+            }
+        } else {
+            if self.bold {
+                let _ = write!(self.out, "{}", SetAttribute(Attribute::NormalIntensity));
+            }
+            if self.reverse {
+                let _ = write!(self.out, "{}", SetAttribute(Attribute::NoReverse));
+            }
+        }
+        self.fg = None;
+        self.bg = None;
+        self.bold = false;
+        self.reverse = false;
+    }
+    fn set_color(&mut self, code: u8, rgb: (u8, u8, u8)) {
+        match t::color(rgb, self.truecolor) {
+            Color::Rgb { r, g, b } => {
+                let _ = write!(self.out, "[{code};2;{r};{g};{b}m");
+            }
+            Color::AnsiValue(index) => {
+                let _ = write!(self.out, "[{code};5;{index}m");
+            }
+            _ => unreachable!("theme emits RGB or indexed colors"),
+        }
+    }
     fn put(&mut self, text: &str, max: usize, s: Style) {
         let end = self.col.saturating_add(max).min(self.limit);
         if self.col >= end {
             return;
         }
+        let bold = s.bold || (!self.color && s.selected);
         if self.color {
-            for (code, color) in [
-                (38, t::color(s.fg, self.truecolor)),
-                (48, t::color(s.bg, self.truecolor)),
-            ] {
-                match color {
-                    Color::Rgb { r, g, b } => {
-                        let _ = write!(self.out, "\x1b[{code};2;{r};{g};{b}m");
-                    }
-                    Color::AnsiValue(index) => {
-                        let _ = write!(self.out, "\x1b[{code};5;{index}m");
-                    }
-                    _ => unreachable!("theme emits RGB or indexed colors"),
-                }
+            if self.fg != Some(s.fg) {
+                self.set_color(38, s.fg);
+                self.fg = Some(s.fg);
             }
-        } else if s.selected {
-            let _ = write!(self.out, "{}", SetAttribute(Attribute::Reverse));
+            if self.bg != Some(s.bg) {
+                self.set_color(48, s.bg);
+                self.bg = Some(s.bg);
+            }
+        } else if s.selected != self.reverse {
+            let attr = if s.selected {
+                Attribute::Reverse
+            } else {
+                Attribute::NoReverse
+            };
+            let _ = write!(self.out, "{}", SetAttribute(attr));
+            self.reverse = s.selected;
         }
-        if s.bold || (!self.color && s.selected) {
-            let _ = write!(self.out, "{}", SetAttribute(Attribute::Bold));
+        if bold != self.bold {
+            let attr = if bold {
+                Attribute::Bold
+            } else {
+                Attribute::NormalIntensity
+            };
+            let _ = write!(self.out, "{}", SetAttribute(attr));
+            self.bold = bold;
         }
         for g in text.graphemes(true) {
             if self.col >= end {
                 break;
             }
-            if g == "\t" {
+            if g == "	" {
                 let n = (self.tab_width - self.col % self.tab_width).min(end - self.col);
                 for _ in 0..n {
                     self.out.push(' ');
@@ -265,15 +327,6 @@ impl Line<'_> {
                 self.out.push_str(g);
                 self.col += n;
             }
-        }
-        if self.color {
-            let _ = write!(self.out, "{}", ResetColor);
-        }
-        if s.bold || (!self.color && s.selected) {
-            let _ = write!(self.out, "{}", SetAttribute(Attribute::NormalIntensity));
-        }
-        if !self.color && s.selected {
-            let _ = write!(self.out, "{}", SetAttribute(Attribute::NoReverse));
         }
     }
     fn fill(&mut self, end: usize, s: Style) {
@@ -293,15 +346,18 @@ pub(super) fn make_line(
 ) {
     let (color, truecolor, tab_width) = options;
     out.clear();
-    let layout = Layout::new(width, height, v.show_files, v.show_diff, v.unified);
-    let mut l = Line {
+    let mut l = Line::new(
         out,
-        col: 0,
-        limit: usize::from(width.saturating_sub(1)),
+        usize::from(width.saturating_sub(1)),
         color,
         truecolor,
         tab_width,
-    };
+    );
+    build_line(&mut l, v, width, height, row);
+    l.finish();
+}
+fn build_line(l: &mut Line<'_>, v: &View<'_>, width: u16, height: u16, row: u16) {
+    let layout = Layout::new(width, height, v.show_files, v.show_diff, v.unified);
     let normal = style(t::TEXT, t::BACKGROUND);
     let panel = style(t::TEXT, t::PANEL);
     let muted = style(t::MUTED, t::PANEL);
@@ -468,10 +524,10 @@ pub(super) fn make_line(
     let both = layout.files > 0 && layout.diff > 0;
     let rows = (row, height);
     if layout.files > 0 {
-        pane(&mut l, v, rows, layout.files, true, (layout.split, both));
+        pane(l, v, rows, layout.files, true, (layout.split, both));
     }
     if layout.diff > 0 {
-        pane(&mut l, v, rows, layout.diff, false, (layout.split, both));
+        pane(l, v, rows, layout.diff, false, (layout.split, both));
     }
 }
 fn edge(active: bool, glyph: &str) -> (&str, Style) {
@@ -961,28 +1017,14 @@ mod tests {
     #[test]
     fn clipped_text_preserves_graphemes_and_sanitizes_controls() {
         let mut out = String::new();
-        let mut line = Line {
-            out: &mut out,
-            col: 0,
-            limit: 4,
-            color: false,
-            truecolor: false,
-            tab_width: 8,
-        };
+        let mut line = Line::new(&mut out, 4, false, false, 8);
         line.put("界e\u{301}\x1bZ", 4, style(t::TEXT, t::BACKGROUND));
         assert_eq!(out, "界e\u{301} ");
     }
     #[test]
     fn tab_width_follows_column_not_utf8_byte_count() {
         let mut out = String::new();
-        let mut line = Line {
-            out: &mut out,
-            col: 0,
-            limit: 12,
-            color: false,
-            truecolor: false,
-            tab_width: 4,
-        };
+        let mut line = Line::new(&mut out, 12, false, false, 4);
         line.put("界\tX", 12, style(t::TEXT, t::BACKGROUND));
         assert_eq!(out, "界  X");
     }
@@ -1229,7 +1271,7 @@ mod tests {
             true,
         );
         assert!(
-            line.contains("[38;2;255;123;114m[48;2;18;37;29mlet"),
+            line.contains("[48;2;18;37;29m") && line.contains("[38;2;255;123;114mlet"),
             "{line:?}"
         );
     }
@@ -1271,5 +1313,157 @@ mod tests {
         );
         assert!(line.contains("let x"));
         assert!(!line.contains("38;"), "{line:?}");
+    }
+
+    /// Replays escapes and returns (fg-set count, bg-set count, final state is default).
+    fn replay(raw: &str) -> (usize, usize, bool) {
+        let (mut fg, mut bg, mut bold, mut reverse) =
+            (None::<String>, None::<String>, false, false);
+        let (mut fgs, mut bgs) = (0, 0);
+        let mut chars = raw.chars();
+        while let Some(c) = chars.next() {
+            if c != '' {
+                continue;
+            }
+            chars.next();
+            let mut p = String::new();
+            for c in chars.by_ref() {
+                if c.is_ascii_alphabetic() {
+                    break;
+                }
+                p.push(c);
+            }
+            match p.as_str() {
+                "0" => (fg, bg, bold, reverse) = (None, None, false, false),
+                "1" => bold = true,
+                "22" => bold = false,
+                "7" => reverse = true,
+                "27" => reverse = false,
+                _ if p.starts_with("38;") => {
+                    assert_ne!(fg.as_deref(), Some(p.as_str()), "redundant fg {p}");
+                    fg = Some(p);
+                    fgs += 1;
+                }
+                _ if p.starts_with("48;") => {
+                    assert_ne!(bg.as_deref(), Some(p.as_str()), "redundant bg {p}");
+                    bg = Some(p);
+                    bgs += 1;
+                }
+                _ => {}
+            }
+        }
+        (fgs, bgs, fg.is_none() && bg.is_none() && !bold && !reverse)
+    }
+
+    #[test]
+    fn adjacent_segments_with_same_style_emit_one_color_sequence() {
+        let mut out = String::new();
+        let mut line = Line::new(&mut out, 40, true, true, 8);
+        let a = style(t::TEXT, t::BACKGROUND);
+        line.put("ab", 2, a);
+        line.put("cd", 2, a);
+        line.put("ef", 2, style(t::MUTED, t::BACKGROUND));
+        line.finish();
+        assert_eq!(out.matches("38;2;").count(), 2, "{out:?}");
+        assert_eq!(out.matches("48;2;").count(), 1, "{out:?}");
+        assert!(out.contains("abcd"), "{out:?}");
+        assert!(out.ends_with("[0m"), "{out:?}");
+        assert_eq!(out.matches("[0m").count(), 1, "{out:?}");
+    }
+
+    #[test]
+    fn every_row_ends_reset_with_color_and_in_monochrome() {
+        let entries = [FileEntry {
+            path: "src/lib.rs",
+            status: 'M',
+            staged: false,
+            selected: true,
+            viewed: true,
+            added: 3,
+            removed: 2,
+        }];
+        let groups = [FileGroup {
+            name: "Changes",
+            collapsed: false,
+            selected: true,
+            files: &entries,
+        }];
+        for overlay in [
+            None,
+            Some(Overlay {
+                title: "t",
+                lines: &[],
+                footer: "f",
+            }),
+        ] {
+            let view = View {
+                show_files: true,
+                show_diff: true,
+                groups: &groups,
+                status: "status",
+                overlay,
+                ..View::default()
+            };
+            for color in [true, false] {
+                for width in [80u16, 160] {
+                    for row in 0..30 {
+                        let mut line = String::new();
+                        make_line(&mut line, &view, width, 30, row, (color, true, 8));
+                        assert!(replay(&line).2, "row {row} color={color}: {line:?}");
+                    }
+                }
+            }
+        }
+    }
+
+    fn highlighted_frame_bytes() -> (usize, usize) {
+        let texts: Vec<String> = (0..40)
+            .map(|i| {
+                format!("    let value_{i} = compute(\"text\", {i}) + other::<u32>(); // note")
+            })
+            .collect();
+        let rows: Vec<DiffRow> = texts
+            .iter()
+            .enumerate()
+            .map(|(i, text)| {
+                let cell = |kind| DiffCell {
+                    number: Some(i + 1),
+                    text,
+                    kind,
+                    spans: &[],
+                    lang: Lang::Rust,
+                    state: State::default(),
+                };
+                DiffRow {
+                    old: Some(cell(DiffKind::Removed)),
+                    new: Some(cell(DiffKind::Added)),
+                    header: None,
+                    selected: false,
+                }
+            })
+            .collect();
+        let view = View {
+            show_files: true,
+            show_diff: true,
+            lines: &rows,
+            ..View::default()
+        };
+        let mut r = Renderer::new();
+        r.color = true;
+        r.truecolor = true;
+        let mut out = Vec::new();
+        r.draw_view(&mut out, &view, 160, 44).unwrap();
+        let raw = String::from_utf8(out).unwrap();
+        let sgr = raw.matches("[38;").count();
+        (raw.len(), sgr)
+    }
+
+    #[test]
+    fn highlighted_split_frame_stays_small() {
+        let (bytes, fg_codes) = highlighted_frame_bytes();
+        // Dense highlighted split diff: about 20 fg changes per row at most.
+        assert!(fg_codes < 44 * 40, "{fg_codes} fg codes");
+        assert!(bytes < 40_000, "{bytes} bytes");
+        eprintln!("frame bytes={bytes} fg_codes={fg_codes}");
     }
 }

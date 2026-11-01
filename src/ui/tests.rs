@@ -1030,7 +1030,10 @@ fn indexed_256_color_mode_keeps_syntax_hues_chromatic() {
             !(c / 36 == c / 6 % 6 && c / 6 % 6 == c % 6),
             "{needle}: index {n} is gray"
         );
-        let want = format!("\x1b[38;5;{n}m\x1b[48;5;{bg}m{needle}");
+        // The background is already active from the sign column, so only the
+        // foreground changes before the token.
+        let want = format!("\x1b[38;5;{n}m{needle}");
         assert!(raw.contains(&want), "{needle}: {want:?} not in {raw:?}");
+        assert!(raw.contains(&format!("\x1b[48;5;{bg}m")), "{raw:?}");
     }
 }
