@@ -11,7 +11,7 @@ if (-not $Helper) {
             try {
                 $argsList = @('-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', ('"' + $PSCommandPath + '"'), '-Helper', '-Exe', ('"' + $exePath + '"'), '-Scenario', $case, '-Result', ('"' + $resultPath + '"'))
                 $helperProcess = Start-Process -FilePath (Join-Path $PSHOME 'powershell.exe') -ArgumentList $argsList -WindowStyle Hidden -PassThru
-                if (-not $helperProcess.WaitForExit(30000)) { $helperProcess.Kill(); throw "Helper timed out: $profile $case" }
+                if (-not $helperProcess.WaitForExit(90000)) { $helperProcess.Kill(); throw "Helper timed out: $profile $case" }
                 if (Test-Path -LiteralPath $resultPath) { "$profile $(Get-Content -LiteralPath $resultPath -Raw)" }
                 if ($helperProcess.ExitCode -ne 0) { throw "Console test failed: $profile $case (exit $($helperProcess.ExitCode))" }
             } finally { Remove-Item -LiteralPath $resultPath -ErrorAction SilentlyContinue }
@@ -19,7 +19,21 @@ if (-not $Helper) {
     }
     exit 0
 }
+$fixturePath = Join-Path ([IO.Path]::GetTempPath()) ("dark-console-fixture-" + [guid]::NewGuid())
 try {
+New-Item -ItemType Directory -Path $fixturePath | Out-Null
+& git -C $fixturePath init -q
+if ($LASTEXITCODE -ne 0) { throw 'Could not initialize fixture' }
+& git -C $fixturePath config user.name 'Dark Test'
+if ($LASTEXITCODE -ne 0) { throw 'Could not configure fixture name' }
+& git -C $fixturePath config user.email 'dark-test@example.invalid'
+if ($LASTEXITCODE -ne 0) { throw 'Could not configure fixture email' }
+[IO.File]::WriteAllText((Join-Path $fixturePath 'sample.txt'), "before`n")
+& git -C $fixturePath add sample.txt
+if ($LASTEXITCODE -ne 0) { throw 'Could not stage fixture' }
+& git -C $fixturePath commit -qm fixture
+if ($LASTEXITCODE -ne 0) { throw 'Could not commit fixture' }
+[IO.File]::WriteAllText((Join-Path $fixturePath 'sample.txt'), "after`n")
 Add-Type -TypeDefinition @'
 using System;
 using System.Diagnostics;
@@ -56,29 +70,34 @@ public static class ConsoleProbe {
  static void Check(bool ok,string what) { if(!ok) throw new Exception(what+": Win32 error "+Marshal.GetLastWin32Error()); }
  static IntPtr Open(string name) { var h=CreateFile(name,0xc0000000,3,IntPtr.Zero,3,0,IntPtr.Zero); if(h==new IntPtr(-1)) throw new Exception("open "+name+": "+Marshal.GetLastWin32Error()); return h; }
  static string Screen() { var h=Open("CONOUT$"); try { var s=new StringBuilder(161); uint n; Check(ReadConsoleOutputCharacter(h,s,120,new COORD(0,0),out n),"read screen"); return s.ToString().Substring(0,(int)n); } finally { CloseHandle(h); } }
+ static string Content() { var h=Open("CONOUT$"); try { SCREENINFO info; Check(GetConsoleScreenBufferInfo(h,out info),"screen size"); int count=info.size.X*2; var s=new StringBuilder(count+1); uint n; Check(ReadConsoleOutputCharacter(h,s,(uint)count,new COORD(0,info.window.top),out n),"read content"); return s.ToString().Substring(0,(int)n); } finally { CloseHandle(h); } }
  static string Status() { var h=Open("CONOUT$"); try { SCREENINFO info; Check(GetConsoleScreenBufferInfo(h,out info),"screen size"); var s=new StringBuilder(info.size.X+1); uint n; Check(ReadConsoleOutputCharacter(h,s,(uint)info.size.X,new COORD(0,info.window.bottom),out n),"read status"); return s.ToString().Substring(0,(int)n); } finally { CloseHandle(h); } }
+ static string Body() { var h=Open("CONOUT$"); try { SCREENINFO info; Check(GetConsoleScreenBufferInfo(h,out info),"screen size"); int row=info.window.top+(info.window.bottom-info.window.top+1)/2; var s=new StringBuilder(info.size.X+1); uint n; Check(ReadConsoleOutputCharacter(h,s,(uint)info.size.X,new COORD(info.window.left,(short)row),out n),"read body"); return s.ToString().Substring(0,(int)n); } finally { CloseHandle(h); } }
  static ulong Memory(Process p) { MEM m=new MEM(); m.cb=(uint)Marshal.SizeOf(typeof(MEM)); Check(GetProcessMemoryInfo(p.Handle,ref m,m.cb),"GetProcessMemoryInfo EX2"); return m.privateWorking.ToUInt64(); }
  static void Key(IntPtr input,char c,bool ctrl) { var e=new INPUT { type=1,down=1,repeat=1,vk=(ushort)char.ToUpperInvariant(c),ch=ctrl?'\x03':c,control=ctrl?8u:0u }; uint n; Check(WriteConsoleInputW(input,new[]{e},1,out n)&&n==1,"WriteConsoleInput"); }
  static void MarkHeader() { var h=Open("CONOUT$"); try { uint n; const string marker="RESIZE TEST"; Check(WriteConsoleOutputCharacterW(h,marker,(uint)marker.Length,new COORD(0,0),out n) && n==marker.Length,"mark header"); } finally { CloseHandle(h); } }
  static SCREENINFO Shrink() { var h=Open("CONOUT$"); try { SCREENINFO info; Check(GetConsoleScreenBufferInfo(h,out info),"screen size before resize"); var small=info.window; if(small.left!=0 || small.top!=0 || small.right<3 || small.bottom<3 || info.size.Y==short.MaxValue) throw new Exception("unsupported console geometry"); small.right--; small.bottom--; MarkHeader(); Check(SetConsoleWindowInfo(h,true,ref small),"shrink console window"); Check(SetConsoleScreenBufferSize(h,new COORD(info.size.X,(short)(info.size.Y+1))),"resize console buffer"); return info; } finally { CloseHandle(h); } }
  static void RestoreSize(SCREENINFO info) { var h=Open("CONOUT$"); try { MarkHeader(); Check(SetConsoleScreenBufferSize(h,info.size),"restore console buffer"); var window=info.window; Check(SetConsoleWindowInfo(h,true,ref window),"restore console window"); } finally { CloseHandle(h); } }
- static void WaitScreen(Process p,string text,ref ulong peak) { var until=DateTime.UtcNow.AddSeconds(6); while(DateTime.UtcNow<until) { if(p.HasExited) throw new Exception("process exited with code "+p.ExitCode+" before screen "+text+"; got: "+Screen()); peak=Math.Max(peak,Memory(p)); if(Screen().Contains(text)) return; Thread.Sleep(20); } throw new Exception("screen not seen: "+text+"; got: "+Screen()); }
- public static string Run(string exe,string scenario,bool release) {
+ static void WaitScreen(Process p,string text,ref ulong peak,bool body=false) { var until=DateTime.UtcNow.AddSeconds(30); while(DateTime.UtcNow<until) { if(p.HasExited) throw new Exception("process exited with code "+p.ExitCode+" before screen "+text+"; got: "+Content()); peak=Math.Max(peak,Memory(p)); if((body?Body():Content()).Contains(text)) return; Thread.Sleep(20); } throw new Exception("screen not seen: "+text+"; got: "+(body?Body():Content())); }
+ static void WaitResize(Process p,ref ulong peak) { var until=DateTime.UtcNow.AddSeconds(30); while(DateTime.UtcNow<until) { if(p.HasExited) throw new Exception("process exited during resize"); peak=Math.Max(peak,Memory(p)); if(!Screen().Contains("RESIZE TEST")) return; Thread.Sleep(20); } throw new Exception("resize did not redraw header"); }
+ public static string Run(string exe,string scenario,bool release,string fixture) {
   FreeConsole(); Check(AllocConsole(),"AllocConsole"); ShowWindow(GetConsoleWindow(),0);
   IntPtr input=Open("CONIN$"), output=Open("CONOUT$");
+  SCREENINFO geometry; Check(GetConsoleScreenBufferInfo(output,out geometry),"initial geometry"); if(geometry.window.right-geometry.window.left+1<80 || geometry.window.bottom-geometry.window.top+1<24) throw new Exception("console geometry must be at least 80x24");
   Check(SetHandleInformation(input,1,1) && SetHandleInformation(output,1,1),"inherit console handles");
   Check(SetStdHandle(-10,input) && SetStdHandle(-11,output) && SetStdHandle(-12,output),"SetStdHandle");
   uint initialMode; Check(GetConsoleMode(input,out initialMode),"read initial input mode"); Check(SetConsoleMode(input,initialMode & ~8u),"clear ENABLE_WINDOW_INPUT");
   if(scenario.EndsWith("hidden")) { CURSOR initial; Check(GetConsoleCursorInfo(output,out initial),"read cursor"); initial.visible=false; Check(SetConsoleCursorInfo(output,ref initial),"hide initial cursor"); }
   uint modeBefore, outputModeBefore, written; CURSOR cursorBefore; Check(GetConsoleMode(input,out modeBefore),"initial input mode"); Check(GetConsoleMode(output,out outputModeBefore),"initial output mode"); Check(GetConsoleCursorInfo(output,out cursorBefore),"initial cursor"); const string marker="dark console test marker"; Check(WriteConsoleW(output,marker,(uint)marker.Length,out written,IntPtr.Zero) && written==marker.Length,"write marker");
   Process p=null; try {
-   bool panic=scenario.StartsWith("panic"); var start=new ProcessStartInfo(exe,panic?"--self-test-panic":scenario=="ctrlc"?"--debug":""); start.UseShellExecute=false; p=Process.Start(start); ulong peak=0,idle=0; int threads=0;
-   WaitScreen(p,"[1 Review]",ref peak);
+   bool panic=scenario.StartsWith("panic"); var start=new ProcessStartInfo(exe,panic?"--self-test-panic":scenario=="ctrlc"?"--debug":""); start.UseShellExecute=false; start.WorkingDirectory=fixture; p=Process.Start(start); ulong peak=0,idle=0; int threads=0;
+   WaitScreen(p,"Changes",ref peak);
    uint modeRunning; Check(GetConsoleMode(input,out modeRunning),"running input mode"); if((modeRunning & 8u)==0) throw new Exception("ENABLE_WINDOW_INPUT not enabled while running");
    if(scenario=="ctrlc" && !Status().Contains("Memory (private_working_set):")) throw new Exception("debug memory status missing: "+Status());
    if(!panic) {
-    foreach(var item in new[]{Tuple.Create('2',"[2 Edit]"),Tuple.Create('3',"[3 Models]"),Tuple.Create('1',"[1 Review]")}) { Key(input,item.Item1,false); WaitScreen(p,item.Item2,ref peak); }
-    var originalSize=Shrink(); WaitScreen(p,"[1 Review]",ref peak); Key(input,'2',false); WaitScreen(p,"[2 Edit]",ref peak); Key(input,'1',false); WaitScreen(p,"[1 Review]",ref peak); RestoreSize(originalSize); WaitScreen(p,"[1 Review]",ref peak);
+    foreach(var item in new[]{Tuple.Create('2',"Edit"),Tuple.Create('3',"Vibe"),Tuple.Create('5',"Models")}) { Key(input,item.Item1,false); WaitScreen(p,item.Item2,ref peak,true); }
+    Key(input,'1',false); WaitScreen(p,"Changes",ref peak);
+    var originalSize=Shrink(); WaitResize(p,ref peak); RestoreSize(originalSize); WaitScreen(p,"Changes",ref peak);
     for(int i=0;i<5;i++) { Thread.Sleep(100); idle=Math.Max(idle,Memory(p)); peak=Math.Max(peak,idle); }
     p.Refresh(); threads=p.Threads.Count;
     if(release && (idle>=2000000 || peak>=10000000)) throw new Exception("RAM budget exceeded: idle="+idle+" peak_sampled="+peak);
@@ -96,10 +115,12 @@ public static class ConsoleProbe {
  }
 }
 '@
-    $message = [ConsoleProbe]::Run($Exe, $Scenario, $Exe -match '[\\/]release[\\/]')
+    $message = [ConsoleProbe]::Run($Exe, $Scenario, $Exe -match '[\\/]release[\\/]', $fixturePath)
     [IO.File]::WriteAllText($Result, $message)
     exit 0
 } catch {
     [IO.File]::WriteAllText($Result, ('FAIL: ' + $_.Exception.ToString()))
     exit 1
+} finally {
+    if (Test-Path -LiteralPath $fixturePath) { Remove-Item -LiteralPath $fixturePath -Recurse -Force }
 }

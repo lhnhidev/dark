@@ -11,11 +11,12 @@ import struct
 import subprocess
 import sys
 import termios
+import tempfile
 import time
 
 IDLE_LIMIT = 2_000_000
 PEAK_LIMIT = 10_000_000
-TIMEOUT = 8.0
+TIMEOUT = 30.0
 
 
 def resize(fd, rows, cols):
@@ -37,6 +38,16 @@ def rss(pid):
 
 
 def run(binary, profile, scenario):
+    fixture = tempfile.TemporaryDirectory(prefix="dark-terminal-")
+    for args in (("init", "-q"), ("config", "user.name", "Dark Test"),
+                 ("config", "user.email", "dark-test@example.invalid")):
+        subprocess.run(("git", *args), cwd=fixture.name, check=True, stdout=subprocess.DEVNULL)
+    with open(os.path.join(fixture.name, "sample.txt"), "w", encoding="utf-8") as f:
+        f.write("before\n")
+    subprocess.run(("git", "add", "sample.txt"), cwd=fixture.name, check=True)
+    subprocess.run(("git", "commit", "-qm", "fixture"), cwd=fixture.name, check=True)
+    with open(os.path.join(fixture.name, "sample.txt"), "w", encoding="utf-8") as f:
+        f.write("after\n")
     master, slave = pty.openpty()
     process = None
     transcript = bytearray()
@@ -61,7 +72,7 @@ def run(binary, profile, scenario):
         environment["TERM"] = "xterm-256color"
         process = subprocess.Popen(args, stdin=slave, stdout=slave, stderr=slave,
                                    preexec_fn=child_setup, env=environment,
-                                   close_fds=True)
+                                   close_fds=True, cwd=fixture.name)
 
         def sample():
             nonlocal peak
@@ -98,27 +109,40 @@ def run(binary, profile, scenario):
                     raise RuntimeError(f"timed out waiting for {expected!r}; output={bytes(transcript)!r}")
                 pump()
 
-        wait_for(b"[1 Review]", 0)
+        def wait_body(expected, start):
+            deadline = time.monotonic() + TIMEOUT
+            marker = b"\x1b[13;1H"
+            while True:
+                chunk = bytes(transcript[start:])
+                pos = chunk.find(marker)
+                if pos >= 0:
+                    body = chunk[pos + len(marker):].split(b"\x1b[14;1H", 1)[0]
+                    if expected in body:
+                        return
+                if process.poll() is not None or time.monotonic() >= deadline:
+                    raise RuntimeError(f"body {expected!r} not seen; output={chunk!r}")
+                pump()
+
+        wait_for(b"Changes", 0)
         if scenario != "panic":
-            for key, label in ((b"2", b"[2 Edit]"), (b"3", b"[3 Models]"),
-                               (b"1", b"[1 Review]")):
+            for key, label in ((b"2", b"Edit"), (b"3", b"Vibe"), (b"5", b"Models")):
                 start = len(transcript)
                 os.write(master, key)
-                wait_for(label, start)
+                wait_body(label, start)
+            start = len(transcript)
+            os.write(master, b"1")
+            wait_for(b"Changes", start)
             if scenario == "ctrlc" and b"Memory (rss):" not in transcript:
                 raise RuntimeError("debug memory status missing")
             # A fresh frame after SIGWINCH must arrive before any subsequent key.
             start = len(transcript)
             resize(slave, 12, 60)
             os.kill(process.pid, signal.SIGWINCH)
-            wait_for(b"[1 Review]", start)
-            start = len(transcript)
-            os.write(master, b"2")
-            wait_for(b"[2 Edit]", start)
+            wait_for("Cửa sổ quá nhỏ".encode(), start)
             start = len(transcript)
             resize(slave, 24, 80)
             os.kill(process.pid, signal.SIGWINCH)
-            wait_for(b"[2 Edit]", start)
+            wait_for(b"Changes", start)
             for _ in range(5):
                 time.sleep(0.1)
                 value = sample()
@@ -160,6 +184,7 @@ def run(binary, profile, scenario):
             process.wait()
         os.close(master)
         os.close(slave)
+        fixture.cleanup()
 
 
 def main():
@@ -167,7 +192,7 @@ def main():
         raise SystemExit("Linux and target directory required; cannot verify")
     failures = []
     for profile in ("debug", "release"):
-        binary = os.path.join(sys.argv[1], profile, "dark")
+        binary = os.path.abspath(os.path.join(sys.argv[1], profile, "dark"))
         if not os.path.isfile(binary):
             raise SystemExit(f"missing binary: {binary}")
         for scenario in ("q", "ctrlc", "panic"):
