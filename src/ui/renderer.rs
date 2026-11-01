@@ -816,7 +816,13 @@ pub(super) fn compact_path(path: &str, available: usize) -> String {
             return String::new();
         }
         let budget = available - 1;
-        let head_budget = (budget / 4).max(1).min(budget);
+        // Keep at least one tail column so the end of the name stays visible;
+        // with room for both, keep at least one head column too.
+        let head_budget = if budget >= 2 {
+            (budget / 4).max(1).min(budget - 1)
+        } else {
+            0
+        };
         let mut head = String::new();
         let mut used = 0;
         for g in base.graphemes(true) {

@@ -329,6 +329,17 @@ fn compact_path_shrinks_directory_then_drops_it_and_keeps_basename() {
 }
 
 #[test]
+fn tiny_widths_keep_the_end_of_a_long_name_visible() {
+    let p = "src/module_01.ts";
+    assert_eq!(compact_path(p, 0), "");
+    assert_eq!(compact_path(p, 1), "…");
+    assert_eq!(compact_path(p, 2), "…s");
+    assert_eq!(compact_path(p, 3), "m…s");
+    assert_eq!(compact_path(p, 4), "m…ts");
+    assert_eq!(compact_path(p, 7), "m…01.ts");
+}
+
+#[test]
 fn narrow_numbered_names_stay_distinct_with_visible_suffix() {
     let outs: Vec<String> = ["src/module_01.ts", "src/module_11.ts", "src/module_21.ts"]
         .iter()
