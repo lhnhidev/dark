@@ -195,6 +195,9 @@ dark/
 | **Giới hạn cứng** | **10 MB** |
 
 ### 6.3 Đo lường
+- M0 thử nghiệm Linux musl: giữ bản GNU phát triển tại `~/dark-target`, musl tại `~/dark-target-musl` và chỉ định target rõ ràng bằng `--target x86_64-unknown-linux-musl`. Không thay release profile hoặc target mặc định. Kết quả WSL đề xuất musl cho bản phát hành Linux; GNU vẫn dùng khi phát triển, dù còn vượt ngưỡng idle 2.000.000 byte.
+- Bổ sung private resident (`Private_Clean + Private_Dirty`) và PSS từ `smaps_rollup` để phân biệt trang riêng/chia sẻ khi so GNU–musl. VmRSS vẫn quyết định ngân sách; không thay bằng private/PSS thấp hơn để báo đạt. Private không chỉ là heap của dark và không tương đương chính xác private working set Windows.
+- Bộ cấp phát musl có rủi ro chậm hơn khi cấp phát dày; M0 chưa benchmark tốc độ. Đo lại độ trễ và throughput ở các milestone sau trước khi kết luận về hiệu năng. Số liệu, phương pháp và output: [M0_VERIFICATION.md](M0_VERIFICATION.md).
 - M0: `--self-test` dùng cùng app/renderer, đi qua ba màn hình và resize trước khi lấy nhiều mẫu idle. `tests/ram/` chỉ áp dụng ngân sách ở `cargo test --release`; debug được đánh dấu bỏ qua kèm lý do. Kết quả ghi idle lớn nhất và đỉnh lấy mẫu, không gọi đỉnh lấy mẫu là đỉnh suốt đời process.
 - Windows: `GetProcessMemoryInfo` với EX2 lấy `PrivateWorkingSetSize`; không nhầm `PrivateUsage` (commit) hoặc `WorkingSetSize` (có trang chia sẻ). Không hỗ trợ thì `n/a` kèm lý do. Linux đọc `VmRSS` trong `/proc/self/status`; macOS dùng `proc_pidinfo(PROC_PIDTASKINFO)` lấy resident size. API theo nền tảng đặt trong `src/memory/mod.rs`, chỉ biên dịch phần tương ứng.
 - Kiểm tra console thật Windows nằm ở `tests/ram/windows-console.ps1`, tách process kiểm tra khỏi app, đo release riêng và kiểm tra đầu vào/đầu ra, con trỏ, màn hình sau khi thoát/panic.

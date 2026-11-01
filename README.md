@@ -46,7 +46,21 @@ cargo build --release
 python3 tests/ram/linux-terminal.py "$CARGO_TARGET_DIR"
 ```
 
-Script Linux cần Python 3 và PTY, kiểm tra phím/resize/thoát/panic trên terminal thật, đo RSS qua `/proc` và phục hồi thuộc tính terminal. Các cờ đo chỉ áp dụng ngân sách cho bản release. Trên Linux ngoài WSL, thay đường dẫn project cho đúng nơi checkout.
+Script Linux cần Python 3 và PTY, kiểm tra phím/resize/thoát/panic trên terminal thật, đo RSS qua `/proc` và phục hồi thuộc tính terminal. Ngưỡng RAM chỉ áp dụng cho bản release. Trên Linux ngoài WSL, thay đường dẫn project cho đúng nơi checkout.
+
+Bản GNU trên WSL hiện chưa đạt ổn định ngưỡng idle 2 MB. Thử nghiệm musl đã đạt, được đề xuất cho phát hành Linux; GNU vẫn dùng cho phát triển. Chưa đổi target mặc định hoặc đóng M0. Có thể tái lập musl trong thư mục riêng:
+
+```bash
+rustup target add x86_64-unknown-linux-musl
+export CARGO_TARGET_DIR="$HOME/dark-target-musl"
+cargo build --target x86_64-unknown-linux-musl
+cargo build --release --target x86_64-unknown-linux-musl
+cargo test --release --target x86_64-unknown-linux-musl
+python3 tests/ram/linux-terminal.py "$CARGO_TARGET_DIR/x86_64-unknown-linux-musl"
+python3 tests/ram/linux-memory.py "$HOME/dark-target/release/dark" "$CARGO_TARGET_DIR/x86_64-unknown-linux-musl/release/dark"
+```
+
+Script so sánh vẫn trả mã lỗi nếu bản GNU vượt ngân sách, đồng thời báo riêng musl đạt; private/PSS là số đo bổ sung, không thay VmRSS để xét ngưỡng. Xem bảng so sánh, output và lưu ý hiệu năng bộ cấp phát ở [M0_VERIFICATION.md](docs/M0_VERIFICATION.md).
 
 ## Vì sao có dark
 

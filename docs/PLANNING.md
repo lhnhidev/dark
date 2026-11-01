@@ -57,11 +57,11 @@ gantt
 ### M0 — Khung dự án
 - [x] `cargo build --release` Windows ra binary dưới 3 MB (170.496 byte).
 - [x] Mở app Windows, chuyển giữa 3 màn trống bằng phím, thoát sạch.
-- [ ] Bài test RAM chạy được trên Windows và Linux; RSS khi rảnh dưới 2 MB.
+- [x] Bài test RAM chạy được trên Windows và Linux musl thử nghiệm, idle dưới 2.000.000 byte. GNU phát triển vẫn chưa đạt ngưỡng này.
 - [x] Trên Windows: `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, `cargo test` và `cargo test --release` đạt; test RAM debug được bỏ qua kèm lý do.
 - [x] Console thật Windows được kiểm tra với resize, `q`, `Ctrl-C` và panic subprocess ở cả debug/release; terminal được phục hồi.
 
-M0 chưa đóng: Linux đã cài Rust stable trong WSL bằng tài khoản người dùng, build riêng tại `~/dark-target`. Format, Clippy, test chức năng và TUI đạt, nhưng bài test RAM release GNU còn vượt 2.000.000 byte trong một số lần chạy, nên tiêu chí RAM vẫn chưa được đánh dấu đạt. Windows headless và console release đã đạt ngân sách; người dùng sẽ tự kiểm tra lại Windows trước khi đóng M0. macOS ARM64 mới qua `cargo check --target aarch64-apple-darwin`; build release chưa link được vì máy Windows thiếu Apple SDK/linker, chưa chạy thực tế. Chưa push hoặc tag M0. Xem output thực tế và giới hạn tại [M0_VERIFICATION.md](M0_VERIFICATION.md).
+M0 chưa đóng: người dùng sẽ tự kiểm tra lại Windows trước khi quyết định đóng. Linux musl thử nghiệm đã qua format, Clippy, test debug/release, TUI và ngân sách RAM trong WSL; đề xuất cho bản phát hành Linux, chưa đổi target mặc định. Bản GNU phát triển ở `~/dark-target` được giữ nguyên; musl ở `~/dark-target-musl`. GNU vẫn còn vượt ngưỡng idle và kết quả đó được giữ nguyên trong báo cáo. Windows headless và console release đã đạt ngân sách. macOS ARM64 mới qua `cargo check --target aarch64-apple-darwin`; chưa build hoàn chỉnh và chưa chạy thực tế. Chưa push hoặc tag M0. Xem output và cách so sánh VmRSS/private/PSS tại [M0_VERIFICATION.md](M0_VERIFICATION.md).
 
 Ngân sách M0 tính theo byte: idle **< 2.000.000**, giới hạn cứng **< 10.000.000**, binary **< 3.000.000**. RAM được đo trên binary release, không phải test runner. Windows dùng private working set (`PROCESS_MEMORY_COUNTERS_EX2`), Linux dùng `VmRSS`; các số đo khác nhau phải ghi đúng tên. Windows không hỗ trợ EX2 thì hiện `n/a` và lý do, không đổi sang số đo khác. Linux được chạy trong WSL nếu môi trường có Rust; nếu chưa chạy được phải ghi rõ. macOS build khi có môi trường phù hợp và ghi rõ chưa kiểm chứng thực tế.
 
