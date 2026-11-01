@@ -21,4 +21,4 @@
 │ [ Có ở M3 ]          ││▌    9+ export const value_008 = 'new value 0:8';    │
 │Space stage · c commit││▌   10− export const value_009 = 'old value 0:9';    │
 └──────────────────────┘└─────────────────────────────────────────────────────┘
- REVIEW  l danh sách file  r khung diff  n/N hunk  u hoàn t  0/31 file đã xem
+ REVIEW  a accept  x reject  l danh sách file  r khung diff  0/31 file đã xem

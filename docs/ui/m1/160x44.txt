@@ -1,4 +1,4 @@
- dark  1 Review  2 Edit  3 Vibe  4 Git commit  5 Models  6 View  7 Help   shop-api · ⎇ main ↑0 ↓0 · snapshot 19:51 · so với HEAD
+ dark  1 Review  2 Edit  3 Vibe  4 Git commit  5 Models  6 View  7 Help   shop-api · ⎇ main ↑0 ↓0 · snapshot 19:55 · so với HEAD
 ┌ Changes 31 file · 0/31 đã xem┐┌ src/auth/session.ts  hunk 1/1                                                                                 +50 −50  split┐
 │ ▾ Staged (2)                 ││▌@@ -1,53 +1,53 @@                                                                                                           │
 │▌[x] M session.ts      +50 −50││▌    1− export const value_000 = 'old value 0:0';             │    1+ export const value_000 = 'new value 0:0';              │
@@ -41,4 +41,4 @@
 │ [ Có ở M3 ]                  ││▌   38− export const value_037 = 'old value 0:37';            │   38+ export const value_037 = 'new value 0:37';             │
 │Space stage · c commit        ││▌   39− export const value_038 = 'old value 0:38';            │   39+ export const value_038 = 'new value 0:38';             │
 └──────────────────────────────┘└─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
- REVIEW  l danh sách file  r khung diff  n/N hunk  u hoàn tác  e editor ngoài  q thoát                                                       0/31 file đã xem
+ REVIEW  a accept  x reject  l danh sách file  r khung diff  n/N hunk  u hoàn tác  e editor ngoài  q thoát                                   0/31 file đã xem
