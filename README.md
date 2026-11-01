@@ -1,182 +1,88 @@
 # dark
 
-**Trạm review và vibe code trong terminal, dưới 10 MB RAM.**
+**Review từng thay đổi agent AI tạo ra: giữ phần đúng, bỏ phần sai, góp ý ngược lại cho agent. Dùng agent bạn đang có, chỉ tốn vài MB RAM.**
 
-dark giúp vibe coder xem AI đã sửa gì, giữ hoặc bỏ từng thay đổi, hỏi AI khi không hiểu, và giao task cho agent, với nhiều model AI tùy chọn. Mục tiêu là chất lượng gọi model ngang hoặc tốt hơn opencode, trong khi process của app chỉ dùng vài MB RAM.
-
-> **Trạng thái:** pre-MVP, đang kiểm chứng M0. Hiện có khung terminal với ba màn hình trống; git, diff, AI và editor chưa được triển khai. Xem [PLANNING.md](docs/PLANNING.md).
-
-## Chạy khung M0
-
-Project trên máy phát triển: `D:\workspace\dark`. Cần Rust stable; Windows dùng toolchain MSVC và Visual Studio C++ Build Tools.
-
-```powershell
-cargo build --release
-.\target\release\dark.exe
-.\target\release\dark.exe --debug
-.\target\release\dark.exe --help
-.\target\release\dark.exe --version
-```
-
-Linux/macOS chạy `./target/release/dark`. Phím `1`/`2`/`3` chuyển Review/Edit/Models; `q` hoặc `Ctrl-C` thoát. `--debug` hiện bộ nhớ của chính ứng dụng, không tính terminal hoặc tiến trình con. Windows đo private working set; Linux/macOS đo RSS. Nếu API không hỗ trợ, thanh trạng thái hiện `n/a` kèm lý do.
-
-```text
-cargo fmt --check
-cargo clippy --all-targets -- -D warnings
-cargo test
-cargo test --release -- --nocapture
-```
-
-Test RAM được bỏ qua có thông báo ở bản debug; bản release kiểm tra idle dưới 2.000.000 byte và đỉnh lấy mẫu dưới 10.000.000 byte. `dark --self-test` chạy không cần terminal, dùng cùng trạng thái app và renderer để kiểm tra điều hướng/resize rồi đo bộ nhớ. Nó không thay thế kiểm tra terminal thật.
-
-Kiểm tra console thật trên Windows, gồm đổi màn hình, resize, thoát và panic ở cả debug/release:
-
-```powershell
-cargo build
-cargo build --release
-powershell -NoProfile -ExecutionPolicy Bypass -File tests/ram/windows-console.ps1
-```
-
-Trong WSL/Linux, dùng thư mục build riêng để không lẫn với `target/` của Windows:
-
-```bash
-cd /mnt/d/workspace/dark
-export PATH="$HOME/.cargo/bin:$PATH"
-export CARGO_TARGET_DIR="$HOME/dark-target"
-cargo build
-cargo build --release
-python3 tests/ram/linux-terminal.py "$CARGO_TARGET_DIR"
-```
-
-Script Linux cần Python 3 và PTY, kiểm tra phím/resize/thoát/panic trên terminal thật, đo RSS qua `/proc` và phục hồi thuộc tính terminal. Ngưỡng RAM chỉ áp dụng cho bản release. Trên Linux ngoài WSL, thay đường dẫn project cho đúng nơi checkout.
-
-Bản GNU trên WSL hiện chưa đạt ổn định ngưỡng idle 2 MB. Musl đã được duyệt cho bản phát hành Linux; GNU vẫn dùng cho phát triển. Chưa đổi target mặc định hoặc đóng M0. Có thể tái lập musl trong thư mục riêng:
-
-```bash
-rustup target add x86_64-unknown-linux-musl
-export CARGO_TARGET_DIR="$HOME/dark-target-musl"
-cargo build --target x86_64-unknown-linux-musl
-cargo build --release --target x86_64-unknown-linux-musl
-cargo test --release --target x86_64-unknown-linux-musl
-python3 tests/ram/linux-terminal.py "$CARGO_TARGET_DIR/x86_64-unknown-linux-musl"
-python3 tests/ram/linux-memory.py "$HOME/dark-target/release/dark" "$CARGO_TARGET_DIR/x86_64-unknown-linux-musl/release/dark"
-```
-
-Script so sánh vẫn trả mã lỗi nếu bản GNU vượt ngân sách, đồng thời báo riêng musl đạt; private/PSS là số đo bổ sung, không thay VmRSS để xét ngưỡng. Xem bảng so sánh, output và lưu ý hiệu năng bộ cấp phát ở [M0_VERIFICATION.md](docs/M0_VERIFICATION.md).
-
-Các runner đã được commit để tái lập trọn bộ kiểm tra và lưu output trong `.dark/`:
-
-```text
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify-windows.ps1
-bash scripts/verify-linux.sh musl
-```
-
-Xem [DEVELOPMENT.md](docs/DEVELOPMENT.md) cho đường dẫn build, thiết lập Rust, phép đo baseline và thao tác terminal WSL. `--help`/`--version` không cần terminal; lỗi tham số nêu đúng giá trị sai và gợi ý trợ giúp.
+> **Trạng thái:** đang phát triển. M0 (khung ứng dụng) đã xong; M1 (review thật) là bước tiếp theo. Xem [PLANNING.md](docs/PLANNING.md).
+> Tên "dark" là tên tạm, sẽ chốt trước khi ra mắt.
 
 ## Vì sao có dark
 
-Sau một phiên vibe code, việc khó nhất thường là **biết AI đã đổi những gì và có nên giữ không**. Các IDE và harness hiện có thường nặng (hàng trăm MB tới vài GB RAM) và nhiều tính năng mà vibe coder hiếm khi dùng. dark tập trung vào đúng vòng lặp:
+Agent vừa sửa 14 file. Bạn có thật sự đọc hết không?
 
-**AI sửa → xem diff → giữ / bỏ / hỏi AI → chạy test → commit**
+Sau một lượt vibe, người dùng thường chỉ có hai lựa chọn: đọc hết trong một IDE nặng, hoặc chấp nhận hết và hy vọng không có lỗi. Muốn bảo agent sửa một chỗ thì phải copy tên file, số dòng, mô tả lại từ đầu.
 
-## Tính năng chính (MVP dự kiến)
+dark làm đúng một vòng lặp:
 
-- **Review theo hunk:** danh sách file AI đã sửa kể từ snapshot, diff từng hunk, `a` giữ, `r` bỏ.
-- **AI nhận xét ngay dưới dòng:** chỉ ra lỗi, đề xuất sửa; áp dụng patch chỉ sau khi bạn duyệt.
-- **Nhiều model:** Anthropic, Gemini, và mọi API OpenAI-compatible (OpenAI, OpenRouter, DeepSeek, Ollama, LM Studio...).
-- **Agent đầy đủ:** đọc, tìm, sửa file, chạy lệnh; tự chạy lint/typecheck/test sau mỗi lần sửa.
-- **Ngữ cảnh tốt:** repo map, đọc `AGENTS.md`/`CLAUDE.md`, tóm tắt hội thoại dài, prompt caching.
-- **Editor gọn:** sửa, lưu, undo, tìm file, chạy test.
-- **An toàn:** checkpoint git trước mỗi lượt AI, hoàn tác bất cứ lúc nào; API key chỉ đọc từ biến môi trường.
+**vibe với agent → review từng hunk → giữ / bỏ → ghi chú gửi lại agent → hoàn tác khi cần**
 
-Danh sách đầy đủ: [FEATURES.md](docs/FEATURES.md).
+## Tính năng (dự kiến)
 
-## Vì sao nhẹ
+- **Review theo hunk:** mọi thay đổi kể từ trước lượt AI. `a` giữ, `r` bỏ, `u` hoàn tác cả lượt.
+- **Ghi chú gửi thẳng cho agent:** `/` ghi chú ngay trên dòng code, agent biết chính xác chỗ cần sửa.
+- **Vibe ngay trong dark:** điều khiển **Claude Code, Codex, Gemini CLI, opencode** qua Agent Client Protocol (ACP). Agent chạy đúng harness chính chủ nên chất lượng không đổi; dark chỉ thay phần giao diện.
+- **Hoặc dùng kèm:** chạy agent ở cửa sổ riêng như bình thường, dark tự phát hiện thay đổi để review.
+- **Cửa sổ riêng trên Windows:** `darkw` mở thẳng cửa sổ, không cần terminal.
+- **Mở editor của bạn:** `e` mở đúng file và dòng trong VS Code, Neovim...
+- **An toàn:** snapshot trước mỗi lượt AI; agent sửa file hay chạy lệnh đều phải được duyệt.
 
-- Viết bằng **Rust**, chạy trong terminal (TUI), một luồng duy nhất.
-- Việc nặng chạy ở **process con**: HTTPS qua `curl`, `git`, `ripgrep`, test runner, LSP (tùy chọn).
-- Tính năng chưa dùng thì chưa nạp; dữ liệu lớn (lịch sử chat, repo map) nằm trên đĩa.
-- **Không đánh đổi chất lượng AI lấy RAM:** model luôn nhận đầy đủ context.
+Không có editor tích hợp, repo map hay LSP: dark để editor của bạn và agent lo những việc đó. Danh sách đầy đủ: [FEATURES.md](docs/FEATURES.md).
 
-| Tình huống | RSS mục tiêu |
+## Nhẹ thật sự
+
+| | Số đo |
 |---|---|
-| Đang review | 1,5–2,5 MB |
-| Đang stream câu trả lời AI | 2–3 MB |
-| Agent đang làm việc | 4–8 MB |
+| RAM idle của bản hiện tại (M0) | ~0,56 MB trên Windows, ~0,52 MB trên Linux musl |
+| File chạy | ~0,2 MB (Windows), ~0,5 MB (Linux musl), không cần Node hay Python |
+| Mục tiêu khi review | dưới 2 MB; `darkw` tính cả cửa sổ dưới 3 MB |
 
-Chi tiết: [ARCHITECTURE.md](docs/ARCHITECTURE.md#6-ngân-sách-ram).
+So sánh sơ bộ trên cùng một diff 30 file (Linux, bộ nhớ riêng của process):
 
-## Phím tắt (MVP dự kiến)
+| dark M0 | tuicr | Hunk |
+|---|---|---|
+| ~0,55 MB | ~14,6 MB | ~191 MB |
+
+dark M0 chưa tải diff nên phép so này chưa công bằng cho đối thủ; sẽ đo lại sau M1 bằng [script công khai](tests/bench/compare-review-tools.py). Agent vẫn tốn RAM như khi bạn chạy chúng riêng; dark chỉ bật agent khi bạn vibe và tắt khi bạn quay lại review. Chi tiết: [ARCHITECTURE.md §6](docs/ARCHITECTURE.md#6-ngân-sách-ram).
+
+## Phím tắt (dự kiến)
 
 | Phím | Tác dụng |
 |---|---|
 | `a` / `r` | Giữ / bỏ hunk |
 | `n` / `N` | Hunk kế / trước |
-| `?` | Hỏi AI |
-| `p` | Áp dụng patch AI |
-| `ctrl-p` | Tìm file |
-| `ctrl-s` | Lưu |
+| `u` | Hoàn tác cả lượt AI |
+| `/` | Ghi chú |
+| `?` | Hỏi agent về hunk |
+| `e` | Mở editor |
 | `!` | Chạy test |
-| `m` | Chọn model |
 | `c` | Commit |
+| `v` | Vibe |
+| `m` | Chọn agent |
+| `q` | Thoát |
 
-## Cài đặt (dự kiến)
+## Chạy bản hiện tại
 
-Yêu cầu: Rust (stable), `git`, `curl` (có sẵn trên Windows 10+, macOS, hầu hết Linux). Khuyến nghị cài thêm `ripgrep`.
-
-```bash
-git clone <repo>/dark
-cd dark
-cargo build --release
-```
-
-## Cấu hình (dự kiến, chưa dùng ở M0)
-
-Tạo `~/.config/dark/providers.toml` (Windows: `%APPDATA%\dark\providers.toml`):
-
-```toml
-default = "anthropic/claude-sonnet"
-
-[providers.anthropic]
-kind = "anthropic"
-key_env = "ANTHROPIC_API_KEY"
-
-[providers.openrouter]
-kind = "openai-compatible"
-base_url = "https://openrouter.ai/api/v1"
-key_env = "OPENROUTER_API_KEY"
-
-[providers.local]
-kind = "openai-compatible"
-base_url = "http://localhost:11434/v1"
-```
-
-Đặt API key trong biến môi trường, ví dụ (PowerShell):
+Bản M0 chỉ có khung: ba màn trống, chuyển bằng `1`/`2`/`3`, thoát bằng `q` hoặc `Ctrl-C`.
 
 ```powershell
-$env:ANTHROPIC_API_KEY = "sk-..."
+cargo build --release
+.\target\release\dark.exe            # Linux/macOS: ./target/release/dark
+.\target\release\dark.exe --debug    # hiện RAM của chính dark
+.\target\release\dark.exe --help
 ```
 
-## Sử dụng (dự kiến)
-
-```bash
-cd my-project
-dark            # mở màn Review so với snapshot gần nhất
-dark "thêm đăng nhập bằng Google"   # giao task cho agent, xong thì mở Review
-dark --debug    # hiện RSS, token, chi phí
-```
+Cần Rust stable; Windows dùng toolchain MSVC và bộ C++ của Visual Studio. Lệnh kiểm tra, runner Windows/WSL, bản musl và cách đo RAM: [DEVELOPMENT.md](docs/DEVELOPMENT.md).
 
 ## Tài liệu
 
 | Tài liệu | Nội dung |
 |---|---|
-| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Bối cảnh, quyết định công nghệ, thành phần, ngân sách RAM, rủi ro |
-| [FEATURES.md](docs/FEATURES.md) | Sơ đồ use case, bảng tính năng MVP, phím tắt, ngoài phạm vi |
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Định vị, thành phần, ACP, `darkw`, ngân sách RAM, điều khoản gói thuê bao, rủi ro |
+| [FEATURES.md](docs/FEATURES.md) | Use case, bảng tính năng, phím tắt, ngoài phạm vi |
 | [SEQUENCE.md](docs/SEQUENCE.md) | Sơ đồ tuần tự các luồng chính |
-| [PLANNING.md](docs/PLANNING.md) | Milestone, tiêu chí hoàn thành, cách đo chất lượng, quyết định còn mở |
-| [M0_VERIFICATION.md](docs/M0_VERIFICATION.md) | Output kiểm tra M0, kích thước binary, bộ nhớ và nền tảng chưa kiểm chứng |
-| [AGENT_WORKFLOW.md](docs/AGENT_WORKFLOW.md) | Vai trò, model và quy trình làm việc của agent |
-| [DEVELOPMENT.md](docs/DEVELOPMENT.md) | Lệnh kiểm tra tracked, môi trường Windows/WSL, đường dẫn build và đo RAM |
+| [PLANNING.md](docs/PLANNING.md) | Lộ trình M1–M5, tiêu chí hoàn thành, quyết định còn mở |
+| [DEVELOPMENT.md](docs/DEVELOPMENT.md) | Môi trường, lệnh kiểm tra, runner, đo RAM, benchmark |
+| [M0_VERIFICATION.md](docs/M0_VERIFICATION.md) | Output kiểm chứng M0 |
+| [AGENT_WORKFLOW.md](docs/AGENT_WORKFLOW.md) | Vai trò, model và quy trình của agent phát triển |
 
 ## Giấy phép
 

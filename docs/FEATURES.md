@@ -1,157 +1,177 @@
-# dark — Danh sách tính năng MVP
+# dark — Danh sách tính năng
 
-> Phiên bản: 0.1 (pre-MVP) · Cập nhật: 01/11/2026
+> Phiên bản: 0.2 (sau M0) · Cập nhật: 01/11/2026
 > Liên quan: [ARCHITECTURE.md](ARCHITECTURE.md) · [PLANNING.md](PLANNING.md) · [SEQUENCE.md](SEQUENCE.md)
 
-## 1. Tác nhân
+## 1. Phạm vi
+
+dark chỉ phục vụ một vòng lặp:
+
+**vibe với agent → review từng thay đổi → góp ý ngược lại cho agent → hoàn tác khi cần**
+
+Tính năng nào không phục vụ vòng lặp này thì bỏ hoặc giao cho công cụ khác (editor của người dùng, git, agent CLI).
+
+| Mục tiêu | Cam kết |
+|---|---|
+| Chất lượng vibe | Ngang agent chính chủ: agent chạy đúng harness của nó qua ACP, dark chỉ thay giao diện |
+| RAM khi review | Dưới 2 MB cho dark; `darkw` tính cả cửa sổ dưới 3 MB (cần đo ở M3) |
+| Nền tảng | Windows là hạng nhất (có cửa sổ riêng `darkw`); Linux, macOS chạy bản terminal |
+
+## 2. Tác nhân
 
 | Tác nhân | Mô tả |
 |---|---|
-| **Vibe coder** | Người dùng chính: giao việc cho AI, review và chấp nhận thay đổi, sửa nhanh, chạy test |
-| **Model AI** | Model từ xa (Anthropic, Gemini, OpenAI-compatible) hoặc local (Ollama, LM Studio) |
-| **Hệ thống cục bộ** | git, ripgrep, test runner, LSP chạy trên máy người dùng |
+| **Vibe coder** | Người dùng chính: giao việc cho agent, review, giữ/bỏ thay đổi, góp ý, commit |
+| **Agent** | Claude Code, Codex CLI, Gemini CLI, opencode... chạy ngầm qua ACP, hoặc chạy riêng ở chế độ đi kèm |
+| **Hệ thống cục bộ** | git, editor của người dùng, test runner |
 
-## 2. Sơ đồ use case
+## 3. Sơ đồ use case
 
 ```mermaid
 flowchart LR
     U(("👤 Vibe coder"))
-    AI(("🤖 Model AI"))
-    SYS(("⚙️ git / test runner / LSP"))
+    AG(("🤖 Agent<br/>Claude Code · Codex<br/>Gemini CLI · opencode"))
+    SYS(("⚙️ git · editor · test"))
 
     subgraph DARK["dark"]
         direction TB
-        UC1([Xem danh sách file AI đã sửa])
-        UC2([Xem diff từng hunk])
-        UC3([Giữ / bỏ hunk])
-        UC4([Hỏi AI về một hunk])
-        UC5([Áp dụng patch AI đề xuất])
-        UC6([Giao task cho agent])
-        UC7([Sửa code trong editor])
-        UC8([Tìm file / tìm text])
-        UC9([Chạy test và xem lỗi])
-        UC10([Nhờ AI sửa lỗi test])
-        UC11([Chọn / đổi model])
-        UC12([Commit thay đổi])
-        UC13([Hoàn tác về checkpoint])
+        UC1([Giao task cho agent])
+        UC2([Duyệt quyền và lần sửa file của agent])
+        UC3([Xem file và hunk AI đã đổi])
+        UC4([Giữ / bỏ từng hunk])
+        UC5([Ghi chú vào dòng hoặc hunk])
+        UC6([Gửi ghi chú cho agent])
+        UC7([Hỏi agent về một hunk])
+        UC8([Hoàn tác cả lượt AI])
+        UC9([Mở file trong editor])
+        UC10([Chạy test])
+        UC11([Commit])
+        UC12([Chọn agent])
     end
 
-    U --- UC1 & UC2 & UC3 & UC4 & UC6 & UC7 & UC8 & UC9 & UC11 & UC12 & UC13
-    UC4 -. include .-> UC5
-    UC9 -. extend .-> UC10
-    UC10 -. include .-> UC5
-
-    UC4 --- AI
-    UC6 --- AI
-    UC10 --- AI
-
-    UC1 --- SYS
+    U --- UC1 & UC3 & UC4 & UC5 & UC7 & UC8 & UC9 & UC10 & UC11 & UC12
+    UC1 -. include .-> UC2
+    UC5 -. extend .-> UC6
+    UC1 --- AG
+    UC2 --- AG
+    UC6 --- AG
+    UC7 --- AG
     UC3 --- SYS
+    UC4 --- SYS
+    UC8 --- SYS
     UC9 --- SYS
-    UC12 --- SYS
-    UC13 --- SYS
+    UC10 --- SYS
+    UC11 --- SYS
 ```
 
-## 3. Bảng tính năng
+## 4. Bảng tính năng
 
-Mức ưu tiên: **P0** = bắt buộc cho MVP, **P1** = nên có trong MVP, **Sau** = sau MVP.
-Ảnh hưởng RAM tính cho process của app (process con không tính).
+Ưu tiên: **P0** = bắt buộc cho bản ra mắt, **P1** = nên có khi ra mắt, **Sau** = sau khi ra mắt.
+Cột "Milestone" theo [PLANNING.md](PLANNING.md). RAM tính cho process của dark; process con (git, agent) đo riêng.
 
-### 3.1 Review
+### 4.1 Review
 
-| ID | Tính năng | Mô tả | Ưu tiên | RAM |
+| ID | Tính năng | Mô tả | Ưu tiên | Milestone |
 |---|---|---|---|---|
-| R1 | Snapshot trước phiên AI | Tạo checkpoint git làm mốc so sánh | P0 | ~0 |
-| R2 | Danh sách file đã đổi | Tên file + trạng thái đã xem (✓) / chưa (·) / bị xóa | P0 | Rất thấp |
-| R3 | Diff theo hunk | Hiển thị inline, dòng thêm/xóa có dấu +/− (không chỉ dựa vào màu) | P0 | Thấp |
-| R4 | Giữ / bỏ hunk | Phím `a` giữ, `r` bỏ; `n`/`N` hunk kế/trước | P0 | ~0 |
-| R5 | Nhận xét AI ngay dưới dòng | AI chỉ ra lỗi, mức độ, đề xuất sửa | P0 | Thấp |
-| R6 | Áp dụng patch AI | Xem trước diff, duyệt rồi mới ghi file | P0 | Thấp |
-| R7 | Lọc file | Từ snapshot / từ commit gần nhất / chỉ file AI cảnh báo | P1 | ~0 |
-| R8 | Diff side-by-side | Hai cột cũ/mới | Sau | Thấp |
+| R1 | Snapshot theo lượt AI | Ghi mốc git trước mỗi lượt agent; mặc định so với snapshot gần nhất, có thể chọn so với commit gần nhất | P0 | M1 |
+| R2 | Danh sách file đã đổi | Tên file và trạng thái: chưa xem (·), đã xem (✓), bị xóa (−), file mới | P0 | M1 |
+| R3 | Diff theo hunk | Hiển thị inline, dấu `+`/`−` kèm màu (không dựa vào màu riêng lẻ), tải lười theo file | P0 | M1 |
+| R4 | Giữ / bỏ hunk | `a` giữ, `r` bỏ (hoàn tác hunk đó trên working tree); `n`/`N` hunk kế/trước | P0 | M1 |
+| R5 | Hoàn tác cả lượt | `u` khôi phục về snapshot, có xác nhận | P0 | M1 |
+| R6 | Mở editor ngoài | `e` mở đúng file và dòng bằng `$EDITOR` hoặc editor trong cấu hình | P0 | M1 |
+| R7 | Độ rộng tab | Cấu hình được (mặc định 4 trong diff) | P1 | M1 |
+| R8 | Ghi chú | `/` ghi chú vào dòng, khoảng dòng hoặc hunk; lưu trong `.dark/` | P0 | M2 |
+| R9 | Gửi ghi chú cho agent | Gửi thẳng qua ACP; ở chế độ đi kèm thì xuất markdown có vị trí file:dòng (clipboard hoặc file) | P0 | M2 / M4 |
+| R10 | Hỏi agent về hunk | `?` gửi câu hỏi kèm hunk cho agent đang dùng, hiện câu trả lời ngay dưới hunk | P1 | M5 |
+| R11 | Tô màu cú pháp trong diff | Chỉ từ khóa, chuỗi, comment | Sau | — |
 
-### 3.2 AI và agent
+### 4.2 Vibe
 
-| ID | Tính năng | Mô tả | Ưu tiên | RAM |
+| ID | Tính năng | Mô tả | Ưu tiên | Milestone |
 |---|---|---|---|---|
-| A1 | Nhiều provider | Anthropic, Gemini native; OpenAI-compatible cho OpenAI, OpenRouter, DeepSeek, Ollama, LM Studio | P0 | Thấp |
-| A2 | Stream câu trả lời | Đọc SSE qua `curl` | P0 | ~0 |
-| A3 | Hỏi AI về hunk/file | Ô chat chỉ hiện khi bấm `?`, hỗ trợ `@file` thêm context | P0 | Thấp |
-| A4 | Agent loop + công cụ | read, grep, glob, edit, run_command | P0 | Thấp |
-| A5 | Edit engine chuẩn xác | Search/replace + khớp gần đúng + báo lỗi rõ | P0 | ~0 |
-| A6 | Định dạng sửa theo họ model | search/replace hoặc apply_patch tùy model | P1 | ~0 |
-| A7 | Repo map | tree-sitter, lazy, cache ra đĩa | P1 | 2–4 MB tạm thời |
-| A8 | Quy tắc project | Đọc `AGENTS.md`, `CLAUDE.md` | P0 | ~0 |
-| A9 | Compaction | Tóm tắt lượt cũ khi gần hết context | P1 | ~0 |
-| A10 | Prompt caching | `cache_control` (Anthropic), cache tự động provider khác | P1 | ~0 |
-| A11 | Tham số đầy đủ | reasoning/thinking, max_tokens, không cắt output | P0 | ~0 |
-| A12 | Ngân sách chi phí | Giới hạn $/ngày, chỉ cảnh báo khi vượt | P1 | ~0 |
-| A13 | So sánh 2 model | Cùng câu hỏi, hai câu trả lời | Sau | Thấp |
-| A14 | MCP client | Kết nối MCP server ngoài | Sau | Thấp |
+| V1 | Chế độ đi kèm | Agent chạy ở cửa sổ khác; dark tự phát hiện thay đổi qua git và làm mới màn Review | P0 | M2 |
+| V2 | Nhường màn hình | `v` trao terminal cho agent CLI (giao diện gốc), agent thoát thì dark quay lại màn Review; mở lại đúng phiên cũ | P1 | M2 |
+| V3 | Chia màn hình | Mở agent ở khung bên cạnh nếu terminal hỗ trợ (Windows Terminal, tmux, WezTerm...) | P1 | M2 |
+| V4 | ACP client | Chạy agent ngầm qua Agent Client Protocol (JSON-RPC qua stdio), không cần terminal | P0 | M4 |
+| V5 | Agent hỗ trợ | Gemini CLI, opencode (ACP gốc); Codex (app-server hoặc `codex-acp`); Claude Code (`claude-agent-acp`, mặc định API key) | P0 | M4 |
+| V6 | Màn Vibe | Ô nhập task, tin nhắn, kế hoạch, lệnh đang chạy, file đang sửa; log ghi ra đĩa | P0 | M4 |
+| V7 | Duyệt quyền | Agent xin chạy lệnh hoặc sửa file thì dark hỏi người dùng | P0 | M4 |
+| V8 | Sửa file đi qua dark | Nếu agent dùng cơ chế đọc/ghi file của client, mỗi lần sửa hiện hunk để duyệt trước khi ghi | P1 | M4 |
+| V9 | Model API qua opencode | Dùng hơn 75 nhà cung cấp của opencode mà không cần dark tự gọi API | P1 | M4 |
+| V10 | Agent tích hợp riêng | Gọi API trực tiếp qua `curl`, nhẹ nhất | Sau | — |
 
-### 3.3 Kiểm tra (verify)
+### 4.3 Quản lý agent
 
-| ID | Tính năng | Mô tả | Ưu tiên | RAM |
+| ID | Tính năng | Mô tả | Ưu tiên | Milestone |
 |---|---|---|---|---|
-| V1 | Chạy lệnh test/build | Bắt stdout/stderr, hiện lỗi; phím `!` | P0 | Thấp |
-| V2 | Nhảy tới vị trí lỗi | Từ output test mở đúng file:dòng | P1 | ~0 |
-| V3 | Vòng kiểm tra tự động | Sau mỗi lần AI sửa: lint/typecheck/test, đưa lỗi lại cho model | P0 | ~0 |
-| V4 | Báo lỗi qua LSP | Lazy, tự tắt khi rảnh, có thể tắt hẳn | P1 | ~0 (process riêng) |
+| A1 | Khởi động khi cần | Agent chỉ chạy khi vibe, không chạy sẵn lúc mở dark | P0 | M4 |
+| A2 | Tự tắt khi rảnh | Tắt sau vài phút không dùng; mở lại thì tiếp tục đúng phiên | P0 | M4 |
+| A3 | Một agent mỗi lúc | Đổi agent thì tắt agent cũ | P0 | M4 |
+| A4 | Khởi động lại khi phình | Vượt ngưỡng RAM thì chờ hết lượt, tắt và mở lại, giữ hội thoại | P1 | M4 |
+| A5 | Chế độ gọn | Khởi động agent với cấu hình tối thiểu (không MCP, không plugin thừa) nếu agent hỗ trợ | P1 | M4 |
+| A6 | Hiện RAM của agent | Cộng cả cây process con, tách riêng với RAM của dark | P1 | M4 |
+| A7 | Giới hạn cứng | `NODE_OPTIONS` cho agent Node; Job Object trên Windows. Tắt mặc định | Sau | — |
 
-### 3.4 Editor và điều hướng
+### 4.4 Chạy và commit
 
-| ID | Tính năng | Mô tả | Ưu tiên | RAM |
+| ID | Tính năng | Mô tả | Ưu tiên | Milestone |
 |---|---|---|---|---|
-| E1 | Mở/sửa/lưu file | Rope buffer, undo/redo, `ctrl-s` | P0 | Thấp |
-| E2 | Tìm và thay | Trong file | P0 | ~0 |
-| E3 | Tìm file fuzzy | `ctrl-p` | P0 | Thấp |
-| E4 | Tìm text toàn project | Gọi ripgrep | P1 | ~0 |
-| E5 | Tô màu cú pháp đơn giản | Từ khóa, chuỗi, comment; chỉ dòng đang hiển thị | P1 | ~0 |
-| E6 | Phím tắt kiểu Vim/Helix | | Sau | ~0 |
+| T1 | Chạy test | `!` chạy lệnh trong cấu hình, chỉ hiện lỗi đầu tiên và vị trí | P1 | M2 |
+| T2 | Commit | `c` commit phần đã giữ; agent gợi ý message nếu đang có agent | P1 | M2 / M5 |
 
-### 3.5 Git và an toàn
+### 4.5 Giao diện và vận hành
 
-| ID | Tính năng | Mô tả | Ưu tiên | RAM |
+| ID | Tính năng | Mô tả | Ưu tiên | Milestone |
 |---|---|---|---|---|
-| G1 | Checkpoint trước mỗi lượt AI | Hoàn tác an toàn | P0 | ~0 |
-| G2 | Commit | Viết message hoặc nhờ AI gợi ý từ diff; phím `c` | P1 | ~0 |
-| G3 | Patch cần duyệt | Mặc định bật | P0 | ~0 |
-| G4 | API key từ biến môi trường | Không lưu key dạng chữ | P0 | ~0 |
+| U1 | Màn Review | Màn chính: danh sách file, diff, ghi chú | P0 | M1 |
+| U2 | Màn Vibe | Xem V6 | P0 | M4 |
+| U3 | Chọn agent | Popup khi bấm `m`; agent thiếu cài đặt hoặc thiếu key bị làm mờ | P0 | M4 |
+| U4 | `darkw` | Cửa sổ Windows riêng (Win32 + GDI), không cần terminal | P0 | M3 |
+| U5 | Bản terminal | `dark` chạy trong mọi terminal: PowerShell, mintty, WSL, VS Code, SSH | P0 | M0 ✓ |
+| U6 | Tên cửa sổ | Ví dụ `dark — shop-api · 2/7 đã review` | P1 | M1 |
+| U7 | `--debug` | Hiện RAM của dark | P1 | M0 ✓ |
+| U8 | `--help`, `--version` | | P0 | M0 ✓ |
+| U9 | Ngôn ngữ giao diện | Tiếng Anh, tiếng Việt | P1 | M5 |
 
-### 3.6 Giao diện
+### 4.6 An toàn
 
-| ID | Tính năng | Mô tả | Ưu tiên | RAM |
+| ID | Tính năng | Mô tả | Ưu tiên | Milestone |
 |---|---|---|---|---|
-| U1 | Màn Review | Màn hình chính | P0 | Thấp |
-| U2 | Màn Edit + Run | | P0 | Thấp |
-| U3 | Màn chọn model | Danh sách model, model thiếu key bị làm mờ | P0 | ~0 |
-| U4 | Hai chế độ hiển thị | **Đầy đủ** (thanh trên, số dòng, panel AI, token, RSS) và **tối giản** (chỉ file, diff, 3 phím) | P1 | ~0 |
-| U5 | Chế độ `--debug` | Hiện RSS, token, chi phí | P1 | ~0 |
+| S1 | Duyệt trước khi ghi | Patch hoặc lệnh của agent phải được duyệt (có thể tắt trong cấu hình) | P0 | M4 |
+| S2 | API key | Chỉ đọc từ biến môi trường, không ghi vào cấu hình hay log | P0 | M4 |
+| S3 | Đăng nhập chính chủ | Không dùng cách đăng nhập lách điều khoản của nhà cung cấp | P0 | M4 |
 
-## 4. Phím tắt (MVP)
+## 5. Phím tắt
 
 | Phím | Màn | Tác dụng |
 |---|---|---|
 | `a` / `r` | Review | Giữ / bỏ hunk |
 | `n` / `N` | Review | Hunk kế / trước |
-| `e` | Review | Sửa hunk trong editor |
-| `?` | Mọi màn | Hỏi AI |
-| `p` | Review | Áp dụng patch AI đề xuất |
-| `ctrl-p` | Mọi màn | Tìm file |
-| `ctrl-s` | Edit | Lưu |
-| `!` | Mọi màn | Chạy test/lệnh |
-| `m` | Mọi màn | Chọn model |
+| `u` | Review | Hoàn tác cả lượt AI về snapshot |
+| `/` | Review | Ghi chú vào dòng hoặc hunk |
+| `?` | Review | Hỏi agent về hunk đang xem |
+| `e` | Review | Mở file trong editor |
+| `!` | Mọi màn | Chạy test |
 | `c` | Review | Commit |
-| `tab` | Mọi màn | Chuyển pane |
+| `v` | Mọi màn | Vibe: mở màn Vibe (ACP) hoặc nhường màn hình cho agent CLI |
+| `m` | Mọi màn | Chọn agent |
+| `Tab` | Mọi màn | Chuyển màn Review / Vibe |
+| `q` | Mọi màn | Thoát |
 
-## 5. Ngoài phạm vi MVP
+## 6. Ngoài phạm vi (cố tình không làm)
 
-- Hệ thống plugin, theme phức tạp, file tree đồ họa.
-- Terminal PTY nhúng đầy đủ (chỉ bắt output lệnh).
-- GUI, bản web.
-- Agent chạy nhiều bước hoàn toàn tự động không cần duyệt (chỉ khi người dùng tắt duyệt trong config).
+| Không làm | Thay bằng |
+|---|---|
+| Editor tích hợp (rope buffer, undo, tìm/thay, tô màu) | `e` mở editor người dùng đang dùng |
+| Tìm file kiểu fuzzy, cây thư mục | Danh sách file đã đổi là đủ cho review |
+| Repo map (tree-sitter) | Agent tự tìm bằng công cụ của nó |
+| LSP | Lệnh test/lint của project |
+| Nhúng giao diện TUI của agent (PTY + terminal thu nhỏ) | Nhường màn hình, chia màn hình, hoặc ACP |
+| Tự viết terminal emulator | `darkw` vẽ thẳng lưới chữ của dark, không làm terminal |
+| Quản lý git đầy đủ (nhánh, rebase, log) | git, lazygit... |
+| Diff side-by-side, hai chế độ giao diện | Chỉ diff inline, chỉ giao diện tối giản |
+| Plugin, theme phức tạp, MCP client | — |
 
-## 6. Mockup giao diện
+## 7. Mockup
 
-Mockup 3 màn (bản đầy đủ và bản tối giản) nằm trên canvas "Vibe Review TUI":
-https://claude.ai/artifact/5Sc1igNP8rkGNVWT9jBfkj (riêng tư, chỉ chủ sở hữu mở được trừ khi chia sẻ).
+Mockup trên canvas "Vibe Review TUI": https://claude.ai/artifact/5Sc1igNP8rkGNVWT9jBfkj (riêng tư, chỉ chủ sở hữu mở được trừ khi chia sẻ). Hàng "Bản tối giản" và "Chạy trong mintty" gần nhất với phạm vi hiện tại; hàng đầu tiên là bản đầy đủ cũ, giữ để tham khảo.

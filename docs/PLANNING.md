@@ -1,131 +1,126 @@
-# dark — Kế hoạch phát triển MVP
+# dark — Kế hoạch phát triển
 
-> Phiên bản: 0.1 (pre-MVP) · Cập nhật: 01/11/2026
-> Liên quan: [ARCHITECTURE.md](ARCHITECTURE.md) · [FEATURES.md](FEATURES.md) · [SEQUENCE.md](SEQUENCE.md)
+> Phiên bản: 0.2 (sau M0) · Cập nhật: 01/11/2026
+> Liên quan: [ARCHITECTURE.md](ARCHITECTURE.md) · [FEATURES.md](FEATURES.md) · [SEQUENCE.md](SEQUENCE.md) · [DEVELOPMENT.md](DEVELOPMENT.md)
 
-## 1. Mục tiêu MVP
+## 1. Mục tiêu bản ra mắt
 
-- Review được mọi thay đổi AI tạo ra: theo file, theo hunk, giữ/bỏ, hỏi AI, áp dụng patch có duyệt.
-- Gọi được nhiều model (Anthropic, Gemini, OpenAI-compatible, local) với chất lượng **ngang hoặc hơn opencode** trên cùng model.
-- Agent làm được task có sửa nhiều file, tự kiểm tra bằng lint/typecheck/test.
-- **RSS của app dưới 10 MB** trong mọi kịch bản test.
-- Chạy trên **Windows** (máy phát triển chính), macOS, Linux.
+- Review mọi thay đổi agent tạo ra: theo file, theo hunk, giữ/bỏ, hoàn tác cả lượt, ghi chú gửi lại agent.
+- Vibe với **Claude Code, Codex, Gemini CLI, opencode** ngay trong dark qua ACP, chất lượng ngang agent chính chủ.
+- Trên Windows, `darkw` chạy cửa sổ riêng không cần terminal.
+- RAM của dark dưới ngân sách ở mọi kịch bản test ([ARCHITECTURE.md §6](ARCHITECTURE.md#6-ngân-sách-ram)); RAM của agent đo và báo riêng.
+- Windows (máy phát triển chính), Linux (musl), macOS (bản terminal).
 
 ## 2. Nguyên tắc làm việc
 
-1. **Bài test RAM có từ ngày đầu** và chạy ở mỗi milestone. Vượt 10 MB thì dừng thêm tính năng, xử lý trước.
-2. **Chất lượng AI đo bằng eval, không đo bằng cảm giác.** Bộ eval có từ M4.
-3. Mỗi milestone kết thúc bằng một bản chạy được và dùng thật được.
+1. **Bài test RAM ở mọi milestone**, đo bản release. Vượt ngân sách thì dừng thêm tính năng, xử lý trước. Không đổi ngưỡng hay số đo để báo đạt.
+2. **Mỗi milestone kết thúc bằng một bản dùng được thật.** Từ M1, dùng chính dark để review code của các milestone sau.
+3. **Lập kế hoạch và chờ duyệt trước khi code** mỗi milestone (xem [AGENT_WORKFLOW.md](AGENT_WORKFLOW.md)).
+4. Dependency mới phải có lý do trong kế hoạch đã duyệt và đi qua bài test RAM.
 
-## 3. Các milestone
+## 3. Lộ trình
 
-Thời gian là **ước tính cho một người làm, có AI hỗ trợ**, cần điều chỉnh theo thực tế.
+Thời gian là ước tính cho một người làm cùng agent, cần điều chỉnh theo thực tế.
 
-| Milestone | Nội dung | Ước tính | Tính năng (xem FEATURES.md) |
+| Milestone | Nội dung | Ước tính | Tính năng ([FEATURES.md](FEATURES.md)) |
 |---|---|---|---|
-| **M0** Khung dự án | Event loop 1 luồng, renderer, đổi màn hình, bài test RAM, build tối ưu kích thước | 1 tuần | U1 (khung), U5 |
-| **M1** Review không AI | Snapshot, đọc git diff, tách hunk, giữ/bỏ, danh sách file | 1–2 tuần | R1–R4, G1, U1 |
-| **M2** Provider + hỏi AI | Adapter 3 loại provider qua `curl`, stream SSE, ô hỏi AI, nhận xét dưới dòng, màn chọn model | 2 tuần | A1–A3, A11, R5, U3, G4 |
-| **M3** Edit + Run | Editor rope, tìm/thay, tìm file, chạy test, áp dụng patch có duyệt | 2 tuần | E1–E3, E5, V1, R6, G3, U2 |
-| **M4** Agent | Agent loop, bộ công cụ, edit engine (khớp gần đúng), quy tắc project, **bộ eval đầu tiên** | 2–3 tuần | A4, A5, A8 |
-| **M5** Chất lượng context | Repo map tree-sitter, định dạng sửa theo model, compaction, prompt caching, ngân sách chi phí | 2 tuần | A6, A7, A9, A10, A12 |
-| **M6** Vòng kiểm tra | Verify loop tự động, nhảy tới lỗi, LSP lazy (tùy chọn), commit có gợi ý AI | 1–2 tuần | V2–V4, G2, E4, R7 |
-| **M7** Hoàn thiện | So eval với opencode, chế độ hiển thị đầy đủ/tối giản, tài liệu, đóng gói phát hành | 1–2 tuần | U4 |
+| **M0** Khung ✓ | Event loop, renderer, ba màn trống, đo RAM, runner kiểm chứng | xong (tag `m0`) | U5, U7, U8 |
+| **M1** Review | Snapshot, diff theo hunk, giữ/bỏ, hoàn tác cả lượt, mở editor, tên cửa sổ | 1–2 tuần | R1–R7, U1, U6 |
+| **M2** Đi kèm agent | Ghi chú, xuất cho agent, phát hiện thay đổi, nhường/chia màn hình, chạy test, commit | 1–2 tuần | R8, R9 (xuất markdown), V1–V3, T1, T2 |
+| **M3** `darkw` | Bản thử đo RAM, rồi cửa sổ Win32 + GDI, bộ gõ tiếng Việt, clipboard, DPI | 1–2 tuần | U4 |
+| **M4** ACP | ACP client, màn Vibe, duyệt quyền, sửa file qua dark, vòng đời agent | 2–3 tuần | V4–V9, A1–A6, U2, U3, S1–S3, R9 (qua ACP) |
+| **M5** Ra mắt | Hỏi agent về hunk, gợi ý commit, ngôn ngữ giao diện, đóng gói, benchmark công khai, README | 1–2 tuần | R10, T2, U9 |
 
-**Tổng ước tính:** khoảng 12–16 tuần.
+**Tổng ước tính:** khoảng 7–11 tuần sau M0.
+
+**Phát hành:**
+- **v0.1 (sau M2):** bản dùng thử cho nhóm nhỏ và cộng đồng dev Việt để lấy phản hồi. Chưa đăng Show HN.
+- **v1.0 (sau M5):** ra mắt chính thức (Show HN, r/rust...), khi đã có ACP, `darkw` và số đo so sánh sau M1.
 
 ```mermaid
 gantt
-    title Lộ trình MVP dark (ước tính)
+    title Lộ trình dark sau M0 (ước tính)
     dateFormat  YYYY-MM-DD
     axisFormat  %d/%m
+    section Review
+    M1 Review              :m1, 2026-11-02, 10d
+    M2 Đi kèm agent · v0.1 :m2, after m1, 10d
     section Nền tảng
-    M0 Khung dự án         :m0, 2026-11-02, 7d
-    M1 Review không AI     :m1, after m0, 12d
-    section AI
-    M2 Provider + hỏi AI   :m2, after m1, 14d
-    M3 Edit + Run          :m3, after m2, 14d
-    M4 Agent + eval        :m4, after m3, 18d
-    M5 Chất lượng context  :m5, after m4, 14d
-    section Hoàn thiện
-    M6 Vòng kiểm tra       :m6, after m5, 12d
-    M7 Hoàn thiện, phát hành :m7, after m6, 12d
+    M3 darkw               :m3, after m2, 10d
+    M4 ACP                 :m4, after m3, 18d
+    section Ra mắt
+    M5 Ra mắt · v1.0       :m5, after m4, 10d
 ```
 
-## 4. Tiêu chí hoàn thành từng milestone
+## 4. Tiêu chí hoàn thành
 
-### M0 — Khung dự án
-- [x] Build release ra binary dưới 3 MB: Windows 212.480 byte, Linux musl 537.464 byte sau sửa review.
-- [x] Mở app Windows, chuyển giữa 3 màn trống bằng phím, thoát sạch.
-- [x] Bài test RAM chạy được trên Windows và Linux musl thử nghiệm, idle dưới 2.000.000 byte. GNU phát triển vẫn chưa đạt ngưỡng này.
-- [x] Trên Windows: `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, `cargo test` và `cargo test --release` đạt; test RAM debug được bỏ qua kèm lý do.
-- [x] Console thật Windows được kiểm tra với resize, `q`, `Ctrl-C` và panic subprocess ở cả debug/release; terminal được phục hồi.
+### M0 — Khung dự án ✓ (tag `m0`)
+- [x] Binary release dưới 3 MB: Windows 212.480 byte, Linux musl 537.464 byte.
+- [x] Ba màn trống, chuyển bằng `1`/`2`/`3`, thoát sạch bằng `q`/`Ctrl-C`, phục hồi terminal sau panic.
+- [x] RAM idle dưới 2.000.000 byte: Windows 557.056 byte (private working set), Linux musl 524.288 byte (VmRSS).
+- [x] fmt, Clippy, test debug/release đạt trên Windows và WSL musl; kiểm tra terminal thật 10/10 (Windows), 6/6 (WSL).
+- [x] Cắt chữ theo grapheme và độ rộng cột; `--help`, `--version`, lỗi tham số rõ ràng; script kiểm chứng được commit.
+- Còn mở: macOS mới qua `cargo check`; bản GNU trên Linux vượt 2 MB do glibc dùng chung (đã chọn musl cho bản phát hành).
 
-M0 chưa đóng: người dùng sẽ tự kiểm tra lại Windows trước khi quyết định đóng. Linux musl thử nghiệm đã qua format, Clippy, test debug/release, TUI và ngân sách RAM trong WSL; đề xuất cho bản phát hành Linux, chưa đổi target mặc định. Bản GNU phát triển ở `~/dark-target` được giữ nguyên; musl ở `~/dark-target-musl`. GNU vẫn còn vượt ngưỡng idle và kết quả đó được giữ nguyên trong báo cáo. Windows headless và console release đã đạt ngân sách. macOS ARM64 mới qua `cargo check --target aarch64-apple-darwin`; chưa build hoàn chỉnh và chưa chạy thực tế. Chưa push hoặc tag M0. Xem output và cách so sánh VmRSS/private/PSS tại [M0_VERIFICATION.md](M0_VERIFICATION.md).
+Output và số đo: [M0_VERIFICATION.md](M0_VERIFICATION.md).
 
-Sau review code, đã sửa clipping Unicode/grapheme/tab 8, thêm help/version và lỗi tham số dễ hiểu, bỏ BOM, đưa script vào scripts/ và rút gọn AGENTS.md. Windows và WSL musl đều đạt 17 test release cùng kiểm tra terminal thật. Binary mới Windows 212.480 byte, musl 537.464 byte; mọi ngưỡng giữ nguyên. Chi tiết chênh lệch trước–sau ở cuối báo cáo kiểm chứng. Vận hành hiện tại: [DEVELOPMENT.md](DEVELOPMENT.md).
+### M1 — Review
+- [ ] Trên một repo thật: tạo snapshot, hiện đúng danh sách file đổi so với snapshot (thêm, sửa, xóa, file mới).
+- [ ] Diff theo hunk; `a`/`r` giữ/bỏ; sau khi bỏ, `git diff` khớp đúng phần còn lại.
+- [ ] `u` hoàn tác cả lượt về snapshot, có xác nhận; không làm hỏng index hay nhánh của người dùng.
+- [ ] `e` mở đúng file và dòng trong editor; độ rộng tab cấu hình được; tên cửa sổ hiện project và tiến độ.
+- [ ] Repo không phải git, file nhị phân, file rất lớn, tên file Unicode: báo rõ, không crash.
+- [ ] RAM khi review repo mẫu (~30 file, ~3.000 dòng đổi) dưới 2.000.000 byte trên Windows và Linux musl.
+- [ ] Chạy lại `tests/bench/compare-review-tools.py`; cập nhật bảng so sánh trong ARCHITECTURE §6.2.
 
-Ngân sách M0 tính theo byte: idle **< 2.000.000**, giới hạn cứng **< 10.000.000**, binary **< 3.000.000**. RAM được đo trên binary release, không phải test runner. Windows dùng private working set (`PROCESS_MEMORY_COUNTERS_EX2`), Linux dùng `VmRSS`; các số đo khác nhau phải ghi đúng tên. Windows không hỗ trợ EX2 thì hiện `n/a` và lý do, không đổi sang số đo khác. Linux được chạy trong WSL nếu môi trường có Rust; nếu chưa chạy được phải ghi rõ. macOS build khi có môi trường phù hợp và ghi rõ chưa kiểm chứng thực tế.
+### M2 — Đi kèm agent (v0.1)
+- [ ] `/` ghi chú dòng, khoảng dòng, hunk; xuất markdown có vị trí file:dòng ra clipboard hoặc file.
+- [ ] Agent chạy ở cửa sổ khác sửa file: dark tự làm mới danh sách mà không cần mở lại.
+- [ ] `v` nhường màn hình cho agent CLI cấu hình sẵn (Codex, Claude Code, Gemini CLI), quay lại màn Review khi agent thoát.
+- [ ] Chia màn hình trong Windows Terminal và tmux; terminal không hỗ trợ thì mở cửa sổ riêng.
+- [ ] `!` chạy test, hiện lỗi đầu tiên và vị trí; `c` commit phần đã giữ.
+- [ ] Kiểm tra trong PowerShell, mintty, WSL, terminal của VS Code.
 
-### M1 — Review không AI
-- [ ] Trên một repo thật, xem đúng danh sách file đổi so với snapshot.
-- [ ] Giữ/bỏ từng hunk, kết quả khớp với `git diff` sau đó.
-- [ ] Diff 2.000 dòng: RSS dưới 4 MB, cuộn mượt.
+### M3 — `darkw`
+- [ ] **Bản thử (1–2 ngày, nhánh riêng):** cửa sổ Win32 + GDI, ba màn, resize, gõ tiếng Việt; RAM idle dưới 3.000.000 byte, không có conhost/OpenConsole đi kèm. Không đạt thì báo lại để quyết định trước khi làm tiếp.
+- [ ] `darkw.exe` chạy màn Review đầy đủ như bản terminal.
+- [ ] Gõ tiếng Việt bằng Unikey, EVKey và bộ gõ Windows; copy/paste; DPI cao; icon, tên cửa sổ.
+- [ ] Process con không chớp cửa sổ console.
 
-### M2 — Provider + hỏi AI
-- [ ] Hỏi được cả 3 loại provider và ít nhất 1 model local.
-- [ ] Stream mượt, không đứng giao diện khi đang nhận.
-- [ ] Thiếu key hoặc lỗi mạng: thông báo rõ, không crash.
-- [ ] RSS khi stream dưới 3 MB (không tính curl).
+### M4 — ACP
+- [ ] Phương án chờ đồng thời console và pipe trên Windows được chốt, kèm số đo RAM.
+- [ ] Vibe được với Gemini CLI và opencode (ACP gốc), Codex (app-server hoặc `codex-acp`), Claude Code (`claude-agent-acp` với API key).
+- [ ] Màn Vibe hiện tin nhắn, kế hoạch, lệnh, file; log ghi ra đĩa; duyệt quyền chạy lệnh và sửa file.
+- [ ] Agent dùng cơ chế đọc/ghi file của client thì mỗi lần sửa được duyệt theo hunk trước khi ghi.
+- [ ] Ghi chú gửi thẳng cho agent qua ACP.
+- [ ] Vòng đời agent: bật khi vibe, tắt khi rảnh, một agent mỗi lúc, khởi động lại khi phình mà giữ phiên; hiện RAM của agent.
+- [ ] RAM của dark khi đang nhận luồng ACP dưới 4.000.000 byte (không tính agent), đo bằng agent giả lập trong test.
+- [ ] Kiểm tra lại điều khoản gói thuê bao của từng agent; ghi kết quả vào ARCHITECTURE §8.
 
-### M3 — Edit + Run
-- [ ] Sửa, lưu, undo/redo đúng trên file 10.000 dòng.
-- [ ] Chạy test, thấy lỗi đầu tiên và vị trí.
-- [ ] Patch AI chỉ ghi file sau khi người dùng duyệt.
+### M5 — Ra mắt (v1.0)
+- [ ] `?` hỏi agent về hunk; agent gợi ý commit message.
+- [ ] Giao diện tiếng Anh và tiếng Việt.
+- [ ] Đóng gói: winget hoặc scoop, Homebrew, `cargo install`, file tải sẵn (Windows, Linux musl, macOS).
+- [ ] Benchmark công khai chạy trong CI; README có ảnh động, bảng số đo, script kiểm chứng.
+- [ ] Tên chính thức được chốt và kiểm tra trên crates.io, GitHub, winget, scoop, Homebrew, tên miền.
 
-### M4 — Agent
-- [ ] Agent hoàn thành task sửa nhiều file trên repo mẫu.
-- [ ] Edit engine: khi model chép sai khoảng trắng vẫn khớp; khi không khớp thì báo lỗi đủ rõ để model tự sửa.
-- [ ] Bộ eval 20–30 task thật, có script chạy tự động và ghi kết quả.
+## 5. Quyết định còn mở
 
-### M5 — Chất lượng context
-- [ ] Repo map tạo xong rồi giải phóng; đỉnh RSS dưới 8 MB.
-- [ ] Phiên dài vượt context window vẫn chạy tiếp nhờ compaction.
-- [ ] Prompt caching hoạt động (xác nhận qua usage trả về).
-
-### M6 — Vòng kiểm tra
-- [ ] Sau mỗi lần sửa, lỗi lint/test được tự đưa lại cho model.
-- [ ] LSP chỉ chạy khi cần, tự tắt khi rảnh, tắt hẳn được trong config.
-
-### M7 — Hoàn thiện
-- [ ] Trên bộ eval, cùng model: tỉ lệ hoàn thành **≥ opencode**, số lượt trung bình **≤ opencode**.
-- [ ] Mọi kịch bản test RAM dưới 10 MB.
-- [ ] README đủ để người mới cài và dùng trong 5 phút.
-
-## 5. Đo chất lượng so với opencode
-
-| Chỉ số | Cách đo |
-|---|---|
-| Tỉ lệ hoàn thành task | Test của task pass sau khi agent dừng |
-| Số lượt gọi model | Đếm request mỗi task |
-| Tỉ lệ sửa file thành công | Số lần `edit_file` áp dụng được / tổng số lần gọi |
-| Lỗi lọt qua | Lỗi lint/typecheck còn lại khi agent báo xong |
-| Chi phí | Token vào/ra, có tính cache |
-
-Quy tắc: luôn dùng **cùng model, cùng task, cùng trạng thái repo** cho cả hai harness. Chạy mỗi task ít nhất 3 lần để giảm nhiễu.
-
-## 6. Quyết định còn mở
-
-| Câu hỏi | Lựa chọn | Thời điểm cần chốt |
+| Câu hỏi | Lựa chọn | Thời điểm |
 |---|---|---|
-| Renderer tự viết hay ratatui? | Tự viết (nhẹ hơn ~1 MB) / ratatui (nhanh làm hơn) | Đầu M0 |
-| HTTPS qua `curl` hay nhúng `ureq` + `rustls`? | curl (app nhẹ hơn) / ureq (tổng RAM thấp hơn, không phụ thuộc curl) | Đầu M2 |
-| Chế độ hiển thị mặc định? | Đầy đủ / tối giản | M7 |
-| Ngôn ngữ giao diện? | Tiếng Anh / tiếng Việt / cả hai | M7 |
-| Có hỗ trợ MCP trong MVP? | Có / để sau | Cuối M5 |
+| Snapshot lưu thế nào | Ref riêng `refs/dark/...` / stash / commit tạm | Kế hoạch M1 |
+| Chờ console + pipe trên Windows | Luồng đọc pipe nhỏ / overlapped I/O một luồng | Kế hoạch M4 |
+| SDK Rust của ACP hay tự viết JSON-RPC | Theo dependency và số đo RAM | Kế hoạch M4 |
+| Codex qua app-server hay `codex-acp` | App-server nhẹ hơn (không Node) / ACP thống nhất | Kế hoạch M4 |
+| Trên Windows mặc định mở `darkw` hay bản terminal | Theo kết quả M3 | Cuối M3 |
+| Tên chính thức | Để sau | Trước M5 |
+| Agent tích hợp riêng (gọi API qua curl) | Làm sau ra mắt nếu người dùng cần | Sau v1.0 |
 
-## 7. Rủi ro lớn nhất
+Đã chốt ở M0: renderer tự viết (không dùng ratatui); musl cho bản phát hành Linux.
 
-Xem bảng rủi ro chi tiết trong [ARCHITECTURE.md](ARCHITECTURE.md#8-rủi-ro-và-cách-giảm). Hai rủi ro cần theo dõi sát:
-1. **Chất lượng agent** không đạt mức opencode → bộ eval từ M4, ưu tiên edit engine và verify loop.
-2. **RAM phình dần** khi thêm tính năng → bài test RAM chạy ở mọi milestone.
+## 6. Rủi ro cần theo dõi
+
+Bảng đầy đủ: [ARCHITECTURE.md §9](ARCHITECTURE.md#9-rủi-ro-và-cách-giảm). Ba rủi ro chính:
+1. **Đối thủ đã có phần review** → giữ khác biệt ở cả vòng lặp vibe–review–góp ý–hoàn tác, ra v0.1 sớm để lấy phản hồi.
+2. **`darkw` hoặc Windows pipe phức tạp hơn dự kiến** → bản thử và số đo trước khi cam kết; bản terminal luôn là dự phòng.
+3. **RAM phình dần** → bài test RAM và benchmark so sánh ở mọi milestone.

@@ -6,7 +6,7 @@ Project hiện tại: `D:\workspace\dark`; trong WSL là `/mnt/d/workspace/dark`
 
 - Rust stable, edition 2021. Windows dùng `stable-x86_64-pc-windows-msvc` và bộ C++ của Visual Studio. Nếu PATH chưa nhận Rust, dùng `%USERPROFILE%\.cargo\bin\cargo.exe` và `rustc.exe` trực tiếp; xác nhận phiên bản trước khi code.
 - Không tự cài Rust khi chưa được người dùng cho phép. `scripts/setup-wsl-rust.sh` chỉ chạy khi được duyệt cài trong WSL/Linux; dùng rustup chính thức dưới `~/.cargo` và `~/.rustup`, không sudo. Nếu thiếu `cc`, dừng và đưa người dùng lệnh `sudo apt update && sudo apt install build-essential` để họ tự chạy.
-- M0 không dùng tokio, regex, clap, serde hoặc tính năng git/diff/AI/editor. API key chỉ đọc từ biến môi trường; không ghi vào cấu hình hay log.
+- Dependency mới phải có lý do trong kế hoạch đã duyệt và đi qua bài test RAM. Hiện không dùng tokio, regex, clap, serde. Không làm editor tích hợp, repo map, LSP (xem [FEATURES.md §6](FEATURES.md#6-ngoài-phạm-vi-cố-tình-không-làm)). API key chỉ đọc từ biến môi trường; không ghi vào cấu hình hay log.
 
 ## Windows
 
@@ -56,8 +56,25 @@ Nhấn 1/2/3 để đổi màn hình, q hoặc Ctrl-C để thoát. Trong termin
 
 - Unit test nằm trong `#[cfg(test)]`, integration test trong `tests/`, bài RAM dưới `tests/ram/`. Debug RAM test phải được đánh dấu bỏ qua với lý do chạy bản release.
 - Windows đo private working set qua EX2; Linux đọc VmRSS. Đo không hỗ trợ phải báo n/a và lý do, không thay số đo khác dưới cùng tên.
-- M0 idle **< 2.000.000 byte**, đỉnh app **< 10.000.000 byte**, binary **< 3.000.000 byte**. Đỉnh lấy mẫu không phải đỉnh bảo đảm của toàn bộ đời process.
+- Ngân sách theo milestone ở [PLANNING.md](PLANNING.md) và [ARCHITECTURE.md §6](ARCHITECTURE.md#6-ngân-sách-ram). M0: idle **< 2.000.000 byte**, đỉnh app **< 10.000.000 byte**, binary **< 3.000.000 byte**. Đỉnh lấy mẫu không phải đỉnh bảo đảm của toàn bộ đời process.
 - Snapshot binary trước sửa và log là output, được giữ ở `.dark/`; mọi script thực thi phải nằm trong `scripts/` hoặc `tests/` và được commit. Đường dẫn `.dark/*.sh` trong log cũ chỉ là lịch sử; dùng runner tracked ở trên để tái lập.
 - `.gitattributes` giữ file shell/Python ở LF để checkout bằng Git trên Windows không làm script WSL bị lỗi CRLF.
 - Unicode M0 dùng tab stop 8 cột cố định; cấu hình tab thuộc M1. Không đánh đổi chất lượng AI hoặc chức năng để giảm RAM. Benchmark lại allocator musl khi workload cấp phát nhiều ở các milestone sau.
-- macOS hiện chỉ qua cargo check, chưa chạy thực tế. Không đóng M0, push hoặc tag khi người dùng còn yêu cầu kiểm tra cuối.
+- macOS hiện chỉ qua cargo check, chưa chạy thực tế. M0 đã đóng (tag `m0`). Không push hoặc tạo tag khi người dùng chưa yêu cầu.
+
+## Self-test và test RAM
+
+`dark --self-test` chạy không cần terminal: dùng cùng trạng thái app và renderer, đi qua các màn hình và resize rồi lấy nhiều mẫu bộ nhớ. Bài test trong `tests/ram/` chỉ áp ngân sách khi chạy `cargo test --release`; bản debug được bỏ qua kèm lý do. Self-test không thay thế kiểm tra terminal thật.
+
+## Benchmark so với công cụ review khác
+
+`tests/bench/compare-review-tools.py` tự tạo repo mẫu 30 file có diff, mở từng công cụ trong PTY, gửi một phím, chờ idle rồi đo private, RSS, PSS của cả cây process. Chỉ chạy trên Linux (trên Windows dùng WSL); chỉ cần Python 3 và git.
+
+```bash
+python3 tests/bench/compare-review-tools.py \
+    --dark "$HOME/dark-target-musl/x86_64-unknown-linux-musl/release/dark" \
+    --tuicr "$(command -v tuicr)" \
+    --hunk "$(command -v hunk)"
+```
+
+Chỉ đo công cụ được truyền đường dẫn. Có một lượt khởi động không tính điểm; lượt nào công cụ gần như không hiển thị gì bị loại. Trước khi công bố số, xem màn hình của từng công cụ một lần (`--keep-repo`) để chắc nó đã hiện diff, và kiểm tra lại dòng lệnh của tuicr/Hunk theo phiên bản mới nhất. Từ M1, dark phải tải đúng repo mẫu này thì phép so mới công bằng.
