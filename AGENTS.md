@@ -6,7 +6,8 @@ Rust stable, edition 2021. Read [README.md](README.md), [architecture](docs/ARCH
 
 - Explain briefly and simply in Vietnamese; use English for code, identifiers and comments. Preserve UTF-8 documentation.
 - Serve nontechnical vibe coders: keep essential features and simple workflows. Preserve correctness, data safety and AI quality; never cut AI context to save RAM.
-- Scope: review engine + ACP client + lightweight UI (terminal and Windows darkw). A lightweight in-place editor for quick fixes is in scope (docs/FEATURES.md §4.2); no IDE features (autocomplete, multi-cursor, tabs, plugins), repo map, LSP or embedded agent TUI; see docs/FEATURES.md §6.
+- Scope: seven tabs (Review, Edit, Vibe, Git commit, Models, View, Help) as listed in docs/FEATURES.md; milestones and phases in docs/PLANNING.md. A lightweight editor and file tree are in scope; no IDE features (autocomplete, multi-cursor, file tabs, vim mode, plugins), repo map, LSP, advanced git (rebase, merge, push) or embedded agent TUI; see docs/FEATURES.md §6.
+- UI must match docs/UI_SPEC.md and the reference images in docs/ui/ (layout, colors, borders, key hints). All colors come from the single theme module (src/ui/theme.rs) with the exact hex values in UI_SPEC §2; never hard-code colors elsewhere. Report any intentional difference from the images. Change UI_SPEC before changing the UI design.
 - Minimize real release-process RAM: one thread, lazy loading, reused buffers and large data on disk. Measure child processes separately.
 - RAM budgets per milestone are in docs/PLANNING.md and docs/ARCHITECTURE.md §6 (review idle below 2,000,000 bytes; hard limit 10,000,000 bytes). Agent processes are measured and reported separately. Do not relax or substitute metrics to report a pass.
 - Follow rustfmt and Rust naming conventions. Justify dependencies in an approved plan; preserve the release profile. Do not implement features of later milestones.

@@ -1,7 +1,7 @@
 # dark — Sơ đồ tuần tự
 
-> Phiên bản: 0.2 (sau M0) · Cập nhật: 01/11/2026
-> Liên quan: [ARCHITECTURE.md](ARCHITECTURE.md) · [FEATURES.md](FEATURES.md) · [PLANNING.md](PLANNING.md)
+> Phiên bản: 0.3 · Cập nhật: 01/11/2026
+> Liên quan: [ARCHITECTURE.md](ARCHITECTURE.md) · [FEATURES.md](FEATURES.md) · [UI_SPEC.md](UI_SPEC.md) · [PLANNING.md](PLANNING.md)
 
 Quy ước: `git`, agent, editor, test runner là **process con** hoặc chương trình riêng. dark chỉ đọc output của chúng; RAM của chúng đo riêng.
 
@@ -42,8 +42,8 @@ sequenceDiagram
         U->>UI: a
         UI->>RV: keep(hunk)
         RV->>RV: Đánh dấu đã giữ, giữ nguyên working tree
-    else Bấm "r" (bỏ)
-        U->>UI: r
+    else Bấm "x" (bỏ)
+        U->>UI: x
         UI->>RV: drop(hunk)
         RV->>G: git apply -R (áp ngược hunk vào working tree)
         G-->>RV: OK / lỗi
@@ -59,7 +59,7 @@ sequenceDiagram
     UI-->>U: Chuyển hunk kế / làm mới danh sách
 ```
 
-## 3. Sửa code ngay trong dark (M1)
+## 3. Sửa code ngay trong dark (M2)
 
 ```mermaid
 sequenceDiagram
@@ -94,7 +94,7 @@ sequenceDiagram
     end
 ```
 
-## 4. Ghi chú và gửi cho agent (M2 xuất markdown, M4 qua ACP)
+## 4. Ghi chú của người dùng gửi cho agent (M5)
 
 ```mermaid
 sequenceDiagram
@@ -109,18 +109,18 @@ sequenceDiagram
     UI->>NT: add(file, dòng, nội dung)
     NT->>ST: Lưu ghi chú
     U->>UI: Gửi ghi chú cho agent
-    alt Có agent ACP (M4)
+    alt Có agent ACP
         NT->>AC: Prompt gồm các ghi chú kèm vị trí file:dòng
         AC->>AG: session/prompt
         AG-->>AC: Cập nhật tin nhắn, file đang sửa
         AC-->>UI: Mở màn Vibe
-    else Chế độ đi kèm (M2)
+    else Chế độ đi kèm, chưa có ACP
         NT-->>U: Markdown có vị trí file:dòng (clipboard hoặc file)
         U->>AG: Dán vào agent ở cửa sổ khác
     end
 ```
 
-## 5. Vibe qua ACP (M4)
+## 5. Vibe qua ACP (M5)
 
 ```mermaid
 sequenceDiagram
@@ -132,7 +132,7 @@ sequenceDiagram
     participant RV as Review engine
     participant G as git
 
-    U->>UI: v, gõ task
+    U->>UI: Tab Vibe, ô 1, gõ task
     UI->>LM: Cần agent đang chọn
     alt Agent chưa chạy
         LM->>AG: Khởi động (ẩn cửa sổ trên Windows)
@@ -161,7 +161,7 @@ sequenceDiagram
     UI-->>U: Review những gì agent vừa làm
 ```
 
-## 6. Nhường màn hình cho agent CLI (M2, bản terminal)
+## 6. Gọi agent CLI từ tab Vibe (M3, bản terminal)
 
 ```mermaid
 sequenceDiagram
@@ -171,7 +171,7 @@ sequenceDiagram
     participant RV as Review engine
     participant G as git
 
-    U->>D: v
+    U->>D: Tab Vibe, chọn agent CLI, Enter
     D->>RV: Tạo snapshot
     RV->>G: Ghi ref snapshot
     D->>D: Rời alternate screen, trả terminal về bình thường
@@ -184,7 +184,7 @@ sequenceDiagram
     D-->>U: Màn Review với những gì agent vừa sửa
 ```
 
-## 7. Khởi động lại agent khi phình RAM (M4)
+## 7. Khởi động lại agent khi phình RAM (M5)
 
 ```mermaid
 sequenceDiagram
@@ -205,7 +205,7 @@ sequenceDiagram
     LM-->>UI: Thông báo ngắn: đã khởi động lại agent
 ```
 
-## 8. Chạy test (M2)
+## 8. Chạy test (M3)
 
 ```mermaid
 sequenceDiagram
@@ -227,4 +227,83 @@ sequenceDiagram
     else Tất cả đạt
         UI-->>U: Ẩn panel lỗi
     end
+```
+
+## 9. Stage và commit từ panel Review (M3)
+
+```mermaid
+sequenceDiagram
+    actor U as Vibe coder
+    participant P as Panel danh sách
+    participant GT as Git
+    participant G as git
+
+    U->>P: Space trên một file (hoặc s: stage tất cả)
+    P->>GT: stage(file)
+    GT->>G: git add -- <file>
+    G-->>GT: OK / lỗi
+    GT->>G: git status --porcelain=v2
+    G-->>GT: Trạng thái mới
+    GT-->>P: File chuyển sang nhóm Staged
+    U->>P: c, gõ commit message, Enter
+    P->>GT: commit(message)
+    GT->>G: git commit -m <message>
+    alt Thành công
+        G-->>GT: hash commit
+        GT-->>P: Làm mới danh sách, cập nhật tab Git
+    else Lỗi (hook, chưa có gì để commit)
+        G-->>GT: Thông báo lỗi
+        GT-->>U: Hiện lỗi rõ ràng, giữ nguyên message
+    end
+```
+
+## 10. Ghi chú AI cho từng hunk qua skill dark-notes (M5)
+
+```mermaid
+sequenceDiagram
+    actor U as Vibe coder
+    participant SK as Skill installer
+    participant AG as Agent
+    participant NS as .dark/notes
+    participant NT as Notes
+    participant UI as Tab Review
+
+    U->>SK: Đồng ý cài skill dark-notes (hỏi một lần)
+    SK->>AG: Ghi SKILL.md vào thư mục skill của agent
+    Note over AG: Trong một lượt vibe bình thường
+    AG->>AG: Sửa code
+    AG->>NS: Cuối lượt: ghi JSON tóm tắt từng hunk (file, dòng, tóm tắt, cảnh báo)
+    UI->>NT: Mở Review cho lượt vừa xong
+    NT->>NS: Đọc ghi chú của snapshot
+    NT->>NT: Ghép với hunk theo hash nội dung
+    NT-->>UI: Ghi chú dưới từng hunk
+    UI-->>U: Hunk đang chọn có viền accent và phím a · x · Enter · ?
+```
+
+## 11. Lưu API key ở tab Models (M6)
+
+```mermaid
+sequenceDiagram
+    actor U as Vibe coder
+    participant UI as Tab Models
+    participant KS as Credential store
+    participant OS as Windows Credential Manager
+    participant API as Nhà cung cấp model
+
+    U->>UI: Chọn nhà cung cấp, nhập API key (hiển thị ••••)
+    U->>UI: t (kiểm tra kết nối)
+    UI->>API: Request nhỏ với key
+    alt Hợp lệ
+        API-->>UI: OK
+        UI-->>U: ✓ kết nối thành công · N ms
+    else Lỗi
+        API-->>UI: Lỗi
+        UI-->>U: ✗ lý do (không in key)
+    end
+    U->>UI: Ctrl-S
+    UI->>KS: save(provider, key)
+    KS->>OS: CredWriteW
+    OS-->>KS: OK
+    KS-->>UI: Đã lưu
+    Note over UI,KS: Key không bao giờ ghi ra file cấu hình hay log
 ```

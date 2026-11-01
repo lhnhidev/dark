@@ -6,7 +6,7 @@ Project hiện tại: `D:\workspace\dark`; trong WSL là `/mnt/d/workspace/dark`
 
 - Rust stable, edition 2021. Windows dùng `stable-x86_64-pc-windows-msvc` và bộ C++ của Visual Studio. Nếu PATH chưa nhận Rust, dùng `%USERPROFILE%\.cargo\bin\cargo.exe` và `rustc.exe` trực tiếp; xác nhận phiên bản trước khi code.
 - Không tự cài Rust khi chưa được người dùng cho phép. `scripts/setup-wsl-rust.sh` chỉ chạy khi được duyệt cài trong WSL/Linux; dùng rustup chính thức dưới `~/.cargo` và `~/.rustup`, không sudo. Nếu thiếu `cc`, dừng và đưa người dùng lệnh `sudo apt update && sudo apt install build-essential` để họ tự chạy.
-- Dependency mới phải có lý do trong kế hoạch đã duyệt và đi qua bài test RAM. Hiện không dùng tokio, regex, clap, serde. Editor trong dark chỉ ở mức sửa nhanh ([FEATURES.md §4.2](FEATURES.md#42-sửa-code-ngay-trong-dark)); không làm tính năng IDE, repo map, LSP (xem [FEATURES.md §6](FEATURES.md#6-ngoài-phạm-vi-cố-tình-không-làm)). API key chỉ đọc từ biến môi trường; không ghi vào cấu hình hay log.
+- Dependency mới phải có lý do trong kế hoạch đã duyệt và đi qua bài test RAM. Hiện không dùng tokio, regex, clap, serde. Editor trong dark chỉ ở mức sửa nhanh ([FEATURES.md §4.3](FEATURES.md#43-tab-2--edit)); không làm tính năng IDE, repo map, LSP (xem [FEATURES.md §6](FEATURES.md#6-ngoài-phạm-vi-cố-tình-không-làm)). API key chỉ đọc từ biến môi trường; không ghi vào cấu hình hay log.
 
 ## Windows
 
@@ -78,3 +78,12 @@ python3 tests/bench/compare-review-tools.py \
 ```
 
 Chỉ đo công cụ được truyền đường dẫn. Có một lượt khởi động không tính điểm; lượt nào công cụ gần như không hiển thị gì bị loại. Trước khi công bố số, xem màn hình của từng công cụ một lần (`--keep-repo`) để chắc nó đã hiện diff, và kiểm tra lại dòng lệnh của tuicr/Hunk theo phiên bản mới nhất. Từ M1, dark phải tải đúng repo mẫu này thì phép so mới công bằng.
+
+## Kiểm tra giao diện
+
+Giao diện phải khớp [UI_SPEC.md](UI_SPEC.md) và ảnh trong [`docs/ui/`](ui/). Ảnh 1280×800 px tương đương terminal 160 cột × 44 dòng.
+
+- Windows Terminal: đặt cửa sổ 160×44 (Settings → Startup → Launch size), hoặc chạy `mode con: cols=160 lines=44` trong conhost.
+- WSL/Linux: kiểm tra bằng PTY cố định kích thước (như `tests/ram/linux-terminal.py`) để chụp output và so bố cục.
+- Kiểm tra thêm ở 120, 100 và 80 cột theo quy tắc màn hẹp (UI_SPEC §3.4).
+- Theme có unit test đúng từng mã hex; mọi khác biệt so với ảnh phải ghi trong báo cáo milestone.
