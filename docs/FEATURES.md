@@ -113,7 +113,7 @@ RAM là phần dark tốn thêm (ước tính), chưa tính agent và cửa sổ
 | E6 | Tìm, nhảy dòng | `Ctrl-F`, `Ctrl-G` | M2 | ~0 |
 | E7 | Vạch thay đổi | Lề trái đánh dấu dòng thêm/sửa/xóa so với snapshot | M2 | ~0 |
 | E8 | An toàn khi sửa | File nhị phân, không UTF-8, quá lớn: chỉ xem. File bị đổi từ bên ngoài: báo, không ghi đè âm thầm | M2 | ~0 |
-| E9 | Tô màu cú pháp | Từ khóa, chuỗi, chú thích, hàm, hằng, kiểu, thẻ; bộ tự viết, không dependency. Diff từ M1, editor dùng lại từ M2 | M1 | ~0 |
+| E9 | Tô màu cú pháp | Từ khóa, chuỗi, chú thích, hàm, hằng, kiểu, thẻ; bộ tự viết, không dependency. Diff từ M1, editor dùng lại từ M2. RAM lúc chạy ~0 (không lưu kết quả); file chạy +71.680 byte trên Windows | M1 | ~0 |
 | E10 | Tìm và thay hàng loạt | | M9 | ~0 |
 
 ### 4.4 Tab 3 · Vibe

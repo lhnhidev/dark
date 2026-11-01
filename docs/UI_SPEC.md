@@ -53,15 +53,15 @@ Theo theme VS Code **GitHub Dark Default** (`primer/github-vscode-theme` v6.3.5,
 
 | Token | Hex | Dùng cho |
 |---|---|---|
-| `syntax_keyword` | `#ff7b72` | Từ khóa, từ khai báo (`const`, `fn`, `def`, `return`, `if`…), toán tử dạng chữ, ký tự thoát trong chuỗi |
+| `syntax_keyword` | `#ff7b72` | Từ khóa, từ khai báo (`const`, `fn`, `def`, `return`, `if`…), ký tự thoát trong chuỗi, `#include`, `@rule` CSS |
 | `syntax_string` | `#a5d6ff` | Chuỗi |
 | `syntax_comment` | `#8b949e` | Chú thích |
 | `syntax_function` | `#d2a8ff` | Tên hàm khi khai báo và khi gọi (`tên(`) |
 | `syntax_constant` | `#79c0ff` | Số, `true`/`false`/`null`/`None`…, `HẰNG_SỐ`, thuộc tính HTML, thuộc tính CSS, tiêu đề Markdown (đậm) |
-| `syntax_type` | `#ffa657` | Tên kiểu và class (chữ cái đầu viết hoa ở vị trí kiểu, kiểu có sẵn của ngôn ngữ) |
+| `syntax_type` | `#ffa657` | Tên kiểu và class (định danh viết hoa chữ đầu, kiểu có sẵn của ngôn ngữ), lifetime Rust `'a` |
 | `syntax_tag` | `#7ee787` | Thẻ HTML/JSX, khóa JSON/YAML/TOML |
 
-Biến, dấu câu và phần còn lại dùng `text`. Bộ tô màu tự viết nên khác VS Code ở vài chỗ: lời gọi hàm thư viện tô tím (VS Code tô xanh dương), tham số hàm không tô cam, regex và template lồng nhau có thể sai.
+Biến, dấu câu và phần còn lại dùng `text`. Bộ tô màu tự viết nên khác VS Code ở vài chỗ: lời gọi hàm thư viện tô tím (VS Code tô xanh dương), tham số hàm không tô cam, toán tử để màu `text`, regex và template lồng nhau có thể sai; hunk bắt đầu giữa một chú thích hoặc chuỗi nhiều dòng sẽ tô sai đoạn đầu hunk vì trạng thái bắt đầu lại ở mỗi hunk.
 
 **Ngôn ngữ (theo đuôi file):** JS/TS (`js jsx mjs cjs ts tsx`), Python, HTML, CSS, JSON, Rust, Go, Java, C/C++, C#, PHP, Shell (`sh bash zsh`), YAML, TOML, Markdown (chỉ tiêu đề, code trong dòng và khối code). Đuôi khác: không tô màu. `NO_COLOR`: không tô màu.
 
