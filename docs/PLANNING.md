@@ -55,7 +55,7 @@ gantt
 ## 4. Tiêu chí hoàn thành từng milestone
 
 ### M0 — Khung dự án
-- [x] `cargo build --release` Windows ra binary dưới 3 MB (170.496 byte).
+- [x] Build release ra binary dưới 3 MB: Windows 212.480 byte, Linux musl 537.464 byte sau sửa review.
 - [x] Mở app Windows, chuyển giữa 3 màn trống bằng phím, thoát sạch.
 - [x] Bài test RAM chạy được trên Windows và Linux musl thử nghiệm, idle dưới 2.000.000 byte. GNU phát triển vẫn chưa đạt ngưỡng này.
 - [x] Trên Windows: `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, `cargo test` và `cargo test --release` đạt; test RAM debug được bỏ qua kèm lý do.
