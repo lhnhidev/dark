@@ -135,17 +135,7 @@ impl Workbench {
             .unwrap_or_default();
         let branch = review
             .as_ref()
-            .map(|r| {
-                let (ahead, behind) = r.repo.ahead_behind();
-                let mut branch = r.repo.branch().to_string();
-                if ahead > 0 {
-                    branch.push_str(&format!(" ↑{ahead}"));
-                }
-                if behind > 0 {
-                    branch.push_str(&format!(" ↓{behind}"));
-                }
-                branch
-            })
+            .map(|r| branch_label(&r.repo))
             .unwrap_or_default();
         let prompt = review
             .as_ref()
@@ -379,6 +369,7 @@ impl Workbench {
         if let Some(review) = &mut self.review {
             match review.refresh() {
                 Ok(()) => {
+                    self.branch = branch_label(&review.repo);
                     self.completed.retain(|path, version| {
                         review
                             .diff(path)
@@ -1011,6 +1002,18 @@ impl Workbench {
             None => Vec::new(),
         }
     }
+}
+
+fn branch_label(repo: &Repo) -> String {
+    let mut branch = repo.branch();
+    let (ahead, behind) = repo.ahead_behind();
+    if ahead > 0 {
+        branch.push_str(&format!(" ↑{ahead}"));
+    }
+    if behind > 0 {
+        branch.push_str(&format!(" ↓{behind}"));
+    }
+    branch
 }
 
 fn in_group(file: &crate::git::StatusFile, group: usize) -> bool {

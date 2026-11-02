@@ -51,6 +51,7 @@ public static class ConsoleProbe {
  [DllImport("kernel32.dll")] static extern bool FreeConsole();
  [DllImport("kernel32.dll")] static extern uint SetErrorMode(uint mode);
  [DllImport("kernel32.dll")] static extern IntPtr GetConsoleWindow();
+ [DllImport("kernel32.dll",CharSet=CharSet.Unicode)] static extern uint GetConsoleTitle(StringBuilder title,uint size);
  [DllImport("user32.dll")] static extern bool ShowWindow(IntPtr h,int n);
  [DllImport("kernel32.dll",CharSet=CharSet.Unicode,SetLastError=true)] static extern IntPtr CreateFile(string n,uint a,uint s,IntPtr sa,uint c,uint flags,IntPtr t);
  [DllImport("kernel32.dll",SetLastError=true)] static extern bool SetStdHandle(int id,IntPtr h);
@@ -88,6 +89,7 @@ public static class ConsoleProbe {
  static void WaitStatus(Process p,string text,ref ulong peak) { var until=DateTime.UtcNow.AddSeconds(30); while(DateTime.UtcNow<until) { if(p.HasExited) throw new Exception("process exited before status "+text); peak=Math.Max(peak,Memory(p)); if(Status().Contains(text)) return; Thread.Sleep(20); } throw new Exception("status not seen: "+text+"; got: "+Status()); }
  static string FullContent() { var h=Open("CONOUT$"); try { SCREENINFO info; Check(GetConsoleScreenBufferInfo(h,out info),"screen size"); int count=info.size.X*(info.window.bottom-info.window.top+1); var s=new StringBuilder(count+1); uint n; Check(ReadConsoleOutputCharacter(h,s,(uint)count,new COORD(0,info.window.top),out n),"read full content"); return s.ToString().Substring(0,(int)n); } finally { CloseHandle(h); } }
  static void WaitDiff(Process p,string text,ref ulong peak) { var until=DateTime.UtcNow.AddSeconds(15); while(DateTime.UtcNow<until) { if(p.HasExited) throw new Exception("process exited before auto refresh"); peak=Math.Max(peak,Memory(p)); if(FullContent().Contains(text)) return; Thread.Sleep(20); } throw new Exception("automatic diff refresh missing: "+text+"; screen: "+FullContent()); }
+ static void WaitTitle(Process p,string text,ref ulong peak) { var until=DateTime.UtcNow.AddSeconds(15); var title=new StringBuilder(4096); while(DateTime.UtcNow<until) { if(p.HasExited) throw new Exception("process exited before title refresh"); peak=Math.Max(peak,Memory(p)); title.Clear(); GetConsoleTitle(title,(uint)title.Capacity); if(title.ToString().Contains(text)) return; Thread.Sleep(20); } throw new Exception("automatic title refresh missing: "+text+"; title: "+title); }
  public static string Run(string exe,string scenario,bool release,string fixture) {
   // The child inherits this test-only setting; avoid interactive Windows error dialogs.
   SetErrorMode(0x0001u | 0x0002u | 0x8000u);
@@ -113,6 +115,9 @@ public static class ConsoleProbe {
     var temporary=System.IO.Path.Combine(fixture,"replacement.tmp");
     System.IO.File.WriteAllText(temporary,"autorefresh_atomic_save\n"); System.IO.File.Delete(file); System.IO.File.Move(temporary,file); WaitDiff(p,"autorefresh_atomic_save",ref peak);
     System.IO.File.WriteAllText(System.IO.Path.Combine(fixture,"new-file.txt"),"new file\n"); WaitDiff(p,"new-file.txt",ref peak);
+    var gitStart=new ProcessStartInfo("git","switch -qc dark-auto-branch"); gitStart.UseShellExecute=false; gitStart.CreateNoWindow=true; gitStart.WorkingDirectory=fixture;
+    using(var git=Process.Start(gitStart)) { if(!git.WaitForExit(6000) || git.ExitCode!=0) throw new Exception("could not switch fixture branch"); }
+    WaitTitle(p,"dark-auto-branch",ref peak);
     foreach(var item in new[]{Tuple.Create('2',"Edit"),Tuple.Create('3',"Vibe"),Tuple.Create('4',"Git commit"),Tuple.Create('5',"Models"),Tuple.Create('6',"View"),Tuple.Create('7',"Help")}) { BareKey(input,item.Item1); WaitScreen(p,item.Item2,ref peak,true); }
     Key(input,'1',false); WaitScreen(p,"Changes",ref peak);
     int width=geometry.window.right-geometry.window.left+1; short oldBorder=(short)(Math.Min(40,Math.Max(24,width/5))-1); short newBorder=(short)Math.Min(oldBorder+4,width-42); short mouseY=(short)(geometry.window.top+(geometry.window.bottom-geometry.window.top+1)/2);

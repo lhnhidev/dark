@@ -104,6 +104,60 @@ fn plain(ansi: &str) -> String {
     result
 }
 
+#[test]
+fn external_refresh_updates_branch_for_same_tree_and_detached_head() {
+    let f = Fixture::new(&[("a.txt", "initial\n")]);
+    f.git(&["checkout", "-qb", "original-test"]);
+    f.git(&["branch", "same-tree-test"]);
+    let mut w = Workbench::open(&f.0);
+    assert!(plain(&render(&mut w)).contains("original-test"));
+    f.git(&["checkout", "-q", "same-tree-test"]);
+    w.refresh_external();
+    let screen = plain(&render(&mut w));
+    assert!(screen.contains("same-tree-test"), "{screen}");
+    assert!(!screen.contains("original-test"), "{screen}");
+    f.git(&["checkout", "-q", "--detach"]);
+    w.refresh_external();
+    let screen = plain(&render(&mut w));
+    assert!(screen.contains("detached HEAD"), "{screen}");
+}
+
+#[test]
+fn external_refresh_updates_branch_and_diff_for_different_tree() {
+    let f = Fixture::new(&[("a.txt", "initial\n")]);
+    f.git(&["checkout", "-qb", "other-tree-test"]);
+    f.write("a.txt", "committed change\n");
+    f.git(&["commit", "-qam", "other tree"]);
+    f.git(&["checkout", "-q", "-"]);
+    let mut w = Workbench::open(&f.0);
+    f.git(&["checkout", "-q", "other-tree-test"]);
+    f.write("a.txt", "working change\n");
+    w.refresh_external();
+    let screen = plain(&render(&mut w));
+    assert!(screen.contains("other-tree-test"), "{screen}");
+    assert!(screen.contains("committed change"), "{screen}");
+    assert!(screen.contains("working change"), "{screen}");
+}
+
+#[test]
+fn external_refresh_updates_upstream_counts() {
+    let f = Fixture::new(&[("a.txt", "initial\n")]);
+    f.git(&["checkout", "-qb", "tracking-test"]);
+    f.git(&["branch", "upstream-test"]);
+    f.git(&["branch", "--set-upstream-to=upstream-test"]);
+    let mut w = Workbench::open(&f.0);
+    f.write("a.txt", "local\n");
+    f.git(&["commit", "-qam", "local"]);
+    f.git(&["checkout", "-q", "upstream-test"]);
+    f.write("a.txt", "remote\n");
+    f.git(&["commit", "-qam", "remote"]);
+    f.git(&["checkout", "-q", "tracking-test"]);
+    w.refresh_external();
+    let screen = plain(&render(&mut w));
+    assert!(screen.contains("tracking-test"), "{screen}");
+    assert!(screen.contains("↑1") && screen.contains("↓1"), "{screen}");
+}
+
 fn mouse(kind: MouseEventKind, column: u16, row: u16) -> MouseEvent {
     MouseEvent {
         kind,

@@ -196,6 +196,27 @@ WSL hiện không có executable tuicr/Hunk, nên chỉ chạy lại dark, khôn
 
 Giới hạn ở bản kiểm chứng ban đầu: patch >512 KiB hoặc untracked >256 KiB mở bằng editor ngoài, chưa paging; nhị phân/không UTF-8 và đường dẫn đặc biệt không phục hồi an toàn được báo rõ/chặn ghi. Rename đang thể hiện thành hai phần thêm/xóa. Bản ban đầu chưa theo dõi thay đổi nền; phần bổ sung 02/11 phía trên đã thay thế giới hạn này trên Windows/Linux. Dấu đã xem thuộc phiên hiện tại, không persist qua lần mở app.
 
+## Bổ sung 02/11/2026 — Đồng bộ nhánh bên ngoài
+
+Đã đo RAM trước khi sửa theo yêu cầu chủ dự án. Lỗi là nhãn nhánh chỉ được lấy lúc mở Workbench; watcher đã nhận thay đổi HEAD và Review đã dùng HEAD mới. Bản sửa dùng lại cách đọc tên nhánh và ahead/behind khi refresh thành công. Không thêm dependency, luồng, bộ theo dõi hay cache; chỉ chạy thêm hai lệnh Git khi có refresh, không chạy Git định kỳ lúc rảnh. Bố cục và màu giao diện giữ nguyên.
+
+Fixture release 30 file/3.000 dòng đổi, watcher đang hoạt động; byte thập phân:
+
+| Phép đo | Trước sửa | Sau sửa |
+|---|---:|---:|
+| Windows private working set idle | 1.466.368 | 1.323.008 |
+| Windows private working set đỉnh lấy mẫu | 1.564.672 | 1.462.272 |
+| WSL Linux musl VmRSS idle | 901.120 | 933.888 |
+| WSL Linux musl VmRSS đỉnh lấy mẫu | 901.120 | 933.888 |
+
+Windows trước/sau dùng `cargo test --release --test ram release_review_fixture_meets_real_memory_limits -- --nocapture` và binary `target/release/dark.exe`. Linux dùng cùng bài test với target musl; số sau lấy từ runner musl. Đây là từng lượt, có dao động cấp phát/trang nhớ; không kết luận bản sửa giảm RAM. Cả hai vẫn dưới ngưỡng idle 2.000.000 byte và đỉnh 10.000.000 byte. Binary sau sửa: Windows 558.080 byte; Linux musl 848.760 byte.
+
+Kiểm chứng: fmt, Clippy với `-D warnings`, test debug/release, build debug/release, help/version/self-test đạt trong hai runner Windows và musl. Test mới bao phủ đổi nhánh cùng cây, khác cây với diff mới, detached HEAD và ahead/behind. Test watcher xác nhận HEAD đổi dù nội dung file không đổi. Terminal Windows đổi nhánh bằng Git bên ngoài, không gửi phím cho Dark, chờ tiêu đề cửa sổ cập nhật; phép kiểm ban đầu tìm nhãn trên màn hình hẹp thất bại vì tên fixture dài che nhãn, đã sửa phép kiểm sang tiêu đề đầy đủ và chạy lại. Hành vi đang mở hộp xác nhận vẫn trì hoãn refresh để giữ an toàn.
+
+Thử thêm WSL đọc ổ D, ghi từ Windows: tự cập nhật, thay file bằng rename, file mới, bảo vệ xác nhận và thoát cầu nối đều đạt. App VmRSS idle 851.968 byte; đo riêng proxy Linux 2.199.552 byte VmRSS và cầu nối Windows median 638.976 byte EX2 private working set (5 mẫu). Không cộng các chỉ số khác nhau để xét ngân sách app; chưa đo riêng đỉnh RAM của Git trong lần kiểm này. Log runner tại `.dark/verification/branch-refresh/after/{windows,musl}`; terminal Windows chạy lại tại `windows/terminal-retry.txt`.
+
+Giới hạn: không thêm thao tác đổi nhánh trong Dark; chưa kiểm chứng macOS. Không mở rộng watcher cho `refs/remotes`, nên không khẳng định tự cập nhật ahead/behind chỉ do fetch khi không có sự kiện đang theo dõi.
+
 ## Chủ dự án chạy thử
 
 ```powershell

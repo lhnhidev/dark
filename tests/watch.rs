@@ -145,6 +145,35 @@ fn observes_index_in_linked_worktree() {
 }
 
 #[test]
+fn observes_same_tree_branch_switch_and_detached_head() {
+    let fixture = Fixture::new();
+    let git = |args: &[&str]| {
+        let output = Command::new("git")
+            .args(args)
+            .current_dir(&fixture.0)
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    };
+    git(&["config", "user.name", "Test"]);
+    git(&["config", "user.email", "test@example.invalid"]);
+    fs::write(fixture.0.join("sample.txt"), "initial\n").unwrap();
+    git(&["add", "sample.txt"]);
+    git(&["commit", "-qm", "initial"]);
+    git(&["branch", "same-tree-test"]);
+    let mut watcher = Watcher::new(&fixture.0).unwrap();
+    git(&["checkout", "-q", "same-tree-test"]);
+    changed(&mut watcher);
+    drain(&mut watcher);
+    git(&["checkout", "-q", "--detach"]);
+    changed(&mut watcher);
+}
+
+#[test]
 fn observes_nested_dark_directory() {
     let fixture = Fixture::new();
     let nested = fixture.0.join("src/.dark");
