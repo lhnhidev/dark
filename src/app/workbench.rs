@@ -249,16 +249,39 @@ impl Workbench {
     pub fn mouse(&mut self, event: MouseEvent, width: u16, height: u16) -> bool {
         self.viewport = (width, height);
         let layout = self.layout(width, height);
-        if self.modal() || layout.small || !self.show_files || !self.show_diff {
+        if self.modal() || layout.small || !self.show_files {
             self.cancel_drag();
             return false;
         }
         match event.kind {
             MouseEventKind::Down(MouseButton::Left) => {
-                self.dragging = usize::from(event.column) == layout.files.saturating_sub(1)
+                self.dragging = self.show_diff
+                    && usize::from(event.column) == layout.files.saturating_sub(1)
                     && event.row >= 1
                     && event.row < height.saturating_sub(1);
-                false
+                if self.dragging
+                    || event.column == 0
+                    || usize::from(event.column) >= layout.files.saturating_sub(1)
+                    || event.row < 2
+                    || usize::from(event.row - 2) >= crate::ui::layout::file_list_rows(height)
+                {
+                    return false;
+                }
+                let cursor = self
+                    .cursor
+                    .saturating_sub(crate::ui::layout::file_list_rows(height) - 1)
+                    + usize::from(event.row - 2);
+                let Some(Item::File(index)) = self.items().get(cursor).copied() else {
+                    return false;
+                };
+                let changed = !self.focus_files || self.cursor != cursor || self.selected != index;
+                self.focus_files = true;
+                self.cursor = cursor;
+                if self.selected != index {
+                    self.selected = index;
+                    self.load();
+                }
+                changed
             }
             MouseEventKind::Drag(MouseButton::Left) if self.dragging => {
                 let width = event

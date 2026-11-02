@@ -128,6 +128,7 @@ Biến, dấu câu và phần còn lại dùng `text`. Bộ tô màu tự viết
 
 ### 4.1 Panel trái: danh sách thay đổi (kiểu git panel của Zed)
 - `Alt+l` ẩn/hiện. Khi ẩn, khung diff chiếm toàn bộ chiều ngang.
+- Bấm chuột trái vào dòng file để chọn và hiện diff, không cần giữ Alt; focus chuyển về danh sách. Chỉ nạp diff khi đổi file; bấm lại file đang đọc giữ vị trí cuộn. Tọa độ dùng đúng danh sách đang hiển thị, kể cả đã cuộn hoặc thu nhóm. Khi khung diff đang ẩn, chỉ chọn file và giữ khung ẩn. Không nhận bấm chọn trên tiêu đề, đầu nhóm, vùng trống, viền, vùng commit, hộp xác nhận hoặc màn quá nhỏ. Kéo đường phân cách vẫn chỉ chỉnh độ rộng; không chọn file trong lúc kéo.
 - Tiêu đề: `Changes` (`text`) + `N file · X/N đã xem` (`muted`).
 - Ba nhóm, mỗi nhóm thu/mở được (`▾`/`▸`): **Staged (n)**, **Changes (n)**, **Untracked (n)**. Giữa các nhóm không có dòng trống (ảnh có dòng trống; bỏ để dành chỗ cho danh sách ở màn thấp).
 - Mỗi dòng file: `[x]`/`[ ]` (đã stage hay chưa) · chữ trạng thái có màu (`M` `file_modified`, `A` `file_added`, `D` `file_deleted`, `?` `file_added`, `R` `file_modified`) · thư mục màu `line_number` + tên file màu `text` (ví dụ `auth/` + `session.ts`) · bên phải `+N` (`file_added`) và `−N` (`file_deleted`); phần bằng 0 không hiện, cả hai bằng 0 thì không hiện số.

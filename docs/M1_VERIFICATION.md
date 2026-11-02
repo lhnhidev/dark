@@ -217,6 +217,25 @@ Thử thêm WSL đọc ổ D, ghi từ Windows: tự cập nhật, thay file b�
 
 Giới hạn: không thêm thao tác đổi nhánh trong Dark; chưa kiểm chứng macOS. Không mở rộng watcher cho `refs/remotes`, nên không khẳng định tự cập nhật ahead/behind chỉ do fetch khi không có sự kiện đang theo dõi.
 
+## Bổ sung 02/11/2026 — Bấm chọn file trong Review
+
+Đã đo bản cũ trước khi triển khai. Bấm chuột trái trên dòng file chọn file và nạp diff hiện có; không thêm thư viện, luồng, cache hay bộ đệm giữ lâu. Tính dòng từ danh sách đang vẽ, dùng lại danh sách Item tạm; bấm lại cùng file không đọc lại Git hoặc đặt lại vị trí cuộn. Danh sách vẫn nhận focus, kể cả khi diff đang ẩn. Chỉ thêm hành vi vào UI_SPEC trước khi sửa mã; bố cục, màu và ảnh tham chiếu không đổi.
+
+Fixture release 30 file/3.000 dòng đổi, watcher đang chạy; bài đo sau sửa có thêm bấm qua các dòng đang hiển thị ở 160×44 và 80×24:
+
+| Phép đo (byte) | Trước sửa | Sau sửa |
+|---|---:|---:|
+| Windows EX2 private working set idle | 1.413.120 | 1.458.176 |
+| Windows EX2 private working set đỉnh lấy mẫu | 1.486.848 | 1.597.440 |
+| Linux musl VmRSS idle | 946.176 | 950.272 |
+| Linux musl VmRSS đỉnh lấy mẫu | 946.176 | 950.272 |
+
+Số từng lượt, có dao động trang nhớ; không dùng chênh lệch này làm kích thước cấp phát chính xác của tính năng. Idle vẫn dưới 2.000.000 byte, đỉnh lấy mẫu dưới 10.000.000 byte. Binary release Windows 558.592 byte (tăng 512 byte), musl 848.760 byte (không đổi so với bản ngay trước). Không gộp RAM Git/terminal vào ngân sách app; lần này chưa đo riêng đỉnh tiến trình Git, không tạo thêm tiến trình nền.
+
+Năm test hành vi mới bao phủ chọn/nạp/focus, danh sách cuộn, nhóm thu, dòng trùng đường dẫn Staged/Changes, giữ vị trí đọc khi bấm lại, vùng không phải file, chuột phải, hộp xác nhận và chế độ chỉ danh sách. Test kéo cột hiện có vẫn đạt. Terminal Windows gửi mouse events để chuyển từ sample.txt sang file mới rồi quay lại; Linux PTY gửi chuỗi SGR mouse thật để chuyển giữa hai file. Kiểm tra fmt, Clippy `-D warnings`, test debug/release và build release đạt trên Windows/WSL musl. Log runner: `.dark/verification/mouse-review/after/{windows,musl}`. Bài Linux PTY được chạy lại sau khi bổ sung thao tác bấm; cả 6 kịch bản đều đạt.
+
+Giới hạn: chưa thử macOS; không thêm bấm thu/mở nhóm hoặc cuộn bằng bánh xe trong lần thay đổi này.
+
 ## Chủ dự án chạy thử
 
 ```powershell

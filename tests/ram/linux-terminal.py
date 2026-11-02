@@ -49,6 +49,8 @@ def run(binary, profile, scenario):
     subprocess.run(("git", "commit", "-qm", "fixture"), cwd=fixture.name, check=True)
     with open(os.path.join(fixture.name, "sample.txt"), "w", encoding="utf-8") as f:
         f.write("after\n")
+    with open(os.path.join(fixture.name, "mouse.txt"), "w", encoding="utf-8") as f:
+        f.write("mouse_selection_unique\n")
     master, slave = pty.openpty()
     process = None
     transcript = bytearray()
@@ -146,6 +148,13 @@ def run(binary, profile, scenario):
             time.sleep(0.2)
             if process.poll() is not None:
                 raise RuntimeError("bare q exited the application")
+            # Click the untracked file, then the tracked file, using real SGR bytes.
+            start = len(transcript)
+            os.write(master, b"\x1b[<0;6;7M\x1b[<0;6;7m")
+            wait_for(b"mouse_selection_unique", start)
+            start = len(transcript)
+            os.write(master, b"\x1b[<0;6;5M\x1b[<0;6;5m")
+            wait_for(b"after", start)
             for key, label in ((b"2", b"Edit"), (b"3", b"Vibe"), (b"4", b"Git commit"),
                                (b"5", b"Models"), (b"6", b"View"), (b"7", b"Help")):
                 start = len(transcript)

@@ -992,3 +992,138 @@ fn checkpoints_reset_after_refresh_with_changed_content() {
     assert_eq!(below_tab_bar(&after), below_tab_bar(&render(&mut fresh)));
     assert_eq!(runs_containing(&color_runs(&after), COMMENT, "v1"), 0);
 }
+
+fn click_row(w: &mut Workbench, row: usize, width: u16, height: u16) {
+    w.mouse(
+        mouse(MouseEventKind::Down(MouseButton::Left), 5, row as u16),
+        width,
+        height,
+    );
+}
+
+fn visible_row(w: &mut Workbench, width: u16, height: u16, text: &str) -> usize {
+    let rows = screen_rows(w, width, height);
+    rows.iter()
+        .position(|row| row.contains(text))
+        .expect("visible list row")
+}
+
+#[test]
+fn mouse_click_selects_file_loads_diff_and_focuses_list() {
+    let f = Fixture::new(&[("a.txt", "old a\n"), ("b.txt", "old b\n")]);
+    f.write("a.txt", "new a\n");
+    f.write("b.txt", "new b\n");
+    let mut w = Workbench::open(&f.0);
+    key(&mut w, KeyCode::Char('f'));
+    assert!(!w.focus_files);
+    let row = visible_row(&mut w, 160, 44, "b.txt");
+    click_row(&mut w, row, 160, 44);
+    assert_eq!(w.selected_path(), Some(PathBuf::from("b.txt")));
+    assert!(w.focus_files);
+    assert!(plain(&render(&mut w)).contains("new b"));
+}
+
+#[test]
+fn mouse_click_uses_scrolled_rows_and_collapsed_group_offsets() {
+    let names: Vec<String> = (0..30).map(|i| format!("f{i:02}.txt")).collect();
+    let initial: Vec<(&str, &str)> = names.iter().map(|n| (n.as_str(), "old\n")).collect();
+    let f = Fixture::new(&initial);
+    for name in &names {
+        f.write(name, "new\n");
+    }
+    f.write("untracked.txt", "untracked contents\n");
+    let mut w = Workbench::open(&f.0);
+    for _ in 0..25 {
+        key(&mut w, KeyCode::Down);
+    }
+    let rows = screen_rows(&mut w, 80, 24);
+    let row = rows
+        .iter()
+        .position(|r| r.contains("f20.txt"))
+        .expect("scrolled file visible");
+    click_row(&mut w, row, 80, 24);
+    assert_eq!(w.selected_path(), Some(PathBuf::from("f20.txt")));
+    let mut collapsed = Workbench::open(&f.0);
+    key(&mut collapsed, KeyCode::Left);
+    key(&mut collapsed, KeyCode::Down);
+    key(&mut collapsed, KeyCode::Left);
+    let row = visible_row(&mut collapsed, 160, 44, "untracked.txt");
+    click_row(&mut collapsed, row, 160, 44);
+    assert_eq!(
+        collapsed.selected_path(),
+        Some(PathBuf::from("untracked.txt"))
+    );
+    assert!(plain(&render(&mut collapsed)).contains("untracked contents"));
+}
+
+#[test]
+fn mouse_click_ignores_non_file_rows_and_modal_and_supports_file_only() {
+    let f = Fixture::new(&[("a.txt", "old a\n"), ("b.txt", "old b\n")]);
+    f.write("a.txt", "new a\n");
+    f.write("b.txt", "new b\n");
+    let mut w = Workbench::open(&f.0);
+    let file_row = visible_row(&mut w, 160, 44, "b.txt");
+    for row in [0, 1, 2, 3, 10, 2 + ui::layout::file_list_rows(44)] {
+        click_row(&mut w, row, 160, 44);
+        assert_eq!(w.selected_path(), Some(PathBuf::from("a.txt")), "row {row}");
+    }
+    w.mouse(
+        mouse(MouseEventKind::Down(MouseButton::Right), 5, file_row as u16),
+        160,
+        44,
+    );
+    assert_eq!(w.selected_path(), Some(PathBuf::from("a.txt")));
+    key(&mut w, KeyCode::Char('u'));
+    assert!(w.modal());
+    click_row(&mut w, file_row, 160, 44);
+    assert_eq!(w.selected_path(), Some(PathBuf::from("a.txt")));
+    key(&mut w, KeyCode::Esc);
+    key(&mut w, KeyCode::Char('r'));
+    assert!(!w.show_diff);
+    let file_row = visible_row(&mut w, 160, 44, "b.txt");
+    click_row(&mut w, file_row, 160, 44);
+    assert_eq!(w.selected_path(), Some(PathBuf::from("b.txt")));
+}
+
+#[test]
+fn mouse_click_same_file_preserves_diff_scroll() {
+    let old: String = (0..400).map(|n| format!("line{n:03} old\n")).collect();
+    let new: String = (0..400).map(|n| format!("line{n:03} new\n")).collect();
+    let f = Fixture::new(&[("a.txt", &old)]);
+    f.write("a.txt", &new);
+    let mut w = Workbench::open(&f.0);
+    for _ in 0..10 {
+        key(&mut w, KeyCode::PageDown);
+    }
+    let anchor = first_visible_line(&mut w);
+    assert_ne!(anchor, "000");
+    let row = visible_row(&mut w, 160, 44, "a.txt");
+    click_row(&mut w, row, 160, 44);
+    assert_eq!(first_visible_line(&mut w), anchor);
+}
+
+#[test]
+fn mouse_click_distinguishes_staged_and_unstaged_rows_for_same_path() {
+    let f = Fixture::new(&[("a.txt", "old\n"), ("b.txt", "old\n")]);
+    f.write("a.txt", "staged\n");
+    f.git(&["add", "a.txt"]);
+    f.write("a.txt", "unstaged\n");
+    f.write("b.txt", "changed\n");
+    let mut w = Workbench::open(&f.0);
+    let rows = screen_rows(&mut w, 160, 44);
+    let matching: Vec<usize> = rows
+        .iter()
+        .enumerate()
+        .filter_map(|(i, r)| {
+            r.chars()
+                .take(31)
+                .collect::<String>()
+                .contains("a.txt")
+                .then_some(i)
+        })
+        .collect();
+    assert_eq!(matching.len(), 2);
+    click_row(&mut w, matching[1], 160, 44);
+    key(&mut w, KeyCode::Down);
+    assert_eq!(w.selected_path(), Some(PathBuf::from("b.txt")));
+}

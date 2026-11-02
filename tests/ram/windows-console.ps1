@@ -118,6 +118,8 @@ public static class ConsoleProbe {
     var gitStart=new ProcessStartInfo("git","switch -qc dark-auto-branch"); gitStart.UseShellExecute=false; gitStart.CreateNoWindow=true; gitStart.WorkingDirectory=fixture;
     using(var git=Process.Start(gitStart)) { if(!git.WaitForExit(6000) || git.ExitCode!=0) throw new Exception("could not switch fixture branch"); }
     WaitTitle(p,"dark-auto-branch",ref peak);
+    Mouse(input,(short)(geometry.window.left+8),(short)(geometry.window.top+6),1,0); Mouse(input,(short)(geometry.window.left+8),(short)(geometry.window.top+6),0,0); WaitDiff(p,"new file",ref peak);
+    Mouse(input,(short)(geometry.window.left+8),(short)(geometry.window.top+4),1,0); Mouse(input,(short)(geometry.window.left+8),(short)(geometry.window.top+4),0,0); WaitDiff(p,"autorefresh_atomic_save",ref peak);
     foreach(var item in new[]{Tuple.Create('2',"Edit"),Tuple.Create('3',"Vibe"),Tuple.Create('4',"Git commit"),Tuple.Create('5',"Models"),Tuple.Create('6',"View"),Tuple.Create('7',"Help")}) { BareKey(input,item.Item1); WaitScreen(p,item.Item2,ref peak,true); }
     Key(input,'1',false); WaitScreen(p,"Changes",ref peak);
     int width=geometry.window.right-geometry.window.left+1; short oldBorder=(short)(Math.Min(40,Math.Max(24,width/5))-1); short newBorder=(short)Math.Min(oldBorder+4,width-42); short mouseY=(short)(geometry.window.top+(geometry.window.bottom-geometry.window.top+1)/2);

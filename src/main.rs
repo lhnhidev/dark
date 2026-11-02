@@ -409,6 +409,26 @@ fn run_review_self_test() -> io::Result<()> {
         workbench.draw(&mut renderer, &mut output, 0, width, height, "")?;
         peak = peak.max(sample_or_report()?);
         workbench.key(KeyEvent::new(KeyCode::Char('\\'), KeyModifiers::ALT));
+        // Include selecting visible files by mouse in the same release RAM budget.
+        for row in 2..12 {
+            for kind in [
+                MouseEventKind::Down(MouseButton::Left),
+                MouseEventKind::Up(MouseButton::Left),
+            ] {
+                workbench.mouse(
+                    MouseEvent {
+                        kind,
+                        column: 5,
+                        row,
+                        modifiers: KeyModifiers::NONE,
+                    },
+                    width,
+                    height,
+                );
+            }
+            workbench.draw(&mut renderer, &mut output, 0, width, height, "")?;
+            peak = peak.max(sample_or_report()?);
+        }
     }
     let mut idle = 0;
     for _ in 0..5 {
