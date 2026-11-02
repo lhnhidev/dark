@@ -128,6 +128,7 @@ src/
 ├── skills/            # cài/gỡ skill dark-notes, dark-feedback vào thư mục của từng agent                [M5]
 ├── credentials/       # lưu/đọc API key qua kho mật khẩu hệ điều hành                                    [M6]
 ├── memory/            # đo bộ nhớ theo nền tảng                                                         [M0 ✓]
+├── watch.rs, watch/   # native notifications Windows/Linux và cầu nối WSL, không filesystem polling   [M1 ✓, C6 đưa từ M3]
 └── proc.rs            # process đồng bộ có timeout, output trên đĩa, CREATE_NO_WINDOW                   [M1 ✓]
 src/bin/darkw.rs       # file chạy cửa sổ riêng (subsystem windows)                                       [M4]
 skills/                # nội dung skill dark-notes, dark-feedback đi kèm (văn bản thuần, không script)      [M5]
@@ -138,7 +139,9 @@ scripts/, tests/       # runner kiểm chứng, test RAM, test bố cục, bench
 ## 5. Các thành phần
 
 ### 5.1 Event loop
-- **Hiện trạng (M0):** `crossterm::event::read/poll` đồng bộ trên một luồng; `src/app/event.rs` tách phần chờ sự kiện. Chế độ thường chờ vô thời hạn; `--debug` cập nhật bộ nhớ mỗi giây. Mã ứng dụng không tạo worker hay runtime async.
+- **Hiện trạng (M1):** `crossterm::event::read/poll` đồng bộ trên một luồng; `src/app/event.rs` tách phần chờ sự kiện. Khi bật theo dõi, chờ phím tối đa 75 ms rồi rút thông báo hệ điều hành đang chờ; không quét file/Git theo nhịp này. `--debug` cập nhật bộ nhớ mỗi giây. Mã ứng dụng không tạo worker hay runtime async.
+- **Tự cập nhật (C6 đưa lên từ M3, duyệt 02/11/2026):** Windows dùng `ReadDirectoryChangesW` overlapped với buffer tái sử dụng; Linux dùng inotify theo thư mục, tránh thư mục ignore trừ khi có file tracked. Theo dõi riêng Git metadata, kể cả linked worktree. Bỏ output `.dark` tại gốc và refs snapshot riêng để tránh tự kích hoạt; đổi ignore rules hoặc tràn queue Linux đăng ký lại theo sự kiện. Gộp sự kiện 150 ms, giới hạn chờ 500 ms khi ghi liên tục. Giữ file/hunk/vị trí cuộn khi còn khớp, hoãn refresh khi mở xác nhận; kiểm tra stale trước ghi không đổi.
+- **WSL đọc ổ Windows:** inotify trên mount 9p không báo trong thử nghiệm, nên gọi `dark.exe --watch-bridge ROOT` qua interop; stdout giao thức nhỏ `READY`/`CHANGED`, stdin pipe giữ vòng đời, không thread phụ. Bridge thoát khi stdin đóng; parent Drop đóng pipe và thu hồi child. Chỉ dùng helper do người dùng chỉ định, cạnh binary đang chạy hoặc tại nguồn build Dark; không tìm executable trong repo được review. Đo riêng private working set Windows của bridge và VmRSS của proxy interop Linux. Không cộng proxy/bridge vào RAM dark hoặc bỏ chúng khỏi báo cáo tổng chi phí. macOS chưa có backend theo dõi và báo giới hạn rõ.
 - **git (M1–M3):** gọi đồng bộ, ngắn; diff đọc theo file; lịch sử theo trang. Thao tác git nào có thể chậm (repo lớn) phải có giới hạn thời gian và báo "đang tải".
 - **Agent (M3 theo dõi thay đổi, M5 ACP):** cần chờ đồng thời phím và output process con. Linux/macOS dùng `poll` nhiều fd. **Windows không có cách chờ chung đơn giản** cho console input và pipe ẩn danh; chốt ở kế hoạch M5 kèm số đo RAM: luồng đọc pipe nhỏ đẩy vào hàng đợi có giới hạn, hoặc named pipe + overlapped I/O với `WaitForMultipleObjects`.
 
@@ -279,6 +282,7 @@ Không tính vào ngân sách: cửa sổ terminal (với bản `dark`), git, ag
 - `--self-test` chạy không cần terminal; test trong `tests/ram/` chỉ áp ngân sách ở `cargo test --release`.
 - Kiểm tra terminal thật: `tests/ram/windows-console.ps1`, `tests/ram/linux-terminal.py`; runner trong `scripts/`.
 - Từ M1, test RAM dùng repo mẫu có diff thật; từ M5, thêm agent giả lập phát luồng ACP; từ M7, 6 agent giả lập.
+- Bổ sung C6 ngày 02/11/2026: bài RAM release giữ watcher đang chạy. Review 30 file đo Windows EX2 private working set idle 1.355.776 byte, Linux musl VmRSS idle 921.600 byte. WSL đọc ổ D có chi phí riêng: cầu nối Windows ~0,64 MB private working set và proxy Linux ~2,21 MB VmRSS; không gộp các chỉ số khác nhau để xét ngân sách ứng dụng. Số đo, binary, giới hạn và log: [M1_VERIFICATION.md](M1_VERIFICATION.md#bổ-sung-02112026--tự-cập-nhật-diff).
 
 ## 7. Cấu hình (dự kiến)
 

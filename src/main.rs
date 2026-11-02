@@ -5,6 +5,7 @@ mod memory;
 mod proc;
 mod review;
 mod ui;
+mod watch;
 
 use app::workbench::Workbench;
 use app::{event::Input, App};
@@ -27,11 +28,18 @@ fn main() -> std::process::ExitCode {
 }
 
 fn run() -> io::Result<()> {
+    let arguments: Vec<_> = std::env::args_os().skip(1).collect();
+    if arguments.first().is_some_and(|arg| arg == "--watch-bridge") {
+        if arguments.len() != 2 {
+            return Err(io::Error::other("Usage: dark --watch-bridge ROOT"));
+        }
+        return run_watch_bridge(std::path::Path::new(&arguments[1]));
+    }
     let mut debug = false;
     let mut self_test = false;
     let mut panic_test = false;
     let mut review_test = false;
-    for arg in std::env::args_os().skip(1) {
+    for arg in arguments {
         match arg.to_str() {
             Some("--help" | "-h") => {
                 println!(
@@ -90,6 +98,8 @@ fn run_terminal(debug: bool, panic_test: bool) -> io::Result<()> {
         height,
     )?;
     let mut workbench = Workbench::open(&std::env::current_dir()?);
+    let mut watcher = open_watcher(&mut workbench);
+    let mut changes = PendingChanges::default();
     let mut status = if debug {
         memory_status()
     } else {
@@ -113,7 +123,11 @@ fn run_terminal(debug: bool, panic_test: bool) -> io::Result<()> {
     }
     let mut next_sample = Instant::now() + Duration::from_secs(1);
     while app.running {
-        let timeout = debug.then(|| next_sample.saturating_duration_since(Instant::now()));
+        let mut timeout = watcher.as_ref().map(|_| Duration::from_millis(75));
+        if debug {
+            let until_sample = next_sample.saturating_duration_since(Instant::now());
+            timeout = Some(timeout.map_or(until_sample, |wait| wait.min(until_sample)));
+        }
         let mut dirty = false;
         if let Some(event) = Input::next(timeout)? {
             if matches!(event, Event::Resize(_, _)) {
@@ -158,6 +172,26 @@ fn run_terminal(debug: bool, panic_test: bool) -> io::Result<()> {
                 dirty = app.handle_event(event);
             }
         }
+        if !app.running {
+            break;
+        }
+        if let Some(active) = &mut watcher {
+            match active.take_changed() {
+                Ok(true) => changes.note(Instant::now()),
+                Ok(false) => {}
+                Err(error) => {
+                    workbench.message =
+                        format!("Tự cập nhật đã dừng: {error}. Đổi tab để tải lại.");
+                    watcher = None;
+                    dirty = true;
+                }
+            }
+        }
+        if changes.ready(Instant::now()) && !workbench.modal() {
+            workbench.refresh_external();
+            changes.clear();
+            dirty |= app.screen == app::Screen::Review;
+        }
         if debug && Instant::now() >= next_sample {
             status = memory_status();
             next_sample = Instant::now() + Duration::from_secs(1);
@@ -180,6 +214,98 @@ fn run_terminal(debug: bool, panic_test: bool) -> io::Result<()> {
         }
     }
     Ok(())
+}
+
+fn open_watcher(workbench: &mut Workbench) -> Option<watch::Watcher> {
+    let root = &workbench.review.as_ref()?.repo.root;
+    match watch::Watcher::new(root) {
+        Ok(watcher) => {
+            // Close the gap between the initial diff load and watch registration.
+            workbench.refresh_external();
+            Some(watcher)
+        }
+        Err(error) => {
+            workbench.message = format!("Chưa bật tự cập nhật: {error}. Đổi tab để tải lại.");
+            None
+        }
+    }
+}
+
+/// Only notification deadlines are polled; no file or Git scan runs while idle.
+#[derive(Default)]
+struct PendingChanges {
+    first: Option<Instant>,
+    last: Option<Instant>,
+}
+
+impl PendingChanges {
+    fn note(&mut self, now: Instant) {
+        self.first.get_or_insert(now);
+        self.last = Some(now);
+    }
+
+    fn ready(&self, now: Instant) -> bool {
+        self.last
+            .is_some_and(|last| now.duration_since(last) >= Duration::from_millis(150))
+            || self
+                .first
+                .is_some_and(|first| now.duration_since(first) >= Duration::from_millis(500))
+    }
+
+    fn clear(&mut self) {
+        *self = Self::default();
+    }
+}
+
+#[cfg(windows)]
+fn run_watch_bridge(root: &std::path::Path) -> io::Result<()> {
+    use std::io::Write;
+    use windows_sys::Win32::System::Console::{GetStdHandle, STD_INPUT_HANDLE};
+
+    #[link(name = "kernel32")]
+    unsafe extern "system" {
+        fn PeekNamedPipe(
+            pipe: *mut std::ffi::c_void,
+            buffer: *mut std::ffi::c_void,
+            size: u32,
+            read: *mut u32,
+            available: *mut u32,
+            left: *mut u32,
+        ) -> i32;
+    }
+    let mut watcher = watch::Watcher::new(root)?;
+    let mut output = io::stdout().lock();
+    writeln!(output, "READY")?;
+    output.flush()?;
+    let input = unsafe { GetStdHandle(STD_INPUT_HANDLE) };
+    loop {
+        // A closed stdin pipe means the WSL owner exited, including abrupt exits.
+        let alive = unsafe {
+            PeekNamedPipe(
+                input,
+                std::ptr::null_mut(),
+                0,
+                std::ptr::null_mut(),
+                std::ptr::null_mut(),
+                std::ptr::null_mut(),
+            )
+        };
+        if alive == 0 {
+            return Ok(());
+        }
+        if watcher.take_changed()? {
+            writeln!(output, "CHANGED")?;
+            output.flush()?;
+        }
+        std::thread::sleep(Duration::from_millis(50));
+    }
+}
+
+#[cfg(not(windows))]
+fn run_watch_bridge(_root: &std::path::Path) -> io::Result<()> {
+    Err(io::Error::other(
+        "The notification bridge requires Windows dark.exe",
+    ))
 }
 
 fn run_self_test() -> io::Result<()> {
@@ -225,6 +351,12 @@ fn sample_or_report() -> io::Result<u64> {
 fn run_review_self_test() -> io::Result<()> {
     let mut workbench = Workbench::open(&std::env::current_dir()?);
     if workbench.review.is_none() || workbench.modal() {
+        return Err(io::Error::other(workbench.message.clone()));
+    }
+    // Include the active notification backend in the release memory acceptance test.
+    let _watcher = open_watcher(&mut workbench);
+    #[cfg(any(windows, target_os = "linux"))]
+    if _watcher.is_none() {
         return Err(io::Error::other(workbench.message.clone()));
     }
     let mut renderer = Renderer::new();
@@ -332,5 +464,20 @@ mod editor_tests {
         );
         assert!(editor_arguments("\"unfinished").is_err());
         assert!(editor_arguments(" ").is_err());
+    }
+
+    #[test]
+    fn notifications_coalesce_without_starving_a_continuous_writer() {
+        let start = Instant::now();
+        let mut changes = PendingChanges::default();
+        assert!(!changes.ready(start));
+        changes.note(start);
+        changes.note(start + Duration::from_millis(100));
+        assert!(!changes.ready(start + Duration::from_millis(200)));
+        assert!(changes.ready(start + Duration::from_millis(250)));
+        changes.note(start + Duration::from_millis(490));
+        assert!(changes.ready(start + Duration::from_millis(500)));
+        changes.clear();
+        assert!(!changes.ready(start + Duration::from_secs(1)));
     }
 }

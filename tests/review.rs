@@ -75,6 +75,55 @@ fn hunk_header_keeps_git_function_context() {
 }
 
 #[test]
+fn refresh_uses_current_head_but_preserves_startup_recovery() {
+    let f = Fixture::new();
+    let initial = fs::read_to_string(f.0.join("file.txt")).unwrap();
+    let at_open = initial.replace("one\n", "first edit\n");
+    fs::write(f.0.join("file.txt"), &at_open).unwrap();
+    let mut r = f.open();
+    let startup = r.startup.clone();
+    let old_diff = r.diff(Path::new("file.txt")).unwrap();
+    f.git(&["add", "file.txt"]);
+    f.git(&["commit", "-qm", "external commit"]);
+    fs::write(
+        f.0.join("file.txt"),
+        at_open.replace("fifteen\n", "later edit\n"),
+    )
+    .unwrap();
+    r.refresh().unwrap();
+    let current = r.diff(Path::new("file.txt")).unwrap();
+    assert_eq!(current.hunks.len(), 1);
+    assert!(String::from_utf8_lossy(&current.patch).contains("+later edit"));
+    assert!(!String::from_utf8_lossy(&current.patch).contains("+first edit"));
+    assert!(r.reject(Path::new("file.txt"), &old_diff, 0).is_err());
+    assert_eq!(r.startup, startup);
+    let head = f.git(&["rev-parse", "HEAD"]);
+    r.undo_checked(&r.undo_token().unwrap()).unwrap();
+    assert_eq!(fs::read_to_string(f.0.join("file.txt")).unwrap(), at_open);
+    assert_eq!(head, f.git(&["rev-parse", "HEAD"]));
+}
+
+#[test]
+fn refresh_handles_an_unborn_head_and_the_first_external_commit() {
+    let f = Fixture::new();
+    f.git(&["checkout", "--orphan", "unborn"]);
+    f.git(&["rm", "--cached", "-r", "."]);
+    let mut r = f.open();
+    r.refresh().unwrap();
+    assert!(!r.diff(Path::new("file.txt")).unwrap().hunks.is_empty());
+    f.git(&["add", "file.txt"]);
+    f.git(&["commit", "-qm", "first commit"]);
+    fs::write(f.0.join("file.txt"), "new working change\n").unwrap();
+    r.refresh().unwrap();
+    assert_eq!(
+        r.baseline,
+        String::from_utf8(f.git(&["rev-parse", "HEAD^{tree}"]))
+            .unwrap()
+            .trim()
+    );
+}
+
+#[test]
 fn raw_snapshot_undo_preserves_index_branch_and_unrelated_files() {
     let f = Fixture::new();
     fs::write(f.0.join("file.txt"), b"startup\r\nbytes\r\n").unwrap();

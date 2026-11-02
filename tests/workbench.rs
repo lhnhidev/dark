@@ -119,6 +119,62 @@ fn accepted_file_remains_counted_after_moving_to_another_file() {
 }
 
 #[test]
+fn external_refresh_preserves_selected_file_and_hunk() {
+    let before: String = (1..=40).map(|n| format!("line {n}\n")).collect();
+    let changed = before
+        .replace("line 2\n", "first change\n")
+        .replace("line 35\n", "second change\n");
+    let f = Fixture::new(&[("a.txt", &before), ("b.txt", "old\n")]);
+    f.write("a.txt", &changed);
+    let mut w = Workbench::open(&f.0);
+    key(&mut w, KeyCode::Char('n'));
+    render(&mut w);
+    let line = w.selected_line();
+    assert!(line > 20);
+    f.write("b.txt", "external file change\n");
+    w.refresh_external();
+    assert_eq!(w.selected_path().unwrap(), PathBuf::from("a.txt"));
+    assert_eq!(w.selected_line(), line);
+    assert!(plain(&render(&mut w)).contains("hunk 2/2"));
+    f.write(
+        "a.txt",
+        &changed.replace("second change", "new external text"),
+    );
+    w.refresh_external();
+    assert_eq!(w.selected_line(), line);
+    assert!(plain(&render(&mut w)).contains("new external text"));
+}
+
+#[test]
+fn external_refresh_does_not_replace_an_open_restore_confirmation() {
+    let f = Fixture::new(&[("a.txt", "original\n")]);
+    f.write("a.txt", "initial change\n");
+    let mut w = Workbench::open(&f.0);
+    key(&mut w, KeyCode::Char('u'));
+    assert!(w.modal());
+    f.write("a.txt", "external while confirming\n");
+    w.refresh_external();
+    assert!(w.modal());
+    key(&mut w, KeyCode::Char('y'));
+    assert_eq!(
+        fs::read_to_string(f.0.join("a.txt")).unwrap(),
+        "external while confirming\n"
+    );
+}
+
+#[test]
+fn external_refresh_selects_a_valid_file_when_current_change_disappears() {
+    let f = Fixture::new(&[("a.txt", "original\n"), ("b.txt", "original\n")]);
+    f.write("a.txt", "changed\n");
+    let mut w = Workbench::open(&f.0);
+    f.write("a.txt", "original\n");
+    f.write("b.txt", "new change\n");
+    w.refresh_external();
+    assert_eq!(w.selected_path().unwrap(), PathBuf::from("b.txt"));
+    assert!(plain(&render(&mut w)).contains("new change"));
+}
+
+#[test]
 fn identical_hunks_must_each_be_accepted() {
     let mut original = String::from("same old\n");
     for i in 0..20 {

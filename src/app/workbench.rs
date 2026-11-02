@@ -290,6 +290,43 @@ impl Workbench {
         }
     }
 
+    /// Background refresh must not replace a pending confirmation or reset reading position.
+    pub fn refresh_external(&mut self) {
+        if self.modal() {
+            return;
+        }
+        let path = self.selected_path();
+        let anchor = self.diff.hunks.get(self.hunk).map(hunk_fingerprint);
+        let line = self.selected_line();
+        let old_hunk = self.hunk;
+        let scroll = self.scroll;
+        self.refresh();
+        if path.is_none() || self.selected_path() != path {
+            return;
+        }
+        self.hunk = anchor
+            .and_then(|fingerprint| {
+                self.diff
+                    .hunks
+                    .iter()
+                    .position(|hunk| hunk_fingerprint(hunk) == fingerprint)
+            })
+            .or_else(|| {
+                self.diff
+                    .hunks
+                    .iter()
+                    .enumerate()
+                    .min_by_key(|(_, hunk)| (hunk.new_start.max(1) as usize).abs_diff(line))
+                    .map(|(index, _)| index)
+            })
+            .unwrap_or(0);
+        self.scroll = if self.hunk == old_hunk {
+            scroll
+        } else {
+            usize::MAX
+        };
+    }
+
     /// Returns an external-editor request. Modal input never reaches global shortcuts.
     pub fn key(&mut self, key: KeyEvent) -> bool {
         if self.modal() {

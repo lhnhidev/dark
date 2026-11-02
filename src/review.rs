@@ -385,7 +385,25 @@ impl Review {
     }
 
     pub fn refresh(&mut self) -> io::Result<()> {
-        self.files = self.repo.status()?;
+        let files = self.repo.status()?;
+        let baseline = match self.repo.text(&["rev-parse", "--verify", "HEAD^{tree}"]) {
+            Ok(tree) => tree,
+            Err(head_error) => {
+                let status = self.repo.text(&[
+                    "status",
+                    "--porcelain=v2",
+                    "--branch",
+                    "--untracked-files=no",
+                ])?;
+                if status.lines().any(|line| line == "# branch.oid (initial)") {
+                    self.repo.text(&["mktree"])?
+                } else {
+                    return Err(head_error);
+                }
+            }
+        };
+        self.files = files;
+        self.baseline = baseline;
         Ok(())
     }
 

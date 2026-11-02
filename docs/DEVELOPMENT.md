@@ -70,6 +70,10 @@ Từ M1, `dark --self-test-review` mở repo ở thư mục hiện tại, tạo 
 
 Các cấu hình M1 dùng biến môi trường: `DARK_SNAPSHOT_KEEP` (số phiên giữ, mặc định 10), `DARK_TAB_WIDTH` (1–16, mặc định 8), `DARK_EDITOR` (ưu tiên hơn `VISUAL`/`EDITOR`, hỗ trợ `{file}`/`{line}`). Chưa đọc file TOML của các milestone sau. `NO_COLOR` tắt màu khi biến được đặt, kể cả giá trị rỗng.
 
+Tự cập nhật M1 dùng native notifications, không filesystem polling. Trong WSL với `/mnt/d` hoặc `/mnt/c`, cần bản Windows mới: build `cargo build --release` trên Windows, rồi build musl trong WSL như trên. Bản Linux build từ repo Dark tự tìm `target/release/dark.exe` tại đường dẫn nguồn build; khi đặt binary ở nơi khác, đặt `dark.exe` cạnh `dark` hoặc dùng `DARK_WATCH_HELPER` (đường dẫn WSL tới exe). Không cần cầu nối khi project ở filesystem Linux. Cầu nối dùng chế độ nội bộ `--watch-bridge`, không phải agent.
+
+Kiểm thử PTY tự cập nhật: `python3 scripts/test-watch-refresh.py "$HOME/dark-target-musl/x86_64-unknown-linux-musl/release/dark"`. Thêm thư mục cha fixture trên `/mnt/d` để thử interop; thêm `--windows-writer` để ghi từ Windows, `--kill-owner` để kiểm cầu nối thoát khi parent bị kill. Fixture luôn riêng, không sửa project thật. Script đo app bằng VmRSS và báo riêng proxy Linux; private working set Windows qua EX2 được báo riêng. `--self-test-review` cũng giữ watcher đang hoạt động khi đo ngân sách release. Bản build-only macOS chưa có native watch.
+
 Đo riêng dependency word diff trên Windows: `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/measure-word-diff.ps1`. Probe cùng dữ liệu/flags trước và sau, không dùng số đó thay cho RAM ứng dụng thật; xem [M1_VERIFICATION.md](M1_VERIFICATION.md).
 
 Ghi lại terminal Linux thật: `python3 scripts/capture-review.py /absolute/path/to/dark`. Fixture được tạo trong thư mục tạm; output `.ansi`, `.txt`, `.html` ở `docs/ui/m1/`. HTML tái dựng từ ANSI đã ghi, không phải ảnh chụp. Các script terminal Windows/Linux cũng dùng fixture riêng để tránh tạo snapshot trong repo làm việc.

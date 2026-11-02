@@ -79,7 +79,7 @@ RAM là phần dark tốn thêm (ước tính), chưa tính agent và cửa sổ
 | C3 | Thanh trạng thái | Tên chế độ, gợi ý phím, thông tin ngữ cảnh | M1 | ~0 |
 | C4 | Màn hẹp | Rút gọn nhãn tab; diff tự về 1 cột; thông báo khi < 80×24 | M1 | ~0 |
 | C5 | Snapshot theo lượt AI | Mốc git riêng trước mỗi lượt agent | M1 | ~0 |
-| C6 | Tự làm mới | Phát hiện file đổi khi agent chạy ở cửa sổ khác | M3 | ~0 |
+| C6 | Tự làm mới | Nhận thông báo file đổi từ hệ điều hành; WSL đọc ổ Windows dùng cầu nối `dark.exe`; không quét file định kỳ | M1 (đưa lên từ M3, duyệt 02/11/2026) | Đo riêng cầu nối |
 | C7 | `!` chạy test | Hiện lỗi đầu tiên và vị trí | M3 | < 0,2 MB |
 | C8 | `darkw` | Cửa sổ Windows riêng (Win32 + GDI), gõ tiếng Việt, clipboard, DPI | M4 | 0,5–2 MB |
 | C9 | Song ngữ | Tiếng Anh, tiếng Việt | M6 | ~0 |

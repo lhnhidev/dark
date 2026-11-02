@@ -71,6 +71,8 @@ Cần Rust stable; Windows dùng toolchain MSVC và bộ C++ của Visual Studio
 
 Trong Review: `a` giữ hunk, `x` bỏ hunk chưa stage, `n`/`N` chuyển hunk, `l`/`r` ẩn/hiện khung, `Tab` đổi khung, `v` đổi split/unified, `e` mở editor ngoài. `u` hỏi trước khi khôi phục về **lúc mở phiên**, gồm cả thay đổi bạn tự làm sau đó; index và nhánh giữ nguyên. Hunk chứa thay đổi đã stage bị chặn reject trong M1, không tự unstage.
 
+File được sửa ở cửa sổ khác sẽ tự cập nhật diff qua thông báo hệ điều hành trên Windows/Linux, giữ vị trí đang đọc khi có thể. WSL đọc project trên ổ D/C dùng `dark.exe` chạy ngầm làm cầu nối: đặt cạnh binary Linux hoặc chỉ định `DARK_WATCH_HELPER=/mnt/d/duong-dan/dark.exe`. Khi build từ repo Dark trên ổ D, bản Linux tự tìm `target/release/dark.exe` của chính mã nguồn Dark; cần build bản Windows mới một lần. Không tìm/chạy executable trong project đang review. macOS hiện chưa hỗ trợ tự cập nhật; lỗi theo dõi hiện trên thanh trạng thái, vẫn có thể đổi tab để tải lại.
+
 `DARK_SNAPSHOT_KEEP` đặt số phiên snapshot cần giữ (mặc định 10; phiên đang mở được bảo vệ). `DARK_TAB_WIDTH` đặt tab stop 1–16 (mặc định 8). `DARK_EDITOR`, rồi `VISUAL`/`EDITOR`, chọn editor ngoài; hỗ trợ `{file}` và `{line}`, ví dụ `code --wait --goto {file}:{line}`. Tham số được truyền trực tiếp, không chạy qua shell.
 
 Bản ghi terminal thật: [160×44](docs/ui/m1/160x44.html), [80×24](docs/ui/m1/80x24.html), đặt cạnh [ảnh thiết kế](docs/ui/1-review.png). Các phần khác ảnh và giới hạn hiện tại được liệt kê trong [báo cáo M1](docs/M1_VERIFICATION.md).

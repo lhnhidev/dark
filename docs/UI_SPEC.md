@@ -175,6 +175,8 @@ Biến, dấu câu và phần còn lại dùng `text`. Bộ tô màu tự viết
 
 **Trong M1:** `Enter` ở danh sách mở diff; `Enter` ở diff báo sửa nội bộ có ở M2 và gợi ý `e`. `?` và `/` báo có ở M5 trên thanh trạng thái, không im lặng. Khi chưa có ghi chú AI, thanh trạng thái vẫn chỉ dẫn `a accept` và `x reject`; màn hẹp ưu tiên giữ hai phím này. `u` ghi rõ khôi phục về **lúc mở phiên dark**, liệt kê file bị ảnh hưởng và cảnh báo gồm cả thay đổi người dùng tự làm sau khi mở; file đổi tiếp trong lúc xác nhận thì hủy thao tác và yêu cầu xem lại.
 
+**Tự cập nhật (đưa lên M1 theo duyệt ngày 02/11/2026):** thay đổi từ bên ngoài được nhận qua thông báo hệ điều hành, gộp trong khoảng 150 ms trước khi tải lại diff; không quét file định kỳ. Giữ file, hunk và vị trí cuộn đang xem khi còn xác định được. Trong lúc mở hộp xác nhận, ghi nhận thay đổi nhưng hoãn cập nhật màn hình tới khi đóng hộp; kiểm tra stale trước khi ghi vẫn bắt buộc. WSL đọc ổ Windows dùng `dark.exe` chạy ngầm làm cầu nối. Nếu không bật được theo dõi hoặc cầu nối mất kết nối, báo trên thanh trạng thái; người dùng vẫn đổi tab để tải lại được. Bố cục, màu và phím không đổi.
+
 ## 5. Tab 2 · Edit
 
 Ảnh: [ui/2-edit.png](ui/2-edit.png)

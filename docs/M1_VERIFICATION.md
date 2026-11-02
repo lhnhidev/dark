@@ -1,6 +1,58 @@
 # M1 — Khung giao diện và Review
 
-Ngày kiểm chứng: 01/11/2026. Mã ứng dụng được kiểm chứng tại `a46f7cc`; các commit sau đó chỉ sửa probe/cập nhật bản ghi và tài liệu. M1 chờ chủ dự án chạy thử; chưa push, chưa tag và chưa đóng milestone.
+Phần kiểm chứng ban đầu ngày 01/11/2026 dưới đây ghi lại bản `a46f7cc`, không phải số đo của mã mới nhất. Bổ sung tự cập nhật ngày 02/11/2026 nằm ở phần kế tiếp. M1 vẫn chờ chủ dự án chạy thử và duyệt đóng; chưa tạo tag `m1`.
+
+## Bổ sung 02/11/2026 — tự cập nhật diff
+
+Theo kế hoạch đã được chủ dự án duyệt, C6 được đưa từ M3 lên M1. Windows dùng `ReadDirectoryChangesW`, Linux dùng inotify; WSL đọc ổ Windows dùng `dark.exe` chạy ngầm làm cầu nối. Không thêm dependency, không thay release profile, không tạo thread ứng dụng. Khoảng chờ terminal 75 ms chỉ để rút thông báo đã có, không quét file/Git định kỳ. Gộp thông báo 150 ms, chặn trì hoãn quá 500 ms khi ghi liên tục.
+
+Diff giữ file/hunk và vị trí cuộn khi còn xác định được; hộp xác nhận không bị thay thế bởi refresh nền. Snapshot phục hồi vẫn là lúc mở phiên. Nếu có commit từ bên ngoài, baseline review chuyển theo HEAD hiện tại; diff cũ bị kiểm tra stale trước reject. Tính năng không sửa thiết kế: bố cục, màu, viền và phím không đổi.
+
+### Kiểm chứng bản bổ sung
+
+```text
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify-windows.ps1 -OutputDirectory .dark/verification/m1/auto-refresh/final-windows
+bash scripts/verify-linux.sh musl .dark/verification/m1/auto-refresh/final-musl
+```
+
+Các runner bao gồm format, Clippy `-D warnings`, test debug/release, build debug/release, self-test, help/version, binary và terminal thật. Windows console còn kiểm sửa file, thay thế file khi lưu và file mới **không gửi phím**; PTY bổ sung thử native Linux, WSL ổ D với writer Linux lẫn Windows, idle không tự redraw liên tục, xác nhận stale và thoát `q`. Test SIGKILL xác nhận trực tiếp PID cầu nối Windows đã kết thúc, không chỉ proxy Linux.
+
+| Kiểm tra | Windows x86_64 MSVC | Linux x86_64 musl, WSL |
+|---|---:|---:|
+| Unit test ứng dụng | 128 | 129 |
+| CLI | 3 | 3 |
+| RAM release | 2 | 2 |
+| Review/snapshot | 21 | 22 |
+| Watcher | 5 | 8 |
+| Workbench và module được nạp lại | 144 | 145 |
+
+Không cộng các hàng thành số test độc lập. Hồi quy watcher gồm atomic save, thư mục mới/xóa, linked worktree, `.dark` lồng hợp lệ, `.DARK` gốc trên Windows, file tracked trong thư mục bị ignore, force-add sau khi mở watcher, thay ignore rules và tái tạo `.git/info`. Reviewer độc lập không còn lỗi chặn sau sửa và kiểm thử.
+
+### RAM và binary của bản bổ sung
+
+Fixture ngân sách có **30 file / 3.000 dòng đổi**, vẽ 160/120/100/80 cột như trước. `--self-test-review` lần này giữ watcher đang hoạt động trong toàn bộ phép đo; không dùng khung trống hay probe để báo đạt.
+
+| Số đo | Windows (EX2 private working set) | Linux musl (VmRSS) |
+|---|---:|---:|
+| Review: lớn nhất trong 5 mẫu idle | 1.355.776 byte | 921.600 byte |
+| Review: đỉnh lấy mẫu sau thao tác | 1.527.808 byte | 921.600 byte |
+| Binary release | 555.008 byte | 844.664 byte |
+
+Hai nền tảng đạt idle **< 2.000.000 byte**, đỉnh lấy mẫu **< 10.000.000 byte**. Đây không phải đỉnh bảo đảm trong toàn bộ đời process hoặc mọi repo.
+
+PTY trên fixture nhỏ, đo riêng các tiến trình khi dùng WSL đọc ổ D:
+
+| Tiến trình/chỉ số | Linux ghi trên ổ D | Windows ghi trên ổ D |
+|---|---:|---:|
+| Dark, VmRSS idle | 851.968 byte | 815.104 byte |
+| Proxy interop Linux, VmRSS | 2.207.744 byte | 2.207.744 byte |
+| Cầu nối Windows, trung vị 5 mẫu EX2 private working set | 638.976 byte | 643.072 byte |
+
+Không cộng hoặc đổi tên các chỉ số khác nhau để báo đạt. Proxy và cầu nối là chi phí thật ngoài process Dark, không bỏ khỏi báo cáo; không có chúng khi chạy native Linux. Native Linux PTY trên fixture nhỏ quan sát Dark 880.640 byte VmRSS. Các số PTY này không thay fixture 30 file của ngân sách. Bản bổ sung chưa đo lại riêng cây Git; dữ liệu cây Git ở phần báo cáo ban đầu là lịch sử.
+
+Log ở `.dark/verification/m1/auto-refresh/`, gồm `final-{windows,musl}/`, `pty-{ext4,drive-linux,drive-windows,kill-owner}.txt` và `macos-arm-check.txt`. macOS ARM64 chỉ qua `cargo check`, chưa chạy thực tế và chưa có backend notification; lần thử target Intel trong WSL không chạy được vì chưa cài target. Chưa stress overflow queue thật; mã có đường phục hồi theo thông báo overflow nhưng không ghi là đã kiểm chứng nhánh đó. Benchmark đầy đủ với tuicr/Hunk vẫn còn mở như phần ban đầu; không dùng probe [so sánh cơ chế](../tests/bench/WATCH_PROBE.md) thay cho benchmark ứng dụng.
+
+## Báo cáo ban đầu 01/11/2026 (lịch sử)
 
 ## Kết quả
 
@@ -95,7 +147,7 @@ Các hồi quy quan trọng đã tìm và sửa trong lúc kiểm chứng: bản
 
 WSL hiện không có executable tuicr/Hunk, nên chỉ chạy lại dark, không cài thêm và không công bố bảng so sánh mới với đối thủ. Bảng cũ trong ARCHITECTURE vẫn được ghi rõ là lịch sử M0.
 
-Giới hạn hiện tại: patch >512 KiB hoặc untracked >256 KiB mở bằng editor ngoài, chưa paging; nhị phân/không UTF-8 và đường dẫn đặc biệt không phục hồi an toàn được báo rõ/chặn ghi. Rename đang thể hiện thành hai phần thêm/xóa. Chưa tự theo dõi thay đổi nền (M3); đổi file/tab, reject/undo và quay lại từ editor sẽ đọc lại dữ liệu. Dấu đã xem thuộc phiên hiện tại, không persist qua lần mở app.
+Giới hạn ở bản kiểm chứng ban đầu: patch >512 KiB hoặc untracked >256 KiB mở bằng editor ngoài, chưa paging; nhị phân/không UTF-8 và đường dẫn đặc biệt không phục hồi an toàn được báo rõ/chặn ghi. Rename đang thể hiện thành hai phần thêm/xóa. Bản ban đầu chưa theo dõi thay đổi nền; phần bổ sung 02/11 phía trên đã thay thế giới hạn này trên Windows/Linux. Dấu đã xem thuộc phiên hiện tại, không persist qua lần mở app.
 
 ## Chủ dự án chạy thử
 

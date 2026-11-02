@@ -47,9 +47,9 @@ Mã tính năng (C, R, E, V, G, P, K, S) theo [FEATURES.md](FEATURES.md).
 
 | Milestone | Nội dung | Bạn dùng được gì | RAM mục tiêu của dark | Ước tính | Cần xong trước |
 |---|---|---|---|---|---|
-| **M1** Khung giao diện + Review | C1–C5, R1–R6, S4, E9 (diff): thanh tab 1–7 (6, 7 Coming soon), theme Hunk, khung active, snapshot, panel danh sách (`l`), diff 2 cột (`r`), accept/reject (`a`/`x`), hoàn tác cả lượt (`u`), editor ngoài (`e`), tên cửa sổ, tô màu cú pháp trong diff (E9, đưa lên từ M9) | Review code agent viết, giữ/bỏ từng hunk | Review diff 30 file < 2 MB | 2 tuần | M0 |
+| **M1** Khung giao diện + Review | C1–C6, R1–R6, S4, E9 (diff): thanh tab 1–7 (6, 7 Coming soon), theme Hunk, khung active, snapshot, panel danh sách (`l`), diff 2 cột (`r`), accept/reject (`a`/`x`), hoàn tác cả lượt (`u`), editor ngoài (`e`), tên cửa sổ, tô màu cú pháp trong diff (E9, đưa lên từ M9), tự cập nhật diff qua thông báo hệ điều hành (C6, đưa lên từ M3 theo duyệt 02/11/2026) | Review code agent viết, giữ/bỏ từng hunk | Review diff 30 file < 2 MB | 2 tuần | M0 |
 | **M2** Edit | E1–E8, R7: cây thư mục, editor gọn, lưu an toàn, sửa hunk từ Review (`Enter`), `Alt-1…7` | Sửa code ngay trong dark | Sửa file 10.000 dòng < 4 MB | 2 tuần | M1 |
-| **M3** Git + Vibe cơ bản → **v0.1** | R8, G1–G5, V1–V3, C6, C7, S3: stage/commit từ panel, lịch sử + cây nhánh + diff commit, phát hiện và gọi agent CLI, tự làm mới, chạy test | **Bản dùng thử đầu tiên** | Lịch sử 200 commit < 0,5 MB thêm | 1,5–2 tuần | M2 |
+| **M3** Git + Vibe cơ bản → **v0.1** | R8, G1–G5, V1–V3, C7, S3: stage/commit từ panel, lịch sử + cây nhánh + diff commit, phát hiện và gọi agent CLI, chạy test; dùng lại tự cập nhật của M1 | **Bản dùng thử đầu tiên** | Lịch sử 200 commit < 0,5 MB thêm | 1,5–2 tuần | M2 |
 | **M4** `darkw` | C8: bản thử 1–2 ngày để đo, rồi cửa sổ Windows riêng | Nhấp đúp mở dark, không cần terminal | `darkw` idle < 3 MB tính cả cửa sổ | 1,5–2 tuần | M3 |
 | **M5** ACP + 1 agent | V4–V7, R9–R11, K1–K3, S1: ACP client, 4 agent, duyệt quyền, sửa file qua dark, vòng đời agent, skill dark-notes/dark-feedback, ghi chú AI mỗi hunk, hỏi về hunk | Vibe và review trong một app | Đang vibe < 4 MB (không tính agent) | 3 tuần | M3 |
 | **M6** Models + phát hành → **v0.2** | P1–P4, V8, C9, S2: tab Models, lưu key trong Windows Credential Manager, model qua opencode, song ngữ, đóng gói, benchmark công khai | **Ra mắt chính thức** | Giữ các mục tiêu trên | 1,5–2 tuần | M5 |
@@ -78,6 +78,7 @@ Triển khai và kiểm chứng nội bộ: xem [M1_VERIFICATION.md](M1_VERIFICA
 - [x] Diff 2 cột có nhấn mạnh chữ đổi trong dòng; ô trống đúng màu; khung diff < 120 cột tự về 1 cột; `v` đổi chế độ.
 - [x] `a`/`x`: sau khi reject, `git diff` khớp đúng phần còn lại. `u` hoàn tác cả lượt có xác nhận, không hỏng index/nhánh.
 - [x] `l`, `r`, `Tab`, `n`/`N`, `e` hoạt động như UI_SPEC §4.4.
+- [x] Tự cập nhật diff qua thông báo hệ điều hành, gộp sự kiện và giữ vị trí review; WSL đọc ổ Windows có cầu nối đo riêng RAM (C6 đưa lên từ M3 theo duyệt 02/11/2026; xem bổ sung kiểm chứng M1).
 - [ ] Code trong diff tô màu cú pháp theo UI_SPEC §2 cho các ngôn ngữ đã liệt kê; giữ nền diff; RAM review vẫn < 2 MB (E9 đưa lên từ M9 theo yêu cầu chủ dự án, 01/11/2026).
 - [x] Repo không phải git, file nhị phân, file lớn, tên file Unicode: báo rõ, không crash.
 - [x] Giao diện ở 160×44 khớp [ui/1-review.png](ui/1-review.png) (trừ ghi chú AI, thuộc M5); kiểm tra thêm ở 120, 100, 80 cột.
@@ -96,7 +97,7 @@ Triển khai và kiểm chứng nội bộ: xem [M1_VERIFICATION.md](M1_VERIFICA
 - [ ] Panel Review: `Space` stage/unstage, `s` stage tất cả, ô commit message, `c` commit đúng phần đã stage, `d` bỏ thay đổi file có xác nhận.
 - [ ] Tab Git: lịch sử tải dần, cây nhánh đúng với nhánh merge, nhãn nhánh/tag, chi tiết commit, `Enter` mở diff commit chỉ đọc; khớp [ui/4-git-commit.png](ui/4-git-commit.png).
 - [ ] Tab Vibe: dải 6 ô (chỉ ô 1 dùng được), hộp chọn liệt kê agent CLI đã cài; `Enter` gọi agent ở giao diện gốc (nhường hoặc chia màn hình), agent thoát thì về Review; khớp [ui/3-vibe.png](ui/3-vibe.png) phần CLI.
-- [ ] Agent chạy ở cửa sổ khác sửa file: dark tự làm mới.
+- Tự cập nhật khi agent sửa file đã chuyển lên tiêu chí M1 (C6).
 - [ ] `!` chạy test, hiện lỗi đầu tiên.
 - [ ] Kiểm tra trong PowerShell, mintty, WSL, terminal của VS Code.
 - [ ] Phát hành v0.1 theo mục 6.

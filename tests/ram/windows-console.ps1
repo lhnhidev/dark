@@ -82,6 +82,8 @@ public static class ConsoleProbe {
  static void WaitScreen(Process p,string text,ref ulong peak,bool body=false) { var until=DateTime.UtcNow.AddSeconds(30); while(DateTime.UtcNow<until) { if(p.HasExited) throw new Exception("process exited with code "+p.ExitCode+" before screen "+text+"; got: "+Content()); peak=Math.Max(peak,Memory(p)); if((body?Body():Content()).Contains(text)) return; Thread.Sleep(20); } throw new Exception("screen not seen: "+text+"; got: "+(body?Body():Content())); }
  static void WaitResize(Process p,ref ulong peak) { var until=DateTime.UtcNow.AddSeconds(30); while(DateTime.UtcNow<until) { if(p.HasExited) throw new Exception("process exited during resize"); peak=Math.Max(peak,Memory(p)); if(!Screen().Contains("RESIZE TEST")) return; Thread.Sleep(20); } throw new Exception("resize did not redraw header"); }
  static void WaitStatus(Process p,string text,ref ulong peak) { var until=DateTime.UtcNow.AddSeconds(30); while(DateTime.UtcNow<until) { if(p.HasExited) throw new Exception("process exited before status "+text); peak=Math.Max(peak,Memory(p)); if(Status().Contains(text)) return; Thread.Sleep(20); } throw new Exception("status not seen: "+text+"; got: "+Status()); }
+ static string FullContent() { var h=Open("CONOUT$"); try { SCREENINFO info; Check(GetConsoleScreenBufferInfo(h,out info),"screen size"); int count=info.size.X*(info.window.bottom-info.window.top+1); var s=new StringBuilder(count+1); uint n; Check(ReadConsoleOutputCharacter(h,s,(uint)count,new COORD(0,info.window.top),out n),"read full content"); return s.ToString().Substring(0,(int)n); } finally { CloseHandle(h); } }
+ static void WaitDiff(Process p,string text,ref ulong peak) { var until=DateTime.UtcNow.AddSeconds(15); while(DateTime.UtcNow<until) { if(p.HasExited) throw new Exception("process exited before auto refresh"); peak=Math.Max(peak,Memory(p)); if(FullContent().Contains(text)) return; Thread.Sleep(20); } throw new Exception("automatic diff refresh missing: "+text+"; screen: "+FullContent()); }
  public static string Run(string exe,string scenario,bool release,string fixture) {
   // The child inherits this test-only setting; avoid interactive Windows error dialogs.
   SetErrorMode(0x0001u | 0x0002u | 0x8000u);
@@ -100,6 +102,12 @@ public static class ConsoleProbe {
    uint modeRunning; Check(GetConsoleMode(input,out modeRunning),"running input mode"); if((modeRunning & 8u)==0) throw new Exception("ENABLE_WINDOW_INPUT not enabled while running");
    if(scenario=="ctrlc") WaitStatus(p,"Memory (private_working_set):",ref peak);
    if(!panic) {
+    // No terminal input: the filesystem notification alone must redraw Review.
+    var file=System.IO.Path.Combine(fixture,"sample.txt");
+    System.IO.File.WriteAllText(file,"autorefresh_native_write\n"); WaitDiff(p,"autorefresh_native_write",ref peak);
+    var temporary=System.IO.Path.Combine(fixture,"replacement.tmp");
+    System.IO.File.WriteAllText(temporary,"autorefresh_atomic_save\n"); System.IO.File.Delete(file); System.IO.File.Move(temporary,file); WaitDiff(p,"autorefresh_atomic_save",ref peak);
+    System.IO.File.WriteAllText(System.IO.Path.Combine(fixture,"new-file.txt"),"new file\n"); WaitDiff(p,"new-file.txt",ref peak);
     foreach(var item in new[]{Tuple.Create('2',"Edit"),Tuple.Create('3',"Vibe"),Tuple.Create('5',"Models")}) { Key(input,item.Item1,false); WaitScreen(p,item.Item2,ref peak,true); }
     Key(input,'1',false); WaitScreen(p,"Changes",ref peak);
     var originalSize=Shrink(); WaitResize(p,ref peak); RestoreSize(originalSize); WaitScreen(p,"Changes",ref peak);
