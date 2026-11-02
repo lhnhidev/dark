@@ -43,7 +43,7 @@ fn run() -> io::Result<()> {
         match arg.to_str() {
             Some("--help" | "-h") => {
                 println!(
-                    "dark {}\n\nUsage: dark [OPTIONS]\n\nOptions:\n  -h, --help       Show this help\n  -V, --version    Show version\n      --debug      Show process memory\n      --self-test  Check all seven tabs without a terminal\n      --self-test-review  Load the current Git repository and measure review memory\n      --self-test-panic  Check terminal cleanup on panic\n\nKeys (all require Alt): Alt+1 Review, Alt+2 Edit, Alt+3 Vibe, Alt+4 Git commit,\n      Alt+5 Models, Alt+6 View, Alt+7 Help\n      Alt+l/r panes, Alt+f focus, Alt+n/N hunks, Alt+a accept, Alt+x reject\n      Alt+u restore session, Alt+e editor, Alt+v split/unified\n      Alt+[/] resize file list, Alt+\\ reset width; drag the separator with the left mouse button\n      Alt+arrows or Alt+j/k navigate, Alt+Enter open, Alt+y/n confirm/cancel\n      Alt+q or Alt+Ctrl+c quit; bare keys do not execute commands\n\nEnvironment: DARK_SNAPSHOT_KEEP (default 10), DARK_EDITOR / VISUAL / EDITOR,\n             DARK_TAB_WIDTH (default 8), DARK_WATCH_HELPER, NO_COLOR",
+                    "dark {}\n\nUsage: dark [OPTIONS]\n\nOptions:\n  -h, --help       Show this help\n  -V, --version    Show version\n      --debug      Show process memory\n      --self-test  Check all seven tabs without a terminal\n      --self-test-review  Load the current Git repository and measure review memory\n      --self-test-panic  Check terminal cleanup on panic\n\nKeys (all require Alt): Alt+1 Review, Alt+2 Edit, Alt+3 Vibe, Alt+4 Git commit,\n      Alt+5 Models, Alt+6 View, Alt+7 Help\n      Alt+l/r panes, Alt+f focus, Alt+n/N hunks, Alt+a accept, Alt+x reject\n      Alt+u restore session, Alt+e editor, Alt+v split/unified\n      Alt+-/Alt+= resize file list, Alt+0 reset width; drag the separator with the left mouse button\n      Alt+arrows or Alt+j/k navigate, Alt+Enter open, Alt+y/n confirm/cancel\n      Alt+q or Alt+Ctrl+c quit; bare keys do not execute commands\n\nEnvironment: DARK_SNAPSHOT_KEEP (default 10), DARK_EDITOR / VISUAL / EDITOR,\n             DARK_TAB_WIDTH (default 8), DARK_WATCH_HELPER, NO_COLOR",
                     env!("CARGO_PKG_VERSION")
                 );
                 return Ok(());
@@ -384,7 +384,7 @@ fn run_review_self_test() -> io::Result<()> {
     use crossterm::event::{MouseButton, MouseEvent, MouseEventKind};
     for (width, height) in [(160, 44), (80, 24)] {
         workbench.draw(&mut renderer, &mut output, 0, width, height, "")?;
-        for code in ['[', ']', ']', '\\'] {
+        for code in ['-', '=', '=', '0'] {
             workbench.key(KeyEvent::new(KeyCode::Char(code), KeyModifiers::ALT));
             workbench.draw(&mut renderer, &mut output, 0, width, height, "")?;
             peak = peak.max(sample_or_report()?);

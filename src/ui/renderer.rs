@@ -442,7 +442,7 @@ fn build_line(l: &mut Line<'_>, v: &View<'_>, width: u16, height: u16, row: u16)
                 &[
                     ("Alt+a", "accept"),
                     ("Alt+x", "reject"),
-                    ("Alt+[/]/\\", "c\u{1ed9}t"),
+                    ("Alt+-/=/0", "c\u{1ed9}t"),
                     ("Alt+l/r", "khung"),
                     ("Alt+n/N", "hunk"),
                     ("Alt+u", "ho\u{e0}n t\u{e1}c"),
@@ -1249,7 +1249,7 @@ mod tests {
             make_line(&mut line, &view, width, 24, 23, (false, false, 8));
             assert!(line.contains("accept"), "{line}");
             assert!(line.contains("reject"), "{line}");
-            assert!(line.contains("Alt+[/]/\\"), "{line}");
+            assert!(line.contains("Alt+-/=/0"), "{line}");
         }
     }
 

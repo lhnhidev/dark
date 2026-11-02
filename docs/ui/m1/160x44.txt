@@ -1,4 +1,4 @@
- dark  Alt+1 Review Alt+2 Edit Alt+3 Vibe Alt+4 Git commit Alt+5 Models Alt+6 View Alt+7 Help                  shop-api · ⎇ main · snapshot 11:14 · so với HEAD
+ dark  Alt+1 Review Alt+2 Edit Alt+3 Vibe Alt+4 Git commit Alt+5 Models Alt+6 View Alt+7 Help                  shop-api · ⎇ main · snapshot 11:31 · so với HEAD
  Changes 31 file · 0/31 đã xem │ src/auth/session.ts  hunk 1/1                                                                                  +50 −50  split
 │ ▾ Staged (2)                 │▌@@ -1,53 +1,53 @@
 │▌[x] M session.ts      +50 −50│▌    1 − export const value_000 = 'old value 0:0';             │    1 + export const value_000 = 'new value 0:0';
@@ -41,4 +41,4 @@
 │ └──────────────────────────┘ │▌   38 − export const value_037 = 'old value 0:37';            │   38 + export const value_037 = 'new value 0:37';
 │ Alt+g stage · Alt+c commit   │▌   39 − export const value_038 = 'old value 0:38';            │   39 + export const value_038 = 'new value 0:38';
 └──────────────────────────────┘
- REVIEW  Alt+a accept  Alt+x reject  Alt+[/]/\ cột  Alt+l/r khung  Alt+n/N hunk  Alt+u hoàn tác  Alt+e editor ngoài  Alt+q thoát             0/31 file đã xem
+ REVIEW  Alt+a accept  Alt+x reject  Alt+-/=/0 cột  Alt+l/r khung  Alt+n/N hunk  Alt+u hoàn tác  Alt+e editor ngoài  Alt+q thoát             0/31 file đã xem

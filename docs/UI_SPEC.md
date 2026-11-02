@@ -7,9 +7,11 @@ Tài liệu này là **chuẩn bắt buộc** cho giao diện của dark. Ảnh 
 
 **Thay đổi được duyệt 02/11/2026 — chỉnh cột và toàn bộ phím Alt:** mọi lệnh bàn phím đang có, kể cả điều hướng, xác nhận và thoát, phải giữ Alt. Phím chữ không kèm Alt không thực thi lệnh. `Alt+1…7` đổi tab; `Alt+f` đổi khung (không dùng Alt+Tab vì Windows giữ tổ hợp này); `Alt+↑/↓/←/→` và `Alt+j/k` điều hướng; `Alt+PageUp/PageDown/Home` cuộn; `Alt+Enter` mở; `Alt+a/x`, `Alt+n/N`, `Alt+l/r`, `Alt+v`, `Alt+u`, `Alt+e`, `Alt+?`, `Alt+/` giữ chức năng tương ứng. Hộp xác nhận dùng `Alt+y/n` xác nhận/hủy (không phụ thuộc Alt+Esc vì hệ điều hành có thể giữ tổ hợp này); `Alt+q` thoát và `Alt+Ctrl+c` là cách thoát dự phòng. Các mô tả thao tác ở milestone sau cũng tuân theo quy tắc thêm Alt; chưa triển khai tính năng của milestone sau. Stage file dùng `Alt+g`, không dùng Alt+Space vì xung đột menu cửa sổ Windows.
 
-Cột danh sách Review có thể kéo tại đường phân cách bằng nút chuột trái, hoặc `Alt+[` thu / `Alt+]` giãn mỗi lần 4 cột, `Alt+\` về mặc định. Độ rộng tùy chỉnh chỉ nhớ trong phiên, không tự giãn theo tên file. Khi cả hai khung hiện, giữ danh sách ≥24 cột và diff ≥40 cột; độ rộng thực tế được kẹp theo cửa sổ, nhưng nhớ mức người dùng chọn khi cửa sổ mở rộng lại. Mặc định vẫn 20%, giới hạn 24–40 cột như ảnh. Diff <120 cột tự về unified. Không cho kéo khi chỉ còn một khung, tab khác, màn hình quá nhỏ hoặc có hộp xác nhận. Chỉ kéo vùng nội dung/tiêu đề, không nhận thanh tab hay trạng thái; bắt đầu ở cột phân cách và kết thúc khi thả chuột, đổi tab, resize cửa sổ hoặc mở hộp xác nhận. Kéo chỉ vẽ lại, không đọc lại Git/diff. Giữ vị trí cuộn bằng dòng code khi split/unified đổi. Mouse capture bật khi vào terminal, tắt khi thoát, panic hoặc nhường cho editor ngoài; terminal hỗ trợ có thể dùng Shift để chọn chữ như thông thường. Không yêu cầu giữ Alt khi kéo chuột.
+Cột danh sách Review có thể kéo tại đường phân cách bằng nút chuột trái, hoặc `Alt+-` thu / `Alt+=` giãn mỗi lần 4 cột, `Alt+0` về mặc định. Độ rộng tùy chỉnh chỉ nhớ trong phiên, không tự giãn theo tên file. Khi cả hai khung hiện, giữ danh sách ≥24 cột và diff ≥40 cột; độ rộng thực tế được kẹp theo cửa sổ, nhưng nhớ mức người dùng chọn khi cửa sổ mở rộng lại. Mặc định vẫn 20%, giới hạn 24–40 cột như ảnh. Diff <120 cột tự về unified. Không cho kéo khi chỉ còn một khung, tab khác, màn hình quá nhỏ hoặc có hộp xác nhận. Chỉ kéo vùng nội dung/tiêu đề, không nhận thanh tab hay trạng thái; bắt đầu ở cột phân cách và kết thúc khi thả chuột, đổi tab, resize cửa sổ hoặc mở hộp xác nhận. Kéo chỉ vẽ lại, không đọc lại Git/diff. Giữ vị trí cuộn bằng dòng code khi split/unified đổi. Mouse capture bật khi vào terminal, tắt khi thoát, panic hoặc nhường cho editor ngoài; terminal hỗ trợ có thể dùng Shift để chọn chữ như thông thường. Không yêu cầu giữ Alt khi kéo chuột.
 
 ## 1. Ảnh tham chiếu
+
+**Sửa tương thích WSL 02/11/2026:** bộ phím chỉnh cột chính là `Alt+-` thu, `Alt+=` giãn 4 cột và `Alt+0` về mặc định. `Alt+[` / `Alt+]` / `Alt+\` còn là alias khi terminal gửi được phím rõ ràng. Legacy terminal gửi Alt+[ dưới dạng `ESC [` trùng tiền tố CSI, nên không quảng bá nó làm phím chính và không dùng timeout để đoán (có thể phá chuỗi chuột/mũi tên đến chậm). Cột ở mức tối thiểu 24 sẽ không thu thêm.
 
 | Tab | Ảnh | Làm ở milestone |
 |---|---|---|
@@ -116,7 +118,7 @@ Biến, dấu câu và phần còn lại dùng `text`. Bộ tô màu tự viết
 | < 80 cột hoặc < 24 dòng | Chỉ hiện thông báo "Cửa sổ quá nhỏ, cần ít nhất 80×24" |
 | < 100 cột | Nhãn tab rút gọn thành số + chữ đầu (`1 Rev`, `2 Edt`...); bỏ thông tin bên phải thanh tab |
 | Khung diff < 120 cột | Diff tự chuyển từ 2 cột sang 1 cột (inline) |
-| Panel trái | Mặc định 20%, giới hạn 24–40 cột; kéo đường phân cách hoặc dùng Alt+[ / Alt+] / Alt+\; giữ danh sách ≥24 và diff ≥40 cột |
+| Panel trái | Mặc định 20%, giới hạn 24–40 cột; kéo đường phân cách hoặc dùng Alt+- / Alt+= / Alt+0; giữ danh sách ≥24 và diff ≥40 cột |
 
 ## 4. Tab 1 · Review
 
@@ -175,7 +177,7 @@ Biến, dấu câu và phần còn lại dùng `text`. Bộ tô màu tự viết
 | `Alt+u` | Hoàn tác cả lượt AI về snapshot (có xác nhận) |
 | `Alt+e` | Mở file trong editor ngoài |
 | `Alt+v` | Đổi split / unified |
-| `Alt+[` / `Alt+]` / `Alt+\` | Thu / giãn danh sách 4 cột / về độ rộng mặc định |
+| `Alt+-` / `Alt+=` / `Alt+0` | Thu / giãn danh sách 4 cột / về độ rộng mặc định |
 | `Alt+y` / `Alt+n` | Xác nhận / hủy hộp đang mở |
 | `Alt+q` | Thoát |
 

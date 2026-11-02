@@ -114,6 +114,33 @@ fn mouse(kind: MouseEventKind, column: u16, row: u16) -> MouseEvent {
 }
 
 #[test]
+fn portable_resize_shortcuts_require_alt_and_keep_legacy_aliases() {
+    let f = Fixture::new(&[("a.txt", "old\n")]);
+    f.write("a.txt", "new\n");
+    let mut w = Workbench::open(&f.0);
+    render(&mut w);
+    for ch in ['-', '=', '0'] {
+        w.key(KeyEvent::new(KeyCode::Char(ch), KeyModifiers::NONE));
+        assert_eq!(w.file_width(), None);
+    }
+    key(&mut w, KeyCode::Char('='));
+    assert_eq!(w.file_width(), Some(36));
+    key(&mut w, KeyCode::Char('-'));
+    assert_eq!(w.file_width(), Some(32));
+    key(&mut w, KeyCode::Char('0'));
+    assert_eq!(w.file_width(), None);
+    key(&mut w, KeyCode::Char(']'));
+    key(&mut w, KeyCode::Char('['));
+    assert_eq!(w.file_width(), Some(32));
+    key(&mut w, KeyCode::Char('\\'));
+    assert_eq!(w.file_width(), None);
+    for _ in 0..8 {
+        key(&mut w, KeyCode::Char('-'));
+    }
+    assert_eq!(w.file_width(), Some(24));
+}
+
+#[test]
 fn dragging_separator_preserves_selection_and_remembers_width() {
     let before: String = (1..=40).map(|n| format!("line {n}\n")).collect();
     let changed = before

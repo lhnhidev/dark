@@ -187,7 +187,7 @@ Chi tiết theo từng tab: [UI_SPEC.md](UI_SPEC.md).
 | `Alt+?` / `Alt+/` | Review | Hỏi agent / ghi chú cho agent (M5) |
 | `Alt+u` | Review | Hoàn tác cả lượt AI |
 | `Alt+e` | Review | Mở editor ngoài |
-| `Alt+[` / `Alt+]` / `Alt+\` | Review | Thu / giãn cột danh sách / về mặc định; cũng kéo được bằng chuột |
+| `Alt+-` / `Alt+=` / `Alt+0` | Review | Thu / giãn cột danh sách / về mặc định; cũng kéo được bằng chuột |
 | `Alt+y` / `Alt+n` | Hộp xác nhận | Đồng ý / hủy |
 | `Alt+g` / `Alt+s` / `Alt+c` | Review (panel) | Stage file / stage tất cả / commit |
 | `Alt+Ctrl+S`, `Alt+Ctrl+Z`, `Alt+Ctrl+Y`, `Alt+Ctrl+F`, `Alt+Ctrl+G`, `Alt+Ctrl+B` | Edit | Lưu, hoàn tác, làm lại, tìm, nhảy dòng, cây thư mục |

@@ -1,5 +1,23 @@
 # M1 — Khung giao diện và Review
 
+## Sửa tương thích 02/11/2026 — phím thu cột trên WSL
+
+Legacy Alt+[ gửi `ESC [` trùng tiền tố CSI, nên Crossterm 0.29 có thể chờ phần còn lại thay vì tạo KeyEvent. Unit test trước chỉ truyền KeyEvent đã giải mã, chưa phát hiện vấn đề này. Phím chính nay là **Alt+- thu, Alt+= giãn, Alt+0 về mặc định**; alias ngoặc/vạch chéo giữ cho terminal gửi được phím rõ ràng. Không đoán bằng timeout và không thay parser, protocol, dependency hoặc thread.
+
+Đã bổ sung kiểm thử chuỗi terminal thật cho `ESC -`, `ESC =`, `ESC 0`, cùng `CSI 91;3u` biểu diễn Alt+[ rõ ràng; kiểm mỗi lần đường phân cách di chuyển đúng. Console Windows thử cả ba phím và kéo chuột. Script Windows dùng VkKeyScanW để gán đúng virtual key: trước sửa script, mã ký tự `-` bị gán thành VK_INSERT, làm lần thử đầu thất bại dù mã ứng dụng nhận phím đúng.
+
+Hai runner đầy đủ cuối cùng ở `.dark/verification/m1/portable-resize/final-{windows,musl}/` đạt exit 0 (fmt, Clippy, test debug/release, build, RAM và terminal). Terminal Windows 10/10, Linux PTY 6/6. Lượt musl đầu có hai test retention snapshot thất bại; chạy lại riêng review đạt 22/22 và toàn runner cuối đạt, không thay mã snapshot để làm test qua. Log lượt đầu và rerun vẫn giữ; chưa chốt nguyên nhân tính không ổn định này.
+
+Fixture 30 file / 3.000 dòng đổi, watcher và đường xử lý chỉnh cột vẫn hoạt động khi đo:
+
+| Chỉ số bản sửa | Windows EX2 private working set | Linux musl VmRSS |
+|---|---:|---:|
+| Idle: lớn nhất trong 5 mẫu | 1.429.504 byte | 925.696 byte |
+| Đỉnh lấy mẫu sau thao tác | 1.576.960 byte | 925.696 byte |
+| Binary release | 558.080 byte | 848.760 byte |
+
+Không coi đỉnh lấy mẫu là đỉnh toàn bộ đời process; không thay metric hoặc ngưỡng. Các số ở phần bên dưới là lịch sử các lần bàn giao trước. Bản ghi 160/80 cột cũng được cập nhật nhãn phím mới; bản sửa không đo lại riêng cây helper/Git Windows. Tại giới hạn tối thiểu 24 cột, phím thu không làm cột nhỏ hơn nữa.
+
 ## Bổ sung 02/11/2026 — kéo cột và toàn bộ phím Alt
 
 Chủ dự án đã duyệt chỉnh độ rộng danh sách bằng chuột và yêu cầu **mọi phím tắt đang có đều giữ Alt**. `Alt+[` thu, `Alt+]` giãn 4 cột, `Alt+\` về mặc định; giữ độ rộng chọn trong phiên và kẹp theo cửa sổ (danh sách ≥24, diff ≥40 cột). Kéo đường phân cách bằng nút trái không tải lại Git/diff. `Alt+f` đổi khung để tránh Alt+Tab của Windows; `Alt+q`/`Alt+Ctrl+C` thoát; hộp xác nhận dùng `Alt+y/n`. Phím chữ và Ctrl+C cũ không chạy lệnh. Alt+mũi tên có Alt+j/k dự phòng khi terminal giữ phím điều hướng.

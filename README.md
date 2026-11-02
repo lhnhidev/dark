@@ -58,7 +58,7 @@ Chi tiết: [PLANNING.md](docs/PLANNING.md).
 
 ## Chạy bản hiện tại
 
-**Mọi phím tắt đều giữ Alt:** `Alt+1…7` đổi tab, `Alt+q` thoát; hộp xác nhận dùng `Alt+y` đồng ý / `Alt+n` hủy. Kéo đường phân cách bằng chuột trái hoặc dùng `Alt+[` thu, `Alt+]` giãn cột danh sách, `Alt+\` về mặc định. Độ rộng chỉ nhớ trong phiên; phím chữ thường không chạy lệnh. Terminal hỗ trợ thường cho giữ Shift để chọn chữ khi bật chế độ chuột.
+**Mọi phím tắt đều giữ Alt:** `Alt+1…7` đổi tab, `Alt+q` thoát; hộp xác nhận dùng `Alt+y` đồng ý / `Alt+n` hủy. Kéo đường phân cách bằng chuột trái hoặc dùng `Alt+-` thu, `Alt+=` giãn cột danh sách, `Alt+0` về mặc định. Độ rộng chỉ nhớ trong phiên; phím chữ thường không chạy lệnh. Terminal hỗ trợ thường cho giữ Shift để chọn chữ khi bật chế độ chuột.
 
 Bản M1 có bảy tab; Review hoạt động, các tab còn lại chờ milestone tương ứng. Chạy dark trong repo Git cần review. Diff so với HEAD nên vẫn hiện thay đổi đã có trước khi mở app; snapshot phục hồi lưu trạng thái lúc mở phiên.
 

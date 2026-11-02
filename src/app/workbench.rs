@@ -467,12 +467,19 @@ impl Workbench {
             KeyCode::Char('v') => {
                 self.unified = !self.unified;
             }
-            KeyCode::Char('[') | KeyCode::Char(']') | KeyCode::Char('\\') => {
+            KeyCode::Char('[')
+            | KeyCode::Char(']')
+            | KeyCode::Char('\\')
+            | KeyCode::Char('-')
+            | KeyCode::Char('=')
+            | KeyCode::Char('0') => {
                 let layout = self.layout(self.viewport.0, self.viewport.1);
                 if !layout.small && self.show_files && self.show_diff {
                     let requested = match key.code {
-                        KeyCode::Char('[') => Some((layout.files as u16).saturating_sub(4).max(24)),
-                        KeyCode::Char(']') => Some(
+                        KeyCode::Char('[') | KeyCode::Char('-') => {
+                            Some((layout.files as u16).saturating_sub(4).max(24))
+                        }
+                        KeyCode::Char(']') | KeyCode::Char('=') => Some(
                             (layout.files as u16)
                                 .saturating_add(4)
                                 .min(self.viewport.0.saturating_sub(41).max(24)),

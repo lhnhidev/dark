@@ -124,6 +124,20 @@ def run(binary, profile, scenario):
                     raise RuntimeError(f"body {expected!r} not seen; output={chunk!r}")
                 pump()
 
+        def wait_border(column, start):
+            deadline = time.monotonic() + TIMEOUT
+            while True:
+                chunk = bytes(transcript[start:])
+                pos = chunk.rfind(b"\x1b[13;1H")
+                if pos >= 0:
+                    row = chunk[pos + len(b"\x1b[13;1H"):].split(b"\x1b[14;1H", 1)[0]
+                    row = re.sub(rb"\x1b\[[0-9;]*[A-Za-z]", b"", row).decode("utf-8", "replace")
+                    if len(row) > column and row[column] == "\u2502":
+                        return
+                if process.poll() is not None or time.monotonic() >= deadline:
+                    raise RuntimeError(f"separator not at column {column}: {chunk!r}")
+                pump()
+
         wait_for(b"Changes", 0)
         if scenario != "panic":
             wait_for(b"sample.txt", 0)
@@ -139,22 +153,19 @@ def run(binary, profile, scenario):
             start = len(transcript)
             os.write(master, b"\x1b1")
             wait_for(b"Changes", start)
+            # Test actual terminal bytes, not already-decoded synthetic KeyEvents.
+            # Legacy Alt+[ is the ambiguous CSI prefix; CSI-u can encode it clearly.
+            for sequence, column in ((b"\x1b=", 27), (b"\x1b-", 23),
+                                     (b"\x1b=", 27), (b"\x1b0", 23),
+                                     (b"\x1b=", 27), (b"\x1b[91;3u", 23)):
+                start = len(transcript)
+                os.write(master, sequence)
+                wait_border(column, start)
             # SGR mouse coordinates are one-based; move the separator from
             # column 24 to column 28 and verify the rendered border moved.
             start = len(transcript)
             os.write(master, b"\x1b[<0;24;13M\x1b[<32;28;13M\x1b[<0;28;13m")
-            deadline = time.monotonic() + TIMEOUT
-            while True:
-                chunk = bytes(transcript[start:])
-                pos = chunk.rfind(b"\x1b[13;1H")
-                if pos >= 0:
-                    row = chunk[pos + len(b"\x1b[13;1H"):].split(b"\x1b[14;1H", 1)[0]
-                    row = re.sub(rb"\x1b\[[0-9;]*[A-Za-z]", b"", row).decode("utf-8", "replace")
-                    if len(row) > 27 and row[27] == "\u2502":
-                        break
-                if process.poll() is not None or time.monotonic() >= deadline:
-                    raise RuntimeError(f"mouse drag did not move border: {chunk!r}")
-                pump()
+            wait_border(27, start)
             if scenario == "ctrlc" and b"Memory (rss):" not in transcript:
                 raise RuntimeError("debug memory status missing")
             # A fresh frame after SIGWINCH must arrive before any subsequent key.

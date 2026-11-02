@@ -75,7 +75,8 @@ public static class ConsoleProbe {
  static string Status() { var h=Open("CONOUT$"); try { SCREENINFO info; Check(GetConsoleScreenBufferInfo(h,out info),"screen size"); var s=new StringBuilder(info.size.X+1); uint n; Check(ReadConsoleOutputCharacter(h,s,(uint)info.size.X,new COORD(0,info.window.bottom),out n),"read status"); return s.ToString().Substring(0,(int)n); } finally { CloseHandle(h); } }
  static string Body() { var h=Open("CONOUT$"); try { SCREENINFO info; Check(GetConsoleScreenBufferInfo(h,out info),"screen size"); int row=info.window.top+(info.window.bottom-info.window.top+1)/2; var s=new StringBuilder(info.size.X+1); uint n; Check(ReadConsoleOutputCharacter(h,s,(uint)info.size.X,new COORD(info.window.left,(short)row),out n),"read body"); return s.ToString().Substring(0,(int)n); } finally { CloseHandle(h); } }
  static ulong Memory(Process p) { MEM m=new MEM(); m.cb=(uint)Marshal.SizeOf(typeof(MEM)); Check(GetProcessMemoryInfo(p.Handle,ref m,m.cb),"GetProcessMemoryInfo EX2"); return m.privateWorking.ToUInt64(); }
- static void Key(IntPtr input,char c,bool ctrl) { var e=new INPUT { type=1,down=1,repeat=1,vk=(ushort)char.ToUpperInvariant(c),ch=ctrl?'\x03':c,control=ctrl?10u:2u }; uint n; Check(WriteConsoleInputW(input,new[]{e},1,out n)&&n==1,"WriteConsoleInput"); }
+ [DllImport("user32.dll",CharSet=CharSet.Unicode)] static extern short VkKeyScanW(char c);
+ static void Key(IntPtr input,char c,bool ctrl) { short mapping=VkKeyScanW(c); if(mapping==-1) throw new Exception("No virtual key for "+c); uint modifiers=(ctrl?10u:2u) | ((mapping & 0x100)!=0?0x10u:0u); var e=new INPUT { type=1,down=1,repeat=1,vk=(ushort)(mapping & 0xff),ch=ctrl?'\x03':c,control=modifiers }; uint n; Check(WriteConsoleInputW(input,new[]{e},1,out n)&&n==1,"WriteConsoleInput"); }
  static void BareKey(IntPtr input,char c) { var e=new INPUT { type=1,down=1,repeat=1,vk=(ushort)char.ToUpperInvariant(c),ch=c }; uint n; Check(WriteConsoleInputW(input,new[]{e},1,out n)&&n==1,"WriteConsoleInput bare key"); }
  static void Mouse(IntPtr input,short x,short y,uint buttons,uint flags) { var e=new INPUT { type=2,mousePos=new COORD(x,y),buttons=buttons,mouseFlags=flags }; uint n; Check(WriteConsoleInputW(input,new[]{e},1,out n)&&n==1,"WriteConsoleInput mouse"); }
  static void WaitBorder(Process p,int column,ref ulong peak) { var until=DateTime.UtcNow.AddSeconds(15); while(DateTime.UtcNow<until) { if(p.HasExited) throw new Exception("process exited during drag"); peak=Math.Max(peak,Memory(p)); var row=Body(); if(column<row.Length && row[column]=='\u2502') return; Thread.Sleep(20); } throw new Exception("drag border not seen at "+column+": "+Body()); }
@@ -115,6 +116,10 @@ public static class ConsoleProbe {
     foreach(var item in new[]{Tuple.Create('2',"Edit"),Tuple.Create('3',"Vibe"),Tuple.Create('5',"Models")}) { Key(input,item.Item1,false); WaitScreen(p,item.Item2,ref peak,true); }
     Key(input,'1',false); WaitScreen(p,"Changes",ref peak);
     int width=geometry.window.right-geometry.window.left+1; short oldBorder=(short)(Math.Min(40,Math.Max(24,width/5))-1); short newBorder=(short)Math.Min(oldBorder+4,width-42); short mouseY=(short)(geometry.window.top+(geometry.window.bottom-geometry.window.top+1)/2);
+    Key(input,'=',false); WaitBorder(p,newBorder,ref peak);
+    Key(input,'-',false); WaitBorder(p,oldBorder,ref peak);
+    Key(input,'=',false); WaitBorder(p,newBorder,ref peak);
+    Key(input,'0',false); WaitBorder(p,oldBorder,ref peak);
     Mouse(input,(short)(geometry.window.left+oldBorder),mouseY,1,0); Mouse(input,(short)(geometry.window.left+newBorder),mouseY,1,1); Mouse(input,(short)(geometry.window.left+newBorder),mouseY,0,0); WaitBorder(p,newBorder,ref peak);
     var originalSize=Shrink(); WaitResize(p,ref peak); RestoreSize(originalSize); WaitScreen(p,"Changes",ref peak);
     for(int i=0;i<5;i++) { Thread.Sleep(100); idle=Math.Max(idle,Memory(p)); peak=Math.Max(peak,idle); }

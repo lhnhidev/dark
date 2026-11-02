@@ -79,7 +79,7 @@ Triển khai và kiểm chứng nội bộ: xem [M1_VERIFICATION.md](M1_VERIFICA
 - [x] `Alt+a`/`Alt+x`: sau khi reject, `git diff` khớp đúng phần còn lại. `Alt+u` hoàn tác cả lượt có xác nhận, không hỏng index/nhánh.
 - [x] `Alt+l`, `Alt+r`, `Alt+f`, `Alt+n`/`Alt+Shift+n`, `Alt+e` hoạt động như UI_SPEC §4.4.
 - [x] Tự cập nhật diff qua thông báo hệ điều hành, gộp sự kiện và giữ vị trí review; WSL đọc ổ Windows có cầu nối đo riêng RAM (C6 đưa lên từ M3 theo duyệt 02/11/2026; xem bổ sung kiểm chứng M1).
-- [x] Điều chỉnh cột danh sách bằng kéo chuột hoặc Alt+[ / Alt+] / Alt+\; mọi phím tắt cần Alt theo duyệt bổ sung 02/11/2026; Windows/WSL terminal thật và RAM release đạt.
+- [x] Điều chỉnh cột danh sách bằng kéo chuột hoặc Alt+- / Alt+= / Alt+0; mọi phím tắt cần Alt theo duyệt bổ sung 02/11/2026; Windows/WSL terminal thật và RAM release đạt.
 - [ ] Code trong diff tô màu cú pháp theo UI_SPEC §2 cho các ngôn ngữ đã liệt kê; giữ nền diff; RAM review vẫn < 2 MB (E9 đưa lên từ M9 theo yêu cầu chủ dự án, 01/11/2026).
 - [x] Repo không phải git, file nhị phân, file lớn, tên file Unicode: báo rõ, không crash.
 - [x] Giao diện ở 160×44 khớp [ui/1-review.png](ui/1-review.png) (trừ ghi chú AI, thuộc M5); kiểm tra thêm ở 120, 100, 80 cột.

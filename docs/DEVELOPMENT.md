@@ -10,7 +10,7 @@ Project hiện tại: `D:\workspace\dark`; trong WSL là `/mnt/d/workspace/dark`
 
 ## Windows
 
-Phím hiện tại đều cần Alt; bộ kiểm terminal dùng Alt+q/Alt+Ctrl+C, thử phím cũ không chạy lệnh và kéo đường phân cách thật. `--self-test-review` cũng thử Alt+[ / Alt+] / Alt+\ và đường xử lý kéo trên fixture RAM 30 file. Mouse capture phải tắt khi thoát/panic/nhường editor, Windows khôi phục console mode gốc.
+Phím hiện tại đều cần Alt; bộ kiểm terminal dùng Alt+q/Alt+Ctrl+C, thử phím cũ không chạy lệnh và kéo đường phân cách thật. `--self-test-review` cũng thử Alt+- / Alt+= / Alt+0 và đường xử lý kéo trên fixture RAM 30 file. Mouse capture phải tắt khi thoát/panic/nhường editor, Windows khôi phục console mode gốc.
 
 ```powershell
 cd D:\workspace\dark
