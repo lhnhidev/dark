@@ -113,7 +113,7 @@ public static class ConsoleProbe {
     var temporary=System.IO.Path.Combine(fixture,"replacement.tmp");
     System.IO.File.WriteAllText(temporary,"autorefresh_atomic_save\n"); System.IO.File.Delete(file); System.IO.File.Move(temporary,file); WaitDiff(p,"autorefresh_atomic_save",ref peak);
     System.IO.File.WriteAllText(System.IO.Path.Combine(fixture,"new-file.txt"),"new file\n"); WaitDiff(p,"new-file.txt",ref peak);
-    foreach(var item in new[]{Tuple.Create('2',"Edit"),Tuple.Create('3',"Vibe"),Tuple.Create('5',"Models")}) { Key(input,item.Item1,false); WaitScreen(p,item.Item2,ref peak,true); }
+    foreach(var item in new[]{Tuple.Create('2',"Edit"),Tuple.Create('3',"Vibe"),Tuple.Create('4',"Git commit"),Tuple.Create('5',"Models"),Tuple.Create('6',"View"),Tuple.Create('7',"Help")}) { BareKey(input,item.Item1); WaitScreen(p,item.Item2,ref peak,true); }
     Key(input,'1',false); WaitScreen(p,"Changes",ref peak);
     int width=geometry.window.right-geometry.window.left+1; short oldBorder=(short)(Math.Min(40,Math.Max(24,width/5))-1); short newBorder=(short)Math.Min(oldBorder+4,width-42); short mouseY=(short)(geometry.window.top+(geometry.window.bottom-geometry.window.top+1)/2);
     Key(input,'=',false); WaitBorder(p,newBorder,ref peak);

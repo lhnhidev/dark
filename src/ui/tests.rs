@@ -490,7 +490,7 @@ fn tab_bar_right_info_is_flush_right_and_tab_colors_match_spec() {
             assert!(s.ends_with(info), "w{w}: {s:?}");
         } else {
             // Not enough room: info is clipped, never overlaps the tabs.
-            assert!(s.contains("Alt+7 Help"), "w{w}: {s:?}");
+            assert!(s.contains(" 7 Help"), "w{w}: {s:?}");
         }
         assert_eq!(row.len(), usize::from(w) - 1);
         let sel = find(row, "Review").unwrap();

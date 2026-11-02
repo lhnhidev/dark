@@ -10,7 +10,7 @@ Project hiện tại: `D:\workspace\dark`; trong WSL là `/mnt/d/workspace/dark`
 
 ## Windows
 
-Phím hiện tại đều cần Alt; bộ kiểm terminal dùng Alt+q/Alt+Ctrl+C, thử phím cũ không chạy lệnh và kéo đường phân cách thật. `--self-test-review` cũng thử Alt+- / Alt+= / Alt+0 và đường xử lý kéo trên fixture RAM 30 file. Mouse capture phải tắt khi thoát/panic/nhường editor, Windows khôi phục console mode gốc.
+Ngoại trừ 1…7 đổi tab trực tiếp, các phím lệnh đều cần Alt; bộ kiểm terminal dùng Alt+q/Alt+Ctrl+C, thử phím cũ không chạy lệnh và kéo đường phân cách thật. `--self-test-review` cũng thử Alt+- / Alt+= / Alt+0 và đường xử lý kéo trên fixture RAM 30 file. Mouse capture phải tắt khi thoát/panic/nhường editor, Windows khôi phục console mode gốc.
 
 ```powershell
 cd D:\workspace\dark
@@ -52,7 +52,7 @@ Script cần Python 3, chạy cùng thao tác trên PTY, chờ 1,2 giây rồi l
 bash scripts/linux-interactive.sh musl
 ```
 
-Nhấn Alt+1…7 để đổi màn hình, Alt+q hoặc Alt+Ctrl+C để thoát. Trong terminal WSL thứ hai, `python3 scripts/linux-terminal-resize.py 12 60` đổi kích thước PTY thật; kiểm tra redraw đến trước khi gửi thêm phím. Runner lưu PID/TTY ở `.dark/verification/manual`; helper xác nhận TTY đúng process trước khi đổi. GNU chọn bằng đối số `gnu`.
+Nhấn 1…7 (hoặc Alt+1…7) để đổi màn hình, Alt+q hoặc Alt+Ctrl+C để thoát. Trong terminal WSL thứ hai, `python3 scripts/linux-terminal-resize.py 12 60` đổi kích thước PTY thật; kiểm tra redraw đến trước khi gửi thêm phím. Runner lưu PID/TTY ở `.dark/verification/manual`; helper xác nhận TTY đúng process trước khi đổi. GNU chọn bằng đối số `gnu`.
 
 ## Dữ liệu và ngân sách kiểm thử
 

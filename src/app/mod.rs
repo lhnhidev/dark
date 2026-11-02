@@ -68,7 +68,7 @@ impl App {
                     self.running = false;
                     return false;
                 }
-                if key.modifiers != KeyModifiers::ALT {
+                if !key.modifiers.is_empty() && key.modifiers != KeyModifiers::ALT {
                     return false;
                 }
                 let screen = match key.code {
@@ -101,31 +101,33 @@ mod tests {
 
     #[test]
     fn switches_screens_and_redraws_only_on_change() {
-        let mut app = App::new();
-        assert_eq!(app.screen, Screen::Review);
-        for (digit, screen) in [
-            ('2', Screen::Edit),
-            ('3', Screen::Vibe),
-            ('4', Screen::Git),
-            ('5', Screen::Models),
-            ('6', Screen::View),
-            ('7', Screen::Help),
-            ('1', Screen::Review),
-        ] {
-            assert!(app.handle_event(key(
-                KeyCode::Char(digit),
-                KeyModifiers::ALT,
-                KeyEventKind::Press
-            )));
-            assert_eq!(app.screen, screen);
-            assert!(!app.handle_event(key(
-                KeyCode::Char(digit),
-                KeyModifiers::ALT,
-                KeyEventKind::Press
-            )));
+        for modifiers in [KeyModifiers::NONE, KeyModifiers::ALT] {
+            let mut app = App::new();
+            assert_eq!(app.screen, Screen::Review);
+            for (digit, screen) in [
+                ('2', Screen::Edit),
+                ('3', Screen::Vibe),
+                ('4', Screen::Git),
+                ('5', Screen::Models),
+                ('6', Screen::View),
+                ('7', Screen::Help),
+                ('1', Screen::Review),
+            ] {
+                assert!(app.handle_event(key(
+                    KeyCode::Char(digit),
+                    modifiers,
+                    KeyEventKind::Press
+                )));
+                assert_eq!(app.screen, screen);
+                assert!(!app.handle_event(key(
+                    KeyCode::Char(digit),
+                    modifiers,
+                    KeyEventKind::Press
+                )));
+            }
+            assert!(app.handle_event(Event::Resize(40, 10)));
+            assert!(app.running);
         }
-        assert!(app.handle_event(Event::Resize(40, 10)));
-        assert!(app.running);
     }
 
     #[test]
@@ -163,7 +165,13 @@ mod tests {
     #[test]
     fn bare_commands_and_control_c_do_not_execute() {
         let mut app = App::new();
-        for code in [KeyCode::Char('2'), KeyCode::Char('q')] {
+        for code in [
+            KeyCode::Char('8'),
+            KeyCode::Char('0'),
+            KeyCode::Char('q'),
+            KeyCode::Char('a'),
+            KeyCode::Char('x'),
+        ] {
             assert!(!app.handle_event(key(code, KeyModifiers::NONE, KeyEventKind::Press)));
         }
         assert!(!app.handle_event(key(

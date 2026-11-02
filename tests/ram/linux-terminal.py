@@ -146,9 +146,10 @@ def run(binary, profile, scenario):
             time.sleep(0.2)
             if process.poll() is not None:
                 raise RuntimeError("bare q exited the application")
-            for key, label in ((b"2", b"Edit"), (b"3", b"Vibe"), (b"5", b"Models")):
+            for key, label in ((b"2", b"Edit"), (b"3", b"Vibe"), (b"4", b"Git commit"),
+                               (b"5", b"Models"), (b"6", b"View"), (b"7", b"Help")):
                 start = len(transcript)
-                os.write(master, b"\x1b" + key)
+                os.write(master, key)
                 wait_body(label, start)
             start = len(transcript)
             os.write(master, b"\x1b1")

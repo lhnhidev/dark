@@ -11,6 +11,8 @@ Cột danh sách Review có thể kéo tại đường phân cách bằng nút c
 
 ## 1. Ảnh tham chiếu
 
+**Ngoại lệ đổi tab được duyệt 02/11/2026:** `1…7` đổi tab trực tiếp, `Alt+1…7` vẫn dùng được. Nhãn tab hiển thị số đơn. Các lệnh khác vẫn cần Alt; hộp xác nhận không cho đổi tab. Khi có chế độ nhập nội dung ở milestone sau, số dùng để nhập và Alt+1…7 dùng đổi tab.
+
 **Sửa tương thích WSL 02/11/2026:** bộ phím chỉnh cột chính là `Alt+-` thu, `Alt+=` giãn 4 cột và `Alt+0` về mặc định. `Alt+[` / `Alt+]` / `Alt+\` còn là alias khi terminal gửi được phím rõ ràng. Legacy terminal gửi Alt+[ dưới dạng `ESC [` trùng tiền tố CSI, nên không quảng bá nó làm phím chính và không dùng timeout để đoán (có thể phá chuỗi chuột/mũi tên đến chậm). Cột ở mức tối thiểu 24 sẽ không thu thêm.
 
 | Tab | Ảnh | Làm ở milestone |
@@ -92,10 +94,10 @@ Biến, dấu câu và phần còn lại dùng `text`. Bộ tô màu tự viết
 ### 3.1 Thanh tab (dòng 0)
 - Nền `panel`, dưới cùng là một đường `border` (vẽ bằng màu nền dòng 1 tách biệt, không tốn thêm dòng).
 - Trái: chữ `dark` màu `accent`, đậm.
-- Mỗi tab: ` Alt+N Nhãn ` với `Alt+N` màu `line_number`, nhãn màu `muted`.
-- **Tab đang chọn:** nền `accent_muted`, nhãn `text` đậm, `Alt+N` màu `file_modified`.
+- Mỗi tab: ` N Nhãn ` với `N` màu `line_number`, nhãn màu `muted`.
+- **Tab đang chọn:** nền `accent_muted`, nhãn `text` đậm, `N` màu `file_modified`.
 - Phải: `tên-project · ⎇ nhánh ↑trước ↓sau · snapshot HH:MM`, màu `muted`, căn sát phải; `↑N`/`↓N` chỉ hiện khi khác 0. Thông tin này bị cắt trước tiên khi thiếu chỗ.
-- Đổi tab: luôn dùng `Alt+1`…`Alt+7`.
+- Đổi tab: `1`…`7`, hoặc `Alt+1`…`Alt+7`. Khi có chế độ nhập nội dung ở milestone sau, số dùng để nhập và chỉ `Alt+1`…`Alt+7` đổi tab.
 
 ### 3.2 Thanh trạng thái (dòng cuối)
 - Nền `panel`. Trái: tên chế độ viết hoa (`REVIEW`, `EDIT`, `VIBE`, `GIT`, `MODELS`, `VIEW`, `HELP`) màu `text`.

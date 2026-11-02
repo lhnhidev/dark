@@ -408,7 +408,7 @@ fn build_line(l: &mut Line<'_>, v: &View<'_>, width: u16, height: u16, row: u16)
             } else {
                 t::LINE_NUMBER
             };
-            l.put(&format!("Alt+{}", i + 1), 5, number);
+            l.put(&(i + 1).to_string(), 1, number);
             l.put(&format!(" {}", name), name.len() + 1, s);
         }
         if !layout.short_tabs {
@@ -450,7 +450,7 @@ fn build_line(l: &mut Line<'_>, v: &View<'_>, width: u16, height: u16, row: u16)
                     ("Alt+q", "tho\u{e1}t"),
                 ]
             } else {
-                &[("Alt+1", "Review"), ("Alt+q", "tho\u{e1}t")]
+                &[("1", "Review"), ("Alt+q", "tho\u{e1}t")]
             };
             let key_style = style(t::TEXT, t::PANEL_ALT);
             for (key, label) in hints {

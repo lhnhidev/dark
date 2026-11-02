@@ -74,7 +74,7 @@ RAM là phần dark tốn thêm (ước tính), chưa tính agent và cửa sổ
 
 | ID | Tính năng | Mô tả | Milestone | RAM thêm |
 |---|---|---|---|---|
-| C1 | Thanh tab 1–7 | `Alt+1`…`Alt+7` đổi tab ở mọi ngữ cảnh; 6 View và 7 Help hiện "Coming soon" | M1 | ~0 |
+| C1 | Thanh tab 1–7 | `1`…`7` hoặc `Alt+1`…`Alt+7` đổi tab ngoài hộp xác nhận; 6 View và 7 Help hiện "Coming soon" | M1 | ~0 |
 | C2 | Theme theo Hunk | Bảng màu GitHub Dark Default trong một module duy nhất; viền `accent` cho khung active | M1 | ~0 |
 | C3 | Thanh trạng thái | Tên chế độ, gợi ý phím, thông tin ngữ cảnh | M1 | ~0 |
 | C4 | Màn hẹp | Rút gọn nhãn tab; diff tự về 1 cột; thông báo khi < 80×24 | M1 | ~0 |
@@ -178,7 +178,7 @@ Chi tiết theo từng tab: [UI_SPEC.md](UI_SPEC.md).
 
 | Phím | Ở đâu | Tác dụng |
 |---|---|---|
-| `Alt+1`…`Alt+7` | Mọi nơi | Đổi tab |
+| `1`…`7` hoặc `Alt+1`…`Alt+7` | Ngoài hộp xác nhận | Đổi tab |
 | `Alt+f` | Mọi nơi | Đổi khung active |
 | `Alt+l` / `Alt+r` | Review | Ẩn/hiện panel danh sách / khung diff |
 | `Alt+n` / `Alt+Shift+n` | Review | Hunk kế / trước |
