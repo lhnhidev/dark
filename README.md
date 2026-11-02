@@ -21,7 +21,7 @@ dark làm đúng một vòng lặp:
 
 | Tab | Làm gì |
 |---|---|
-| **1 Review** | Bên trái: danh sách file đổi kiểu git panel của Zed (stage, commit). Bên phải (80%): diff 2 cột, mỗi hunk có ghi chú ngắn của agent; `a` accept, `x` reject, `Enter` sửa, `?` hỏi agent |
+| **1 Review** | Bên trái: danh sách file đổi kiểu git panel của Zed (stage, commit). Bên phải (80%): diff 2 cột, mỗi hunk có ghi chú ngắn của agent; `Alt+a` accept, `Alt+x` reject, `Alt+Enter` sửa, `Alt+?` hỏi agent |
 | **2 Edit** | Cây thư mục và editor gọn: sửa, lưu, hoàn tác, copy/paste, tìm |
 | **3 Vibe** | Chọn agent: Claude Code, Codex, Gemini CLI, opencode đã cài trên máy, hoặc model qua API key. Bản đầu chạy 1 agent, về sau tối đa 6 agent cùng lúc |
 | **4 Git commit** | Lịch sử commit, cây nhánh, xem diff từng commit |
@@ -58,6 +58,8 @@ Chi tiết: [PLANNING.md](docs/PLANNING.md).
 
 ## Chạy bản hiện tại
 
+**Mọi phím tắt đều giữ Alt:** `Alt+1…7` đổi tab, `Alt+q` thoát; hộp xác nhận dùng `Alt+y` đồng ý / `Alt+n` hủy. Kéo đường phân cách bằng chuột trái hoặc dùng `Alt+[` thu, `Alt+]` giãn cột danh sách, `Alt+\` về mặc định. Độ rộng chỉ nhớ trong phiên; phím chữ thường không chạy lệnh. Terminal hỗ trợ thường cho giữ Shift để chọn chữ khi bật chế độ chuột.
+
 Bản M1 có bảy tab; Review hoạt động, các tab còn lại chờ milestone tương ứng. Chạy dark trong repo Git cần review. Diff so với HEAD nên vẫn hiện thay đổi đã có trước khi mở app; snapshot phục hồi lưu trạng thái lúc mở phiên.
 
 ```powershell
@@ -69,7 +71,7 @@ cargo build --release
 
 Cần Rust stable; Windows dùng toolchain MSVC và bộ C++ của Visual Studio. Lệnh kiểm tra, runner Windows/WSL, bản musl và cách đo RAM: [DEVELOPMENT.md](docs/DEVELOPMENT.md).
 
-Trong Review: `a` giữ hunk, `x` bỏ hunk chưa stage, `n`/`N` chuyển hunk, `l`/`r` ẩn/hiện khung, `Tab` đổi khung, `v` đổi split/unified, `e` mở editor ngoài. `u` hỏi trước khi khôi phục về **lúc mở phiên**, gồm cả thay đổi bạn tự làm sau đó; index và nhánh giữ nguyên. Hunk chứa thay đổi đã stage bị chặn reject trong M1, không tự unstage.
+Trong Review: `Alt+a` giữ hunk, `Alt+x` bỏ hunk chưa stage, `Alt+n`/`Alt+Shift+n` chuyển hunk, `Alt+l`/`Alt+r` ẩn/hiện khung, `Alt+f` đổi khung, `Alt+v` đổi split/unified, `Alt+e` mở editor ngoài. `Alt+u` hỏi trước khi khôi phục về **lúc mở phiên**, gồm cả thay đổi bạn tự làm sau đó; index và nhánh giữ nguyên. Hunk chứa thay đổi đã stage bị chặn reject trong M1, không tự unstage.
 
 File được sửa ở cửa sổ khác sẽ tự cập nhật diff qua thông báo hệ điều hành trên Windows/Linux, giữ vị trí đang đọc khi có thể. WSL đọc project trên ổ D/C dùng `dark.exe` chạy ngầm làm cầu nối: đặt cạnh binary Linux hoặc chỉ định `DARK_WATCH_HELPER=/mnt/d/duong-dan/dark.exe`. Khi build từ repo Dark trên ổ D, bản Linux tự tìm `target/release/dark.exe` của chính mã nguồn Dark; cần build bản Windows mới một lần. Không tìm/chạy executable trong project đang review. macOS hiện chưa hỗ trợ tự cập nhật; lỗi theo dõi hiện trên thanh trạng thái, vẫn có thể đổi tab để tải lại.
 

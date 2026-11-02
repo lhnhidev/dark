@@ -26,10 +26,28 @@ pub struct Layout {
 }
 impl Layout {
     pub fn new(width: u16, height: u16, show_files: bool, show_diff: bool, unified: bool) -> Self {
+        Self::with_file_width(width, height, show_files, show_diff, unified, None)
+    }
+
+    pub fn with_file_width(
+        width: u16,
+        height: u16,
+        show_files: bool,
+        show_diff: bool,
+        unified: bool,
+        file_width: Option<u16>,
+    ) -> Self {
         let usable = usize::from(width.saturating_sub(1));
         let files = if show_files {
             if show_diff {
-                (usize::from(width) / 5).clamp(24, 40).min(usable)
+                file_width.map_or_else(
+                    || (usize::from(width) / 5).clamp(24, 40).min(usable),
+                    |requested| {
+                        usize::from(requested)
+                            .clamp(24, usable.saturating_sub(40).max(24))
+                            .min(usable)
+                    },
+                )
             } else {
                 usable
             }
@@ -67,5 +85,19 @@ mod tests {
         assert!(Layout::new(79, 24, true, true, false).small);
         assert!(Layout::new(80, 23, true, true, false).small);
         assert!(Layout::new(99, 24, true, true, false).short_tabs);
+    }
+    #[test]
+    fn custom_width_clamps_and_split_tracks_available_diff() {
+        let layout = |width, requested| {
+            Layout::with_file_width(width, 24, true, true, false, Some(requested))
+        };
+        assert_eq!((layout(100, 1).files, layout(100, 1).diff), (24, 75));
+        assert_eq!((layout(100, 200).files, layout(100, 200).diff), (59, 40));
+        assert!(layout(200, 40).split);
+        assert!(!layout(200, 100).split);
+        assert_eq!(
+            Layout::with_file_width(100, 24, true, false, false, Some(30)).files,
+            99
+        );
     }
 }

@@ -43,7 +43,7 @@ fn run() -> io::Result<()> {
         match arg.to_str() {
             Some("--help" | "-h") => {
                 println!(
-                    "dark {}\n\nUsage: dark [OPTIONS]\n\nOptions:\n  -h, --help       Show this help\n  -V, --version    Show version\n      --debug      Show process memory\n      --self-test  Check all seven tabs without a terminal\n      --self-test-review  Load the current Git repository and measure review memory\n      --self-test-panic  Check terminal cleanup on panic\n\nKeys: 1 Review, 2 Edit, 3 Vibe, 4 Git commit, 5 Models, 6 View, 7 Help\n      l/r panes, Tab focus, n/N hunks, a accept, x reject, u restore session, e editor\n      q or Ctrl-C quit\n\nEnvironment: DARK_SNAPSHOT_KEEP (default 10), DARK_EDITOR / VISUAL / EDITOR,\n             DARK_TAB_WIDTH (default 8), NO_COLOR",
+                    "dark {}\n\nUsage: dark [OPTIONS]\n\nOptions:\n  -h, --help       Show this help\n  -V, --version    Show version\n      --debug      Show process memory\n      --self-test  Check all seven tabs without a terminal\n      --self-test-review  Load the current Git repository and measure review memory\n      --self-test-panic  Check terminal cleanup on panic\n\nKeys (all require Alt): Alt+1 Review, Alt+2 Edit, Alt+3 Vibe, Alt+4 Git commit,\n      Alt+5 Models, Alt+6 View, Alt+7 Help\n      Alt+l/r panes, Alt+f focus, Alt+n/N hunks, Alt+a accept, Alt+x reject\n      Alt+u restore session, Alt+e editor, Alt+v split/unified\n      Alt+[/] resize file list, Alt+\\ reset width; drag the separator with the left mouse button\n      Alt+arrows or Alt+j/k navigate, Alt+Enter open, Alt+y/n confirm/cancel\n      Alt+q or Alt+Ctrl+c quit; bare keys do not execute commands\n\nEnvironment: DARK_SNAPSHOT_KEEP (default 10), DARK_EDITOR / VISUAL / EDITOR,\n             DARK_TAB_WIDTH (default 8), DARK_WATCH_HELPER, NO_COLOR",
                     env!("CARGO_PKG_VERSION")
                 );
                 return Ok(());
@@ -132,13 +132,12 @@ fn run_terminal(debug: bool, panic_test: bool) -> io::Result<()> {
         if let Some(event) = Input::next(timeout)? {
             if matches!(event, Event::Resize(_, _)) {
                 renderer.invalidate();
+                workbench.cancel_drag();
             }
             if let Event::Key(key) = event {
                 if key.kind == crossterm::event::KeyEventKind::Press {
                     if workbench.modal() {
-                        if key.code == KeyCode::Char('c')
-                            && key.modifiers.contains(KeyModifiers::CONTROL)
-                        {
+                        if app::is_quit(key) {
                             app.running = false;
                         } else {
                             workbench.key(key);
@@ -146,14 +145,14 @@ fn run_terminal(debug: bool, panic_test: bool) -> io::Result<()> {
                     } else {
                         let previous = app.screen;
                         app.handle_event(event);
+                        if previous != app.screen {
+                            workbench.cancel_drag();
+                        }
                         if app.screen == app::Screen::Review && previous != app.screen {
                             workbench.refresh();
                         }
                         if app.screen == app::Screen::Review
-                            && key
-                                .modifiers
-                                .intersection(KeyModifiers::CONTROL | KeyModifiers::ALT)
-                                .is_empty()
+                            && key.modifiers.contains(KeyModifiers::ALT)
                             && workbench.key(key)
                         {
                             drop(_session);
@@ -167,6 +166,13 @@ fn run_terminal(debug: bool, panic_test: bool) -> io::Result<()> {
                         }
                     }
                     dirty = true;
+                }
+            } else if let Event::Mouse(mouse) = event {
+                if app.screen == app::Screen::Review {
+                    let (width, height) = terminal::size()?;
+                    dirty = workbench.mouse(mouse, width, height);
+                } else {
+                    workbench.cancel_drag();
                 }
             } else {
                 dirty = app.handle_event(event);
@@ -317,7 +323,7 @@ fn run_self_test() -> io::Result<()> {
     for digit in ['2', '3', '4', '5', '6', '7', '1'] {
         app.handle_event(Event::Key(KeyEvent::new(
             KeyCode::Char(digit),
-            KeyModifiers::NONE,
+            KeyModifiers::ALT,
         )));
         renderer.draw(&mut sink, app.screen, 80, 24, "")?;
         peak = peak.max(sample_or_report()?);
@@ -372,7 +378,37 @@ fn run_review_self_test() -> io::Result<()> {
             workbench.draw(&mut renderer, &mut output, 0, width, height, "")?;
             peak = peak.max(sample_or_report()?);
         }
-        workbench.key(KeyEvent::new(KeyCode::Char('n'), KeyModifiers::NONE));
+        workbench.key(KeyEvent::new(KeyCode::Char('n'), KeyModifiers::ALT));
+    }
+    // Exercise both resized layouts and the drag path in the same RAM fixture.
+    use crossterm::event::{MouseButton, MouseEvent, MouseEventKind};
+    for (width, height) in [(160, 44), (80, 24)] {
+        workbench.draw(&mut renderer, &mut output, 0, width, height, "")?;
+        for code in ['[', ']', ']', '\\'] {
+            workbench.key(KeyEvent::new(KeyCode::Char(code), KeyModifiers::ALT));
+            workbench.draw(&mut renderer, &mut output, 0, width, height, "")?;
+            peak = peak.max(sample_or_report()?);
+        }
+        let separator = ui::Layout::new(width, height, true, true, false).files as u16 - 1;
+        for (kind, column) in [
+            (MouseEventKind::Down(MouseButton::Left), separator),
+            (MouseEventKind::Drag(MouseButton::Left), width - 2),
+            (MouseEventKind::Up(MouseButton::Left), width - 2),
+        ] {
+            workbench.mouse(
+                MouseEvent {
+                    kind,
+                    column,
+                    row: 5,
+                    modifiers: KeyModifiers::NONE,
+                },
+                width,
+                height,
+            );
+        }
+        workbench.draw(&mut renderer, &mut output, 0, width, height, "")?;
+        peak = peak.max(sample_or_report()?);
+        workbench.key(KeyEvent::new(KeyCode::Char('\\'), KeyModifiers::ALT));
     }
     let mut idle = 0;
     for _ in 0..5 {

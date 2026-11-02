@@ -23,16 +23,7 @@ fn help_describes_user_options_and_keys_without_a_terminal() {
     for argument in ["--help", "-h"] {
         let output = run(argument);
         let text = plain_success(&output);
-        for expected in [
-            "--help",
-            "--version",
-            "--debug",
-            "1",
-            "2",
-            "3",
-            "q",
-            "Ctrl-C",
-        ] {
+        for expected in ["--help", "--version", "--debug", "1", "2", "3", "q", "Alt"] {
             assert!(text.contains(expected), "help missing {expected:?}: {text}");
         }
     }

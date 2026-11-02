@@ -85,7 +85,7 @@ def capture(binary, cols, rows, repo):
                 break
         else:
             raise RuntimeError(f"timed out waiting for review frame: {bytes(output)!r}")
-        os.write(master, b"q")
+        os.write(master, b"\x1bq")
         proc.wait(timeout=10)
         if proc.returncode != 0:
             raise RuntimeError(f"dark exited with {proc.returncode}")

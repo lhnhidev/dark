@@ -1,4 +1,4 @@
- dark  1 Rev  2 Edt  3 Vib  4 Git  5 Mod  6 Vie  7 Hlp
+ dark  Alt+1 Rev Alt+2 Edt Alt+3 Vib Alt+4 Git Alt+5 Mod Alt+6 Vie Alt+7 Hlp
  Changes 31 · 0/31     │ src/auth/session.ts  hunk 1/1        +50 −50  unified
 │ ▾ Staged (2)         │▌@@ -1,53 +1,53 @@
 │▌[x] M s…on.ts +50 −50│▌    1 − export const value_000 = 'old value 0:0';
@@ -19,6 +19,6 @@
 │──────────────────────│▌    8 + export const value_007 = 'new value 0:7';
 │ Commit message       │▌    9 − export const value_008 = 'old value 0:8';
 │ [ Có ở M3 ]          │▌    9 + export const value_008 = 'new value 0:8';
-│Space stage · c commit│▌   10 − export const value_009 = 'old value 0:9';
+│Alt+g stage · Alt+c co│▌   10 − export const value_009 = 'old value 0:9';
 └──────────────────────┘
- REVIEW  a accept  x reject  l danh sách file  r khung diff  0/31 file đã xem
+ REVIEW  Alt+a accept  Alt+x reject  Alt+[/]/\ cột  Alt+l/r  0/31 file đã xem

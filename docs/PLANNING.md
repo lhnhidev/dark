@@ -47,8 +47,8 @@ Mã tính năng (C, R, E, V, G, P, K, S) theo [FEATURES.md](FEATURES.md).
 
 | Milestone | Nội dung | Bạn dùng được gì | RAM mục tiêu của dark | Ước tính | Cần xong trước |
 |---|---|---|---|---|---|
-| **M1** Khung giao diện + Review | C1–C6, R1–R6, S4, E9 (diff): thanh tab 1–7 (6, 7 Coming soon), theme Hunk, khung active, snapshot, panel danh sách (`l`), diff 2 cột (`r`), accept/reject (`a`/`x`), hoàn tác cả lượt (`u`), editor ngoài (`e`), tên cửa sổ, tô màu cú pháp trong diff (E9, đưa lên từ M9), tự cập nhật diff qua thông báo hệ điều hành (C6, đưa lên từ M3 theo duyệt 02/11/2026) | Review code agent viết, giữ/bỏ từng hunk | Review diff 30 file < 2 MB | 2 tuần | M0 |
-| **M2** Edit | E1–E8, R7: cây thư mục, editor gọn, lưu an toàn, sửa hunk từ Review (`Enter`), `Alt-1…7` | Sửa code ngay trong dark | Sửa file 10.000 dòng < 4 MB | 2 tuần | M1 |
+| **M1** Khung giao diện + Review | C1–C6, R1–R6, S4, E9 (diff): thanh tab 1–7 (6, 7 Coming soon), theme Hunk, khung active, snapshot, panel danh sách (`Alt+l`), diff 2 cột (`Alt+r`), accept/reject (`Alt+a`/`Alt+x`), hoàn tác cả lượt (`Alt+u`), editor ngoài (`Alt+e`), tên cửa sổ, tô màu cú pháp trong diff (E9, đưa lên từ M9), tự cập nhật diff qua thông báo hệ điều hành (C6, đưa lên từ M3 theo duyệt 02/11/2026) | Review code agent viết, giữ/bỏ từng hunk | Review diff 30 file < 2 MB | 2 tuần | M0 |
+| **M2** Edit | E1–E8, R7: cây thư mục, editor gọn, lưu an toàn, sửa hunk từ Review (`Alt+Enter`), `Alt+1…7` | Sửa code ngay trong dark | Sửa file 10.000 dòng < 4 MB | 2 tuần | M1 |
 | **M3** Git + Vibe cơ bản → **v0.1** | R8, G1–G5, V1–V3, C7, S3: stage/commit từ panel, lịch sử + cây nhánh + diff commit, phát hiện và gọi agent CLI, chạy test; dùng lại tự cập nhật của M1 | **Bản dùng thử đầu tiên** | Lịch sử 200 commit < 0,5 MB thêm | 1,5–2 tuần | M2 |
 | **M4** `darkw` | C8: bản thử 1–2 ngày để đo, rồi cửa sổ Windows riêng | Nhấp đúp mở dark, không cần terminal | `darkw` idle < 3 MB tính cả cửa sổ | 1,5–2 tuần | M3 |
 | **M5** ACP + 1 agent | V4–V7, R9–R11, K1–K3, S1: ACP client, 4 agent, duyệt quyền, sửa file qua dark, vòng đời agent, skill dark-notes/dark-feedback, ghi chú AI mỗi hunk, hỏi về hunk | Vibe và review trong một app | Đang vibe < 4 MB (không tính agent) | 3 tuần | M3 |
@@ -61,7 +61,7 @@ Mã tính năng (C, R, E, V, G, P, K, S) theo [FEATURES.md](FEATURES.md).
 
 ### M0 — Khung dự án ✓ (tag `m0`)
 - [x] Binary release dưới 3 MB: Windows 212.480 byte, Linux musl 537.464 byte.
-- [x] Ba màn trống, chuyển bằng `1`/`2`/`3`, thoát sạch bằng `q`/`Ctrl-C`, phục hồi terminal sau panic.
+- [x] Ba màn trống, chuyển bằng `1`/`2`/`3`, thoát sạch bằng `Alt+q`/`Alt+Ctrl+C`, phục hồi terminal sau panic.
 - [x] RAM idle dưới 2.000.000 byte: Windows 557.056 byte (private working set), Linux musl 524.288 byte (VmRSS).
 - [x] fmt, Clippy, test debug/release đạt trên Windows và WSL musl; kiểm tra terminal thật 10/10 (Windows), 6/6 (WSL).
 - [x] Cắt chữ theo grapheme và độ rộng cột; `--help`, `--version`, lỗi tham số rõ ràng; script kiểm chứng được commit.
@@ -75,30 +75,31 @@ Triển khai và kiểm chứng nội bộ: xem [M1_VERIFICATION.md](M1_VERIFICA
 - [x] Thanh tab, thanh trạng thái, khung active, dòng đang chọn đúng [UI_SPEC.md](UI_SPEC.md) §3; tab 6 và 7 hiện "Coming soon".
 - [x] Theme nằm trong một module, có test đúng từng mã hex; hỗ trợ terminal 256 màu và `NO_COLOR`.
 - [x] Trên một repo thật: snapshot, danh sách file đổi đúng (thêm, sửa, xóa, untracked), nhóm Staged/Changes/Untracked.
-- [x] Diff 2 cột có nhấn mạnh chữ đổi trong dòng; ô trống đúng màu; khung diff < 120 cột tự về 1 cột; `v` đổi chế độ.
-- [x] `a`/`x`: sau khi reject, `git diff` khớp đúng phần còn lại. `u` hoàn tác cả lượt có xác nhận, không hỏng index/nhánh.
-- [x] `l`, `r`, `Tab`, `n`/`N`, `e` hoạt động như UI_SPEC §4.4.
+- [x] Diff 2 cột có nhấn mạnh chữ đổi trong dòng; ô trống đúng màu; khung diff < 120 cột tự về 1 cột; `Alt+v` đổi chế độ.
+- [x] `Alt+a`/`Alt+x`: sau khi reject, `git diff` khớp đúng phần còn lại. `Alt+u` hoàn tác cả lượt có xác nhận, không hỏng index/nhánh.
+- [x] `Alt+l`, `Alt+r`, `Alt+f`, `Alt+n`/`Alt+Shift+n`, `Alt+e` hoạt động như UI_SPEC §4.4.
 - [x] Tự cập nhật diff qua thông báo hệ điều hành, gộp sự kiện và giữ vị trí review; WSL đọc ổ Windows có cầu nối đo riêng RAM (C6 đưa lên từ M3 theo duyệt 02/11/2026; xem bổ sung kiểm chứng M1).
+- [x] Điều chỉnh cột danh sách bằng kéo chuột hoặc Alt+[ / Alt+] / Alt+\; mọi phím tắt cần Alt theo duyệt bổ sung 02/11/2026; Windows/WSL terminal thật và RAM release đạt.
 - [ ] Code trong diff tô màu cú pháp theo UI_SPEC §2 cho các ngôn ngữ đã liệt kê; giữ nền diff; RAM review vẫn < 2 MB (E9 đưa lên từ M9 theo yêu cầu chủ dự án, 01/11/2026).
 - [x] Repo không phải git, file nhị phân, file lớn, tên file Unicode: báo rõ, không crash.
 - [x] Giao diện ở 160×44 khớp [ui/1-review.png](ui/1-review.png) (trừ ghi chú AI, thuộc M5); kiểm tra thêm ở 120, 100, 80 cột.
 - [x] RAM review repo mẫu (~30 file, ~3.000 dòng đổi) < 2.000.000 byte trên Windows và Linux musl; chạy lại `tests/bench/compare-review-tools.py`, cập nhật ARCHITECTURE §6.2.
 
 ### M2 — Edit
-- [ ] Cây thư mục tải dần, bỏ qua `.gitignore`, đánh dấu file/thư mục đã đổi; `Ctrl-B` ẩn/hiện.
-- [ ] Editor: gõ, xóa, di chuyển theo cụm ký tự; `Ctrl-S`, `Ctrl-Z`/`Ctrl-Y`, chọn chữ, clipboard hệ thống, `Ctrl-F`, `Ctrl-G`; vạch thay đổi ở lề trái.
+- [ ] Cây thư mục tải dần, bỏ qua `.gitignore`, đánh dấu file/thư mục đã đổi; `Alt+Ctrl+B` ẩn/hiện.
+- [ ] Editor: gõ, xóa, di chuyển theo cụm ký tự; `Alt+Ctrl+S`, `Alt+Ctrl+Z`/`Alt+Ctrl+Y`, chọn chữ, clipboard hệ thống, `Alt+Ctrl+F`, `Alt+Ctrl+G`; vạch thay đổi ở lề trái.
 - [ ] Lưu giữ LF/CRLF, BOM, quyền file; ghi file tạm rồi đổi tên; file bị đổi từ bên ngoài thì hỏi, không ghi đè.
-- [ ] `Enter` ở Review mở editor đúng dòng của hunk; lưu xong diff tự cập nhật.
-- [ ] `Alt-1…7` đổi tab khi đang gõ; `Ctrl-C` trong editor là copy.
+- [ ] `Alt+Enter` ở Review mở editor đúng dòng của hunk; lưu xong diff tự cập nhật.
+- [ ] `Alt+1…7` đổi tab khi đang gõ; `Alt+Ctrl+C` trong editor là copy.
 - [ ] Giao diện khớp [ui/2-edit.png](ui/2-edit.png), code tô màu bằng bộ tô màu của M1.
 - [ ] RAM khi sửa file 10.000 dòng < 4.000.000 byte.
 
 ### M3 — Git + Vibe cơ bản (v0.1)
-- [ ] Panel Review: `Space` stage/unstage, `s` stage tất cả, ô commit message, `c` commit đúng phần đã stage, `d` bỏ thay đổi file có xác nhận.
-- [ ] Tab Git: lịch sử tải dần, cây nhánh đúng với nhánh merge, nhãn nhánh/tag, chi tiết commit, `Enter` mở diff commit chỉ đọc; khớp [ui/4-git-commit.png](ui/4-git-commit.png).
-- [ ] Tab Vibe: dải 6 ô (chỉ ô 1 dùng được), hộp chọn liệt kê agent CLI đã cài; `Enter` gọi agent ở giao diện gốc (nhường hoặc chia màn hình), agent thoát thì về Review; khớp [ui/3-vibe.png](ui/3-vibe.png) phần CLI.
+- [ ] Panel Review: `Alt+g` stage/unstage, `Alt+s` stage tất cả, ô commit message, `Alt+c` commit đúng phần đã stage, `Alt+d` bỏ thay đổi file có xác nhận.
+- [ ] Tab Git: lịch sử tải dần, cây nhánh đúng với nhánh merge, nhãn nhánh/tag, chi tiết commit, `Alt+Enter` mở diff commit chỉ đọc; khớp [ui/4-git-commit.png](ui/4-git-commit.png).
+- [ ] Tab Vibe: dải 6 ô (chỉ ô 1 dùng được), hộp chọn liệt kê agent CLI đã cài; `Alt+Enter` gọi agent ở giao diện gốc (nhường hoặc chia màn hình), agent thoát thì về Review; khớp [ui/3-vibe.png](ui/3-vibe.png) phần CLI.
 - Tự cập nhật khi agent sửa file đã chuyển lên tiêu chí M1 (C6).
-- [ ] `!` chạy test, hiện lỗi đầu tiên.
+- [ ] `Alt+!` chạy test, hiện lỗi đầu tiên.
 - [ ] Kiểm tra trong PowerShell, mintty, WSL, terminal của VS Code.
 - [ ] Phát hành v0.1 theo mục 6.
 
@@ -114,7 +115,7 @@ Triển khai và kiểm chứng nội bộ: xem [M1_VERIFICATION.md](M1_VERIFICA
 - [ ] Duyệt quyền; agent dùng cơ chế ghi file của client thì mỗi lần sửa được duyệt theo hunk.
 - [ ] Vòng đời agent: bật khi vibe, tắt khi rảnh, một agent, khởi động lại khi phình mà giữ phiên; hiện RAM của agent.
 - [ ] Skill dark-notes, dark-feedback: hỏi trước khi cài, liệt kê/tắt/gỡ được, không đè skill của người dùng.
-- [ ] Ghi chú AI hiện dưới đúng hunk theo UI_SPEC §4.3, không ghi vào code, có cache; `?` và `/` hoạt động.
+- [ ] Ghi chú AI hiện dưới đúng hunk theo UI_SPEC §4.3, không ghi vào code, có cache; `Alt+?` và `Alt+/` hoạt động.
 - [ ] RAM khi đang nhận luồng ACP < 4.000.000 byte (không tính agent), đo bằng agent giả lập trong test.
 - [ ] Kiểm tra lại điều khoản gói thuê bao của từng agent, ghi vào ARCHITECTURE §8.
 
@@ -173,7 +174,7 @@ Làm song song: thu góp ý từ v0.1 để quyết định thứ tự M7–M9; 
 | Trên Windows mặc định mở `darkw` hay bản terminal | Theo kết quả M4 | Cuối M4 |
 | Tên chính thức | Để sau | Trước M6 |
 
-Đã chốt: renderer tự viết (không dùng ratatui); musl cho bản phát hành Linux; theme theo Hunk; reject là `x` vì `r` dùng để ẩn/hiện khung diff. M1 lưu snapshot bằng ref riêng `refs/dark/snapshots/<session>/<turn>` và index tạm, tách mốc phục hồi lúc mở phiên khỏi mốc review HEAD; word diff dùng `similar 2.7.0`/Myers có giới hạn. Chi tiết và số đo ở [M1_VERIFICATION.md](M1_VERIFICATION.md).
+Đã chốt: renderer tự viết (không dùng ratatui); musl cho bản phát hành Linux; theme theo Hunk; reject là `Alt+x` vì `Alt+r` dùng để ẩn/hiện khung diff. M1 lưu snapshot bằng ref riêng `refs/dark/snapshots/<session>/<turn>` và index tạm, tách mốc phục hồi lúc mở phiên khỏi mốc review HEAD; word diff dùng `similar 2.7.0`/Myers có giới hạn. Chi tiết và số đo ở [M1_VERIFICATION.md](M1_VERIFICATION.md).
 
 ## 8. Rủi ro cần theo dõi
 

@@ -165,15 +165,15 @@ public static class BridgeMemory {
             write_external(root / "brandnew.txt", "new file\n")
             wait_for(b"brandnew.txt", start)
             start = len(output)
-            send(b"u")
+            send(b"\x1bu")
             wait_for("Khôi phục".encode(), start)
             tracked.write_text("changedafterprompt\n", encoding="utf-8")
             time.sleep(1)
-            send(b"y")
+            send(b"\x1by")
             time.sleep(1)
             if tracked.read_text(encoding="utf-8") != "changedafterprompt\n":
                 raise RuntimeError("confirmation overwrote an external change")
-            send(b"q")
+            send(b"\x1bq")
             process.wait(timeout=10)
             if process.returncode:
                 raise RuntimeError(f"dark exited {process.returncode}")

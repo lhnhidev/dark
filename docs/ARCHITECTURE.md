@@ -176,7 +176,7 @@ scripts/, tests/       # runner kiểm chứng, test RAM, test bố cục, bench
 
 ### 5.5 Editor gọn và cây thư mục (M2)
 - **Mục đích:** sửa nhanh không rời app. Không có tự hoàn thành, đa con trỏ, nhiều tab file, chế độ vim.
-- **Chế độ:** `Enter` ở Review mở file tại dòng của hunk; tab Edit mở file từ cây thư mục. Khi đang gõ, phím chữ dùng để gõ, phím tắt đi qua `Ctrl`, đổi tab bằng `Alt-1…7`; `Ctrl-C` là copy.
+- **Chế độ:** `Alt+Enter` ở Review mở file tại dòng của hunk; tab Edit mở file từ cây thư mục. Khi đang gõ, phím chữ dùng để gõ, phím tắt đi qua `Ctrl`, đổi tab bằng `Alt+1…7`; `Alt+Ctrl+C` là copy.
 - **Bộ đệm:** chỉ nạp file đang sửa; mảng dòng hay rope (`ropey`) chốt ở kế hoạch M2 theo số đo với file 10.000 dòng. File quá lớn, nhị phân, không UTF-8: chỉ xem.
 - **Con trỏ:** di chuyển theo cụm grapheme, cột theo độ rộng hiển thị; chỉ vẽ dòng trong khung nhìn.
 - **Undo/redo:** lưu thao tác chèn/xóa kèm vị trí, gộp thao tác gõ liên tiếp, giới hạn số bước và dung lượng.
@@ -230,7 +230,7 @@ Lệnh và tên package kiểm tra lại khi làm M5. SDK Rust của ACP đã 1.
 - Bắt đầu bằng bản thử 1–2 ngày để đo RAM trước khi cam kết.
 
 ### 5.10 Chạy test
-- `!` chạy lệnh test trong cấu hình (hoặc tự phát hiện), chỉ hiện lỗi đầu tiên và vị trí; output ghi ra đĩa, RAM chỉ giữ phần hiển thị.
+- `Alt+!` chạy lệnh test trong cấu hình (hoặc tự phát hiện), chỉ hiện lỗi đầu tiên và vị trí; output ghi ra đĩa, RAM chỉ giữ phần hiển thị.
 
 ### 5.11 Đo bộ nhớ (M0)
 - Windows: `GetProcessMemoryInfo` với `PROCESS_MEMORY_COUNTERS_EX2` lấy `PrivateWorkingSetSize`; không nhầm `PrivateUsage` hay `WorkingSetSize`. Không hỗ trợ thì `n/a` kèm lý do.

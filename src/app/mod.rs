@@ -45,6 +45,12 @@ pub struct App {
     pub running: bool,
 }
 
+pub fn is_quit(key: crossterm::event::KeyEvent) -> bool {
+    key.modifiers == KeyModifiers::ALT && key.code == KeyCode::Char('q')
+        || key.modifiers == (KeyModifiers::ALT | KeyModifiers::CONTROL)
+            && key.code == KeyCode::Char('c')
+}
+
 impl App {
     pub fn new() -> Self {
         Self {
@@ -58,16 +64,11 @@ impl App {
         match event {
             Event::Resize(_, _) => true,
             Event::Key(key) if key.kind == KeyEventKind::Press => {
-                if key.code == KeyCode::Char('c') && key.modifiers.contains(KeyModifiers::CONTROL) {
+                if is_quit(key) {
                     self.running = false;
                     return false;
                 }
-                if !key.modifiers.is_empty() && key.modifiers != KeyModifiers::ALT {
-                    return false;
-                }
-                if key.modifiers == KeyModifiers::ALT
-                    && !matches!(key.code, KeyCode::Char('1'..='7'))
-                {
+                if key.modifiers != KeyModifiers::ALT {
                     return false;
                 }
                 let screen = match key.code {
@@ -78,10 +79,6 @@ impl App {
                     KeyCode::Char('5') => Screen::Models,
                     KeyCode::Char('6') => Screen::View,
                     KeyCode::Char('7') => Screen::Help,
-                    KeyCode::Char('q') => {
-                        self.running = false;
-                        return false;
-                    }
                     _ => return false,
                 };
                 let changed = self.screen != screen;
@@ -117,13 +114,13 @@ mod tests {
         ] {
             assert!(app.handle_event(key(
                 KeyCode::Char(digit),
-                KeyModifiers::NONE,
+                KeyModifiers::ALT,
                 KeyEventKind::Press
             )));
             assert_eq!(app.screen, screen);
             assert!(!app.handle_event(key(
                 KeyCode::Char(digit),
-                KeyModifiers::NONE,
+                KeyModifiers::ALT,
                 KeyEventKind::Press
             )));
         }
@@ -151,12 +148,30 @@ mod tests {
     #[test]
     fn quit_keys_stop_without_redrawing() {
         for (code, modifiers) in [
-            (KeyCode::Char('q'), KeyModifiers::NONE),
-            (KeyCode::Char('c'), KeyModifiers::CONTROL),
+            (KeyCode::Char('q'), KeyModifiers::ALT),
+            (
+                KeyCode::Char('c'),
+                KeyModifiers::CONTROL | KeyModifiers::ALT,
+            ),
         ] {
             let mut app = App::new();
             assert!(!app.handle_event(key(code, modifiers, KeyEventKind::Press)));
             assert!(!app.running);
         }
+    }
+
+    #[test]
+    fn bare_commands_and_control_c_do_not_execute() {
+        let mut app = App::new();
+        for code in [KeyCode::Char('2'), KeyCode::Char('q')] {
+            assert!(!app.handle_event(key(code, KeyModifiers::NONE, KeyEventKind::Press)));
+        }
+        assert!(!app.handle_event(key(
+            KeyCode::Char('c'),
+            KeyModifiers::CONTROL,
+            KeyEventKind::Press
+        )));
+        assert_eq!(app.screen, Screen::Review);
+        assert!(app.running);
     }
 }

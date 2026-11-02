@@ -1,4 +1,4 @@
- dark  1 Review  2 Edit  3 Vibe  4 Git commit  5 Models  6 View  7 Help                                        shop-api · ⎇ main · snapshot 23:23 · so với HEAD
+ dark  Alt+1 Review Alt+2 Edit Alt+3 Vibe Alt+4 Git commit Alt+5 Models Alt+6 View Alt+7 Help                  shop-api · ⎇ main · snapshot 11:14 · so với HEAD
  Changes 31 file · 0/31 đã xem │ src/auth/session.ts  hunk 1/1                                                                                  +50 −50  split
 │ ▾ Staged (2)                 │▌@@ -1,53 +1,53 @@
 │▌[x] M session.ts      +50 −50│▌    1 − export const value_000 = 'old value 0:0';             │    1 + export const value_000 = 'new value 0:0';
@@ -39,6 +39,6 @@
 │ ┌──────────────────────────┐ │▌   36 − export const value_035 = 'old value 0:35';            │   36 + export const value_035 = 'new value 0:35';
 │ │ Có ở M3                  │ │▌   37 − export const value_036 = 'old value 0:36';            │   37 + export const value_036 = 'new value 0:36';
 │ └──────────────────────────┘ │▌   38 − export const value_037 = 'old value 0:37';            │   38 + export const value_037 = 'new value 0:37';
-│ Space stage · c commit       │▌   39 − export const value_038 = 'old value 0:38';            │   39 + export const value_038 = 'new value 0:38';
+│ Alt+g stage · Alt+c commit   │▌   39 − export const value_038 = 'old value 0:38';            │   39 + export const value_038 = 'new value 0:38';
 └──────────────────────────────┘
- REVIEW  a accept  x reject  l danh sách file  r khung diff  n/N hunk  u hoàn tác  e editor ngoài  q thoát                                   0/31 file đã xem
+ REVIEW  Alt+a accept  Alt+x reject  Alt+[/]/\ cột  Alt+l/r khung  Alt+n/N hunk  Alt+u hoàn tác  Alt+e editor ngoài  Alt+q thoát             0/31 file đã xem

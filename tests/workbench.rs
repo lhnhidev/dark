@@ -13,7 +13,7 @@ mod review;
 mod ui;
 
 use app::workbench::Workbench;
-use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
@@ -69,7 +69,7 @@ impl Drop for Fixture {
 }
 
 fn key(workbench: &mut Workbench, code: KeyCode) {
-    workbench.key(KeyEvent::new(code, KeyModifiers::NONE));
+    workbench.key(KeyEvent::new(code, KeyModifiers::ALT));
 }
 
 fn render(workbench: &mut Workbench) -> String {
@@ -102,6 +102,148 @@ fn plain(ansi: &str) -> String {
         }
     }
     result
+}
+
+fn mouse(kind: MouseEventKind, column: u16, row: u16) -> MouseEvent {
+    MouseEvent {
+        kind,
+        column,
+        row,
+        modifiers: KeyModifiers::NONE,
+    }
+}
+
+#[test]
+fn dragging_separator_preserves_selection_and_remembers_width() {
+    let before: String = (1..=40).map(|n| format!("line {n}\n")).collect();
+    let changed = before
+        .replace("line 2\n", "first change\n")
+        .replace("line 35\n", "second change\n");
+    let f = Fixture::new(&[("a.txt", &before)]);
+    f.write("a.txt", &changed);
+    let mut w = Workbench::open(&f.0);
+    key(&mut w, KeyCode::Char('n'));
+    render(&mut w);
+    let path = w.selected_path();
+    let line = w.selected_line();
+    let down = MouseEventKind::Down(MouseButton::Left);
+    let drag = MouseEventKind::Drag(MouseButton::Left);
+    let up = MouseEventKind::Up(MouseButton::Left);
+    w.mouse(mouse(down, 31, 10), 160, 44);
+    w.mouse(mouse(drag, 55, 10), 160, 44);
+    w.mouse(mouse(up, 55, 10), 160, 44);
+    assert_eq!(w.file_width(), Some(56));
+    assert_eq!(w.selected_path(), path);
+    assert_eq!(w.selected_line(), line);
+    let narrow = screen_rows(&mut w, 80, 24);
+    assert_eq!(narrow[10].chars().nth(38), Some('\u{2502}'));
+    let wide = screen_rows(&mut w, 160, 44);
+    assert_eq!(wide[10].chars().nth(55), Some('\u{2502}'));
+    w.mouse(mouse(drag, 70, 10), 160, 44);
+    assert_eq!(w.file_width(), Some(56), "release must end the drag");
+    w.mouse(mouse(down, 54, 10), 160, 44);
+    w.mouse(mouse(drag, 70, 10), 160, 44);
+    assert_eq!(w.file_width(), Some(56), "drag must start on separator");
+    w.mouse(mouse(down, 55, 10), 160, 44);
+    w.cancel_drag();
+    w.mouse(mouse(drag, 70, 10), 160, 44);
+    assert_eq!(w.file_width(), Some(56), "cancel must end the drag");
+}
+
+fn first_visible_line(workbench: &mut Workbench) -> String {
+    screen_rows(workbench, 160, 44)
+        .iter()
+        .find_map(|row| {
+            let start = row.find("line")?;
+            let digits: String = row[start + 4..]
+                .chars()
+                .take_while(char::is_ascii_digit)
+                .collect();
+            (!digits.is_empty()).then_some(digits)
+        })
+        .expect("visible diff line")
+}
+
+#[test]
+fn scrolling_position_survives_view_and_width_changes() {
+    let old: String = (0..400).map(|n| format!("line{n:03} old\n")).collect();
+    let new: String = (0..400).map(|n| format!("line{n:03} new\n")).collect();
+    let f = Fixture::new(&[("a.txt", &old)]);
+    f.write("a.txt", &new);
+    let mut w = Workbench::open(&f.0);
+    render(&mut w);
+    for _ in 0..10 {
+        key(&mut w, KeyCode::PageDown);
+    }
+    let anchor = first_visible_line(&mut w);
+    assert_ne!(anchor, "000");
+    key(&mut w, KeyCode::Char('v'));
+    assert_eq!(first_visible_line(&mut w), anchor);
+    key(&mut w, KeyCode::Char('v'));
+    assert_eq!(first_visible_line(&mut w), anchor);
+    w.mouse(
+        mouse(MouseEventKind::Down(MouseButton::Left), 31, 10),
+        160,
+        44,
+    );
+    w.mouse(
+        mouse(MouseEventKind::Drag(MouseButton::Left), 55, 10),
+        160,
+        44,
+    );
+    w.mouse(
+        mouse(MouseEventKind::Up(MouseButton::Left), 55, 10),
+        160,
+        44,
+    );
+    assert_eq!(first_visible_line(&mut w), anchor);
+}
+
+#[test]
+fn resize_shortcuts_and_inactive_panes_follow_review_state() {
+    let f = Fixture::new(&[("a.txt", "old\n")]);
+    f.write("a.txt", "new\n");
+    let mut w = Workbench::open(&f.0);
+    render(&mut w);
+    key(&mut w, KeyCode::Char(']'));
+    assert_eq!(w.file_width(), Some(36));
+    key(&mut w, KeyCode::Char('['));
+    assert_eq!(w.file_width(), Some(32));
+    key(&mut w, KeyCode::Char('\\'));
+    assert_eq!(w.file_width(), None);
+    let down = MouseEventKind::Down(MouseButton::Left);
+    let drag = MouseEventKind::Drag(MouseButton::Left);
+    key(&mut w, KeyCode::Char('u'));
+    assert!(w.modal());
+    w.mouse(mouse(down, 31, 10), 160, 44);
+    w.mouse(mouse(drag, 55, 10), 160, 44);
+    assert_eq!(w.file_width(), None);
+    key(&mut w, KeyCode::Esc);
+    key(&mut w, KeyCode::Char('l'));
+    w.mouse(mouse(down, 31, 10), 160, 44);
+    w.mouse(mouse(drag, 55, 10), 160, 44);
+    assert_eq!(w.file_width(), None);
+}
+
+#[test]
+fn review_actions_require_alt() {
+    let f = Fixture::new(&[("a.txt", "old a\n"), ("b.txt", "old b\n")]);
+    f.write("a.txt", "new a\n");
+    f.write("b.txt", "new b\n");
+    let mut w = Workbench::open(&f.0);
+    let initial = w.selected_path();
+    for ch in ['a', 'x', 'u', 'f'] {
+        w.key(KeyEvent::new(KeyCode::Char(ch), KeyModifiers::NONE));
+        assert_eq!(w.selected_path(), initial, "bare {ch} changed selection");
+        assert!(!w.modal(), "bare {ch} opened a confirmation");
+    }
+    assert!(w.focus_files);
+    key(&mut w, KeyCode::Char('f'));
+    assert!(!w.focus_files);
+    key(&mut w, KeyCode::Char('u'));
+    assert!(w.modal());
+    w.key(KeyEvent::new(KeyCode::Char('y'), KeyModifiers::NONE));
+    assert!(w.modal(), "bare y confirmed restore");
 }
 
 #[test]
@@ -212,7 +354,7 @@ fn unavailable_review_actions_explain_what_happened() {
     let f = Fixture::new(&[("a.txt", "old\n")]);
     f.write("a.txt", "new\n");
     let mut w = Workbench::open(&f.0);
-    key(&mut w, KeyCode::Tab);
+    key(&mut w, KeyCode::Char('f'));
     for code in [KeyCode::Enter, KeyCode::Char('?'), KeyCode::Char('/')] {
         key(&mut w, code);
         assert!(!w.message.is_empty(), "no explanation for {code:?}");

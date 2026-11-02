@@ -1,5 +1,34 @@
 # M1 — Khung giao diện và Review
 
+## Bổ sung 02/11/2026 — kéo cột và toàn bộ phím Alt
+
+Chủ dự án đã duyệt chỉnh độ rộng danh sách bằng chuột và yêu cầu **mọi phím tắt đang có đều giữ Alt**. `Alt+[` thu, `Alt+]` giãn 4 cột, `Alt+\` về mặc định; giữ độ rộng chọn trong phiên và kẹp theo cửa sổ (danh sách ≥24, diff ≥40 cột). Kéo đường phân cách bằng nút trái không tải lại Git/diff. `Alt+f` đổi khung để tránh Alt+Tab của Windows; `Alt+q`/`Alt+Ctrl+C` thoát; hộp xác nhận dùng `Alt+y/n`. Phím chữ và Ctrl+C cũ không chạy lệnh. Alt+mũi tên có Alt+j/k dự phòng khi terminal giữ phím điều hướng.
+
+Đã sửa và có hồi quy giữ đúng dòng code đang đọc khi kéo qua ngưỡng split/unified hoặc đổi bằng Alt+v. Không kéo khi modal, khung ẩn, tab khác hoặc màn hình quá nhỏ; resize/đổi tab/mở modal hủy trạng thái kéo. Mouse capture bật khi vào terminal, tắt khi thoát/panic/nhường editor; Windows khôi phục console mode ban đầu. Không thêm dependency hoặc thread, release profile giữ nguyên.
+
+Hai runner đầy đủ kết thúc exit 0, gồm fmt, Clippy `-D warnings`, test debug/release, build debug/release, RAM, help/version và terminal thật:
+
+```text
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify-windows.ps1 -OutputDirectory .dark/verification/m1/resize-alt/windows
+bash scripts/verify-linux.sh musl .dark/verification/m1/resize-alt/musl
+```
+
+Windows console **10/10**, Linux PTY **6/6** đạt: kéo chuột thật, Alt đổi tab/thoát, phím thường không thoát hay ghi, resize trước phím tiếp và phục hồi terminal sau panic. Unit ứng dụng 132/133, CLI 3/3, RAM release 2/2, workbench 152/153 (Windows/Linux; có test module được nạp lại, không cộng thành test độc lập). WSL đọc ổ D với writer Linux và Windows tiếp tục qua kiểm tra tự cập nhật bằng phím Alt. Reviewer độc lập không còn lỗi chặn sau sửa vị trí cuộn.
+
+Fixture RAM **30 file / 3.000 dòng đổi** giữ watcher hoạt động, vẽ ở 160/120/100/80 cột; nay thử thêm phím chỉnh cột, reset và đường xử lý kéo ở 160/80 cột trước đo idle. Không lấy probe hay khung trống thay tiêu chí:
+
+| Số đo bản này | Windows, EX2 private working set | Linux musl, VmRSS |
+|---|---:|---:|
+| Review: lớn nhất trong 5 mẫu idle | 1.503.232 byte | 937.984 byte |
+| Review: đỉnh lấy mẫu sau thao tác | 1.503.232 byte | 937.984 byte |
+| Binary release | 558.080 byte | 848.760 byte |
+
+Idle vẫn **<2.000.000 byte**, đỉnh lấy mẫu **<10.000.000 byte**. Binary tăng 3.072 byte (Windows) / 4.096 byte (musl) so với `fb02f67`; đó là cả thay đổi kéo cột và phím Alt. Không quy chênh lệch hai lượt RAM thành chi phí cố định riêng của thao tác kéo; trang resident và cách lấy mẫu có dao động. Đây không phải đỉnh bảo đảm cho mọi repo.
+
+Bản ghi PTY [160×44](ui/m1/160x44.html), [80×24](ui/m1/80x24.html) đã tạo lại bằng binary mới; thông tin SHA-256 và process con ở [README bản ghi](ui/m1/README.md). **Khác ảnh tham chiếu có chủ đích:** nhãn tab và gợi ý dùng Alt, thanh trạng thái có phím chỉnh cột; độ rộng mặc định giữ nguyên, chỉ đổi khi người dùng kéo hoặc bấm phím. Màu và viền không đổi.
+
+Log mới ở `.dark/verification/m1/resize-alt/`; các số ở phần tự cập nhật và báo cáo ban đầu bên dưới là lịch sử. Kiểm tra biên dịch macOS ARM64 đạt, chưa chạy macOS thật. Chưa đo riêng lại toàn bộ cây Git trên Windows cho bản này; không dùng chỉ số khác để giả là đã đo. M1 vẫn chờ chủ dự án chạy thử và duyệt đóng, không tự tạo tag.
+
 Phần kiểm chứng ban đầu ngày 01/11/2026 dưới đây ghi lại bản `a46f7cc`, không phải số đo của mã mới nhất. Bổ sung tự cập nhật ngày 02/11/2026 nằm ở phần kế tiếp. M1 vẫn chờ chủ dự án chạy thử và duyệt đóng; chưa tạo tag `m1`.
 
 ## Bổ sung 02/11/2026 — tự cập nhật diff

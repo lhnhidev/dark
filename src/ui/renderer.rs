@@ -28,6 +28,7 @@ pub struct View<'a> {
     pub message: &'a str,
     pub groups: &'a [FileGroup<'a>],
     pub file_scroll: usize,
+    pub file_width: Option<u16>,
     pub diff_path: &'a str,
     pub diff_added: usize,
     pub diff_removed: usize,
@@ -357,7 +358,14 @@ pub(super) fn make_line(
     l.finish();
 }
 fn build_line(l: &mut Line<'_>, v: &View<'_>, width: u16, height: u16, row: u16) {
-    let layout = Layout::new(width, height, v.show_files, v.show_diff, v.unified);
+    let layout = Layout::with_file_width(
+        width,
+        height,
+        v.show_files,
+        v.show_diff,
+        v.unified,
+        v.file_width,
+    );
     let normal = style(t::TEXT, t::BACKGROUND);
     let panel = style(t::TEXT, t::PANEL);
     let muted = style(t::MUTED, t::PANEL);
@@ -400,8 +408,8 @@ fn build_line(l: &mut Line<'_>, v: &View<'_>, width: u16, height: u16, row: u16)
             } else {
                 t::LINE_NUMBER
             };
-            l.put(&(i + 1).to_string(), 1, number);
-            l.put(&format!(" {} ", name), name.len() + 2, s);
+            l.put(&format!("Alt+{}", i + 1), 5, number);
+            l.put(&format!(" {}", name), name.len() + 1, s);
         }
         if !layout.short_tabs {
             let info = format!("{} · ⎇ {} · snapshot {}", v.project, v.branch, v.snapshot);
@@ -432,21 +440,21 @@ fn build_line(l: &mut Line<'_>, v: &View<'_>, width: u16, height: u16, row: u16)
         } else {
             let hints: &[(&str, &str)] = if v.tab == 0 {
                 &[
-                    ("a", "accept"),
-                    ("x", "reject"),
-                    ("l", "danh sách file"),
-                    ("r", "khung diff"),
-                    ("n/N", "hunk"),
-                    ("u", "hoàn tác"),
-                    ("e", "editor ngoài"),
-                    ("q", "thoát"),
+                    ("Alt+a", "accept"),
+                    ("Alt+x", "reject"),
+                    ("Alt+[/]/\\", "c\u{1ed9}t"),
+                    ("Alt+l/r", "khung"),
+                    ("Alt+n/N", "hunk"),
+                    ("Alt+u", "ho\u{e0}n t\u{e1}c"),
+                    ("Alt+e", "editor ngo\u{e0}i"),
+                    ("Alt+q", "tho\u{e1}t"),
                 ]
             } else {
-                &[("1", "Review"), ("q", "thoát")]
+                &[("Alt+1", "Review"), ("Alt+q", "tho\u{e1}t")]
             };
             let key_style = style(t::TEXT, t::PANEL_ALT);
             for (key, label) in hints {
-                if let Some((first, second)) = key.split_once('/') {
+                if let Some((first, second)) = key.split_once('/').filter(|_| *key == "Alt+n/N") {
                     l.put(first, hint_end.saturating_sub(l.col), key_style);
                     l.put("/", hint_end.saturating_sub(l.col), muted);
                     l.put(second, hint_end.saturating_sub(l.col), key_style);
@@ -516,7 +524,7 @@ fn build_line(l: &mut Line<'_>, v: &View<'_>, width: u16, height: u16, row: u16)
     }
     if !v.show_files && !v.show_diff {
         if row == height / 2 {
-            l.put("Ấn l hoặc r để hiện lại", l.limit, normal);
+            l.put("Ấn Alt+l hoặc Alt+r để hiện lại", l.limit, normal);
         }
         l.fill(l.limit, normal);
         return;
@@ -780,9 +788,9 @@ fn commit_line(l: &mut Line<'_>, k: usize, height: u16, width: usize) {
         l.put(" Commit message", width, dim);
     } else if k == hint {
         let text = if width > 22 {
-            " Space stage · c commit"
+            " Alt+g stage · Alt+c commit"
         } else {
-            "Space stage · c commit"
+            "Alt+g stage · Alt+c commit"
         };
         l.put(text, width, dim);
     } else if !tall {
@@ -1100,7 +1108,7 @@ mod tests {
         let output = String::from_utf8(output).unwrap();
         assert!(output.contains("Changes 1 · 0/1"));
         assert!(output.contains("Có ở M3"));
-        assert!(output.contains("Space stage · c commit"));
+        assert!(output.contains("Alt+g stage"));
         assert!(output.contains("  0/1 file đã xem"));
     }
     struct FailFlush;
@@ -1241,6 +1249,49 @@ mod tests {
             make_line(&mut line, &view, width, 24, 23, (false, false, 8));
             assert!(line.contains("accept"), "{line}");
             assert!(line.contains("reject"), "{line}");
+            assert!(line.contains("Alt+[/]/\\"), "{line}");
+        }
+    }
+
+    #[test]
+    fn wider_file_pane_reveals_long_filename_and_keeps_rows_bounded() {
+        let entries = [FileEntry {
+            path: "src/a_very_long_distinct_filename.rs",
+            status: 'M',
+            staged: false,
+            selected: true,
+            viewed: false,
+            added: 1,
+            removed: 1,
+        }];
+        let groups = [FileGroup {
+            name: "Changes",
+            collapsed: false,
+            selected: false,
+            files: &entries,
+        }];
+        let mut view = View {
+            show_files: true,
+            show_diff: true,
+            groups: &groups,
+            ..View::default()
+        };
+        let mut narrow = String::new();
+        make_line(&mut narrow, &view, 120, 24, 3, (false, false, 8));
+        view.file_width = Some(60);
+        let mut wide = String::new();
+        make_line(&mut wide, &view, 120, 24, 3, (false, false, 8));
+        assert!(
+            !narrow.contains("a_very_long_distinct_filename.rs"),
+            "{narrow}"
+        );
+        assert!(wide.contains("a_very_long_distinct_filename.rs"), "{wide}");
+        for color in [false, true] {
+            for row in 0..24 {
+                let mut line = String::new();
+                make_line(&mut line, &view, 120, 24, row, (color, true, 8));
+                assert!(replay(&line).2, "row {row}: {line:?}");
+            }
         }
     }
 

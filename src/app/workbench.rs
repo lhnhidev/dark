@@ -4,7 +4,7 @@ use crate::ui::syntax::{self, State};
 use crate::ui::{
     DiffCell, DiffKind, DiffRow, FileEntry, FileGroup, Layout, Overlay, Renderer, View,
 };
-use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
 use std::collections::{HashMap, HashSet};
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
@@ -33,6 +33,10 @@ pub struct Workbench {
     pub show_diff: bool,
     pub focus_files: bool,
     pub unified: bool,
+    file_width: Option<u16>,
+    viewport: (u16, u16),
+    last_split: bool,
+    dragging: bool,
     selected: usize,
     cursor: usize,
     collapsed: [bool; 3],
@@ -154,6 +158,10 @@ impl Workbench {
             show_diff: true,
             focus_files: true,
             unified: false,
+            file_width: None,
+            viewport: (0, 0),
+            last_split: false,
+            dragging: false,
             selected: 0,
             cursor: 1,
             collapsed: [false; 3],
@@ -179,6 +187,102 @@ impl Workbench {
 
     pub fn modal(&self) -> bool {
         self.prompt.is_some()
+    }
+
+    pub fn file_width(&self) -> Option<u16> {
+        self.file_width
+    }
+
+    pub fn cancel_drag(&mut self) {
+        self.dragging = false;
+    }
+
+    fn layout(&self, width: u16, height: u16) -> Layout {
+        if self.file_width().is_none() {
+            return Layout::new(width, height, self.show_files, self.show_diff, self.unified);
+        }
+        Layout::with_file_width(
+            width,
+            height,
+            self.show_files,
+            self.show_diff,
+            self.unified,
+            self.file_width(),
+        )
+    }
+
+    fn change_file_width(&mut self, requested: Option<u16>) -> bool {
+        if self.file_width == requested {
+            return false;
+        }
+        self.file_width = requested;
+        let layout = self.layout(self.viewport.0, self.viewport.1);
+        self.preserve_scroll(layout.split);
+        true
+    }
+
+    fn preserve_scroll(&mut self, split: bool) {
+        if self.last_split == split {
+            return;
+        }
+        // Keep only one temporary row list alive at a time.
+        let anchor = {
+            let rows = self.rows(self.last_split);
+            let offset = if self.scroll == usize::MAX {
+                rows.iter()
+                    .position(|row| row.hunk == self.hunk)
+                    .unwrap_or(0)
+            } else {
+                self.scroll
+            };
+            rows.get(offset).copied()
+        };
+        if let Some(anchor) = anchor {
+            self.scroll = self
+                .rows(split)
+                .iter()
+                .position(|row| {
+                    row.hunk == anchor.hunk
+                        && if anchor.header {
+                            row.header
+                        } else if let Some(new) = anchor.new {
+                            row.new == Some(new)
+                        } else {
+                            row.old == anchor.old && !row.header
+                        }
+                })
+                .unwrap_or(0);
+        }
+        self.last_split = split;
+    }
+
+    pub fn mouse(&mut self, event: MouseEvent, width: u16, height: u16) -> bool {
+        self.viewport = (width, height);
+        let layout = self.layout(width, height);
+        if self.modal() || layout.small || !self.show_files || !self.show_diff {
+            self.cancel_drag();
+            return false;
+        }
+        match event.kind {
+            MouseEventKind::Down(MouseButton::Left) => {
+                self.dragging = usize::from(event.column) == layout.files.saturating_sub(1)
+                    && event.row >= 1
+                    && event.row < height.saturating_sub(1);
+                false
+            }
+            MouseEventKind::Drag(MouseButton::Left) if self.dragging => {
+                let width = event
+                    .column
+                    .saturating_add(1)
+                    .clamp(24, width.saturating_sub(41).max(24));
+                self.change_file_width(Some(width))
+            }
+            MouseEventKind::Up(_) | MouseEventKind::Down(_) => {
+                self.cancel_drag();
+                false
+            }
+            _ => false,
+        }
     }
 
     pub fn title(&self, tab: &str) -> String {
@@ -261,7 +365,8 @@ impl Workbench {
             Err(error) => {
                 self.diff = FileDiff::default();
                 self.message = if error.to_string().contains("external editor") {
-                    "Diff quá lớn: nhấn e để xem trong editor ngoài. File được giữ nguyên.".into()
+                    "Diff quá lớn: nhấn Alt+e để xem trong editor ngoài. File được giữ nguyên."
+                        .into()
                 } else {
                     format!("Không tải được diff: {error}")
                 };
@@ -329,6 +434,17 @@ impl Workbench {
 
     /// Returns an external-editor request. Modal input never reaches global shortcuts.
     pub fn key(&mut self, key: KeyEvent) -> bool {
+        if !key.modifiers.contains(KeyModifiers::ALT)
+            || key.modifiers.intersects(
+                KeyModifiers::CONTROL
+                    | KeyModifiers::SUPER
+                    | KeyModifiers::HYPER
+                    | KeyModifiers::META,
+            )
+        {
+            return false;
+        }
+        self.cancel_drag();
         if self.modal() {
             self.prompt_key(key.code);
             return false;
@@ -343,14 +459,28 @@ impl Workbench {
                 self.show_diff = !self.show_diff;
                 self.focus_files = !self.show_diff && self.show_files;
             }
-            KeyCode::Tab | KeyCode::BackTab => {
+            KeyCode::Char('f') => {
                 if self.show_files && self.show_diff {
                     self.focus_files = !self.focus_files;
                 }
             }
             KeyCode::Char('v') => {
                 self.unified = !self.unified;
-                self.scroll = 0;
+            }
+            KeyCode::Char('[') | KeyCode::Char(']') | KeyCode::Char('\\') => {
+                let layout = self.layout(self.viewport.0, self.viewport.1);
+                if !layout.small && self.show_files && self.show_diff {
+                    let requested = match key.code {
+                        KeyCode::Char('[') => Some((layout.files as u16).saturating_sub(4).max(24)),
+                        KeyCode::Char(']') => Some(
+                            (layout.files as u16)
+                                .saturating_add(4)
+                                .min(self.viewport.0.saturating_sub(41).max(24)),
+                        ),
+                        _ => None,
+                    };
+                    self.change_file_width(requested);
+                }
             }
             KeyCode::Down | KeyCode::Char('j') => self.move_cursor(1),
             KeyCode::Up | KeyCode::Char('k') => self.move_cursor(-1),
@@ -371,7 +501,7 @@ impl Workbench {
                         None => {}
                     }
                 } else {
-                    self.message = "Sửa trong dark có ở M2; nhấn e để mở editor ngoài".into();
+                    self.message = "Sửa trong dark có ở M2; nhấn Alt+e để mở editor ngoài".into();
                 }
             }
             KeyCode::Left | KeyCode::Right if self.focus_files => {
@@ -443,7 +573,7 @@ impl Workbench {
                         let token = review.undo_token()?;
                         if before != token {
                             return Err(io::Error::other(
-                                "File đang thay đổi; hãy mở lại hộp xác nhận u",
+                                "File đang thay đổi; hãy mở lại hộp xác nhận Alt+u",
                             ));
                         }
                         Ok((plan, token))
@@ -460,7 +590,7 @@ impl Workbench {
             KeyCode::Char('e') => return self.selected_path().is_some(),
             KeyCode::Char('?') => self.message = "Hỏi agent có ở M5".into(),
             KeyCode::Char('/') => self.message = "Ghi chú gửi agent có ở M5".into(),
-            KeyCode::Char(' ') | KeyCode::Char('s') | KeyCode::Char('c') | KeyCode::Char('d') => {
+            KeyCode::Char('g') | KeyCode::Char('s') | KeyCode::Char('c') | KeyCode::Char('d') => {
                 self.message = "Stage, commit và bỏ cả file có ở M3".into()
             }
             _ => {}
@@ -625,7 +755,14 @@ impl Workbench {
         height: u16,
         memory: &str,
     ) -> io::Result<()> {
-        let layout = Layout::new(width, height, self.show_files, self.show_diff, self.unified);
+        let first_draw = self.viewport == (0, 0);
+        self.viewport = (width, height);
+        let layout = self.layout(width, height);
+        if first_draw {
+            self.last_split = layout.split;
+        } else {
+            self.preserve_scroll(layout.split);
+        }
         let indexes = self.rows(layout.split);
         if self.scroll == usize::MAX {
             self.scroll = indexes
@@ -802,7 +939,7 @@ impl Workbench {
         let overlay = self.prompt.as_ref().map(|_| Overlay {
             title,
             lines: &overlay_lines[prompt_start..end],
-            footer: "y xác nhận · n/Esc hủy · ↑↓ xem danh sách",
+            footer: "Alt+y xác nhận · Alt+n hủy · Alt+↑↓ xem danh sách",
         });
         let file = self
             .review
@@ -825,6 +962,7 @@ impl Workbench {
                 show_diff: self.show_diff,
                 focus_files: self.focus_files,
                 unified: self.unified,
+                file_width: self.file_width,
                 overlay,
                 file_scroll: self
                     .cursor
@@ -843,7 +981,7 @@ impl Workbench {
                 let Some(review) = &self.review else {
                     return Vec::new();
                 };
-                let mut lines=vec![format!("Có {} file untracked; {} file vượt chính sách snapshot.",review.untracked_count,review.oversized.len()),"y: bỏ qua các file liệt kê; n: hủy tạo snapshot. Không âm thầm thêm chúng vào Git.".into()];
+                let mut lines=vec![format!("Có {} file untracked; {} file vượt chính sách snapshot.",review.untracked_count,review.oversized.len()),"Alt+y: bỏ qua các file liệt kê; Alt+n: hủy tạo snapshot. Không âm thầm thêm chúng vào Git.".into()];
                 lines.extend(
                     review
                         .oversized
@@ -854,7 +992,7 @@ impl Workbench {
             }
             Some(Prompt::Undo { paths, .. }) => {
                 let mut lines = vec![
-                    "u khôi phục về LÚC MỞ PHIÊN, không phải trước lượt agent.".into(),
+                    "Alt+u khôi phục về LÚC MỞ PHIÊN, không phải trước lượt agent.".into(),
                     "Bao gồm cả thay đổi bạn tự làm sau khi mở dark. Index và nhánh giữ nguyên."
                         .into(),
                     "File untracked mới ngoài snapshot được giữ lại.".into(),
@@ -935,7 +1073,7 @@ fn paired_lines(
 fn friendly_error(error: &io::Error) -> String {
     let text = error.to_string();
     if text.contains("changed") && (text.contains("confirmation") || text.contains("prepared")) {
-        "File đã đổi sau khi mở xác nhận. Không khôi phục; nhấn u để xem lại danh sách.".into()
+        "File đã đổi sau khi mở xác nhận. Không khôi phục; nhấn Alt+u để xem lại danh sách.".into()
     } else if text.contains("recovery limit") {
         "Có file untracked vượt giới hạn snapshot. Hãy chuyển file lớn ra ngoài repo hoặc mở lại dark để chọn bỏ qua.".into()
     } else {

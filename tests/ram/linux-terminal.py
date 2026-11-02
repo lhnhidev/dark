@@ -4,6 +4,7 @@
 import fcntl
 import os
 import pty
+import re
 import resource
 import select
 import signal
@@ -127,13 +128,33 @@ def run(binary, profile, scenario):
         if scenario != "panic":
             wait_for(b"sample.txt", 0)
             wait_for(b"\x1b[24;1H", transcript.find(b"sample.txt"))
+            os.write(master, b"qaxu")
+            time.sleep(0.2)
+            if process.poll() is not None:
+                raise RuntimeError("bare q exited the application")
             for key, label in ((b"2", b"Edit"), (b"3", b"Vibe"), (b"5", b"Models")):
                 start = len(transcript)
-                os.write(master, key)
+                os.write(master, b"\x1b" + key)
                 wait_body(label, start)
             start = len(transcript)
-            os.write(master, b"1")
+            os.write(master, b"\x1b1")
             wait_for(b"Changes", start)
+            # SGR mouse coordinates are one-based; move the separator from
+            # column 24 to column 28 and verify the rendered border moved.
+            start = len(transcript)
+            os.write(master, b"\x1b[<0;24;13M\x1b[<32;28;13M\x1b[<0;28;13m")
+            deadline = time.monotonic() + TIMEOUT
+            while True:
+                chunk = bytes(transcript[start:])
+                pos = chunk.rfind(b"\x1b[13;1H")
+                if pos >= 0:
+                    row = chunk[pos + len(b"\x1b[13;1H"):].split(b"\x1b[14;1H", 1)[0]
+                    row = re.sub(rb"\x1b\[[0-9;]*[A-Za-z]", b"", row).decode("utf-8", "replace")
+                    if len(row) > 27 and row[27] == "\u2502":
+                        break
+                if process.poll() is not None or time.monotonic() >= deadline:
+                    raise RuntimeError(f"mouse drag did not move border: {chunk!r}")
+                pump()
             if scenario == "ctrlc" and b"Memory (rss):" not in transcript:
                 raise RuntimeError("debug memory status missing")
             # A fresh frame after SIGWINCH must arrive before any subsequent key.
@@ -153,7 +174,7 @@ def run(binary, profile, scenario):
                 idle_samples.append(value)
             if profile == "release" and max(idle_samples) >= IDLE_LIMIT:
                 budget_error = f"RAM budget exceeded: idle={idle_samples} peak_sampled={peak}"
-            os.write(master, b"\x03" if scenario == "ctrlc" else b"q")
+            os.write(master, b"\x1b\x03" if scenario == "ctrlc" else b"\x1bq")
 
         deadline = time.monotonic() + TIMEOUT
         while process.poll() is None:
@@ -175,6 +196,8 @@ def run(binary, profile, scenario):
             raise RuntimeError("alternate screen entry/exit missing")
         if b"\x1b[?25l" not in transcript or b"\x1b[?25h" not in transcript:
             raise RuntimeError("cursor hide/show missing")
+        if b"\x1b[?1000h" not in transcript or b"\x1b[?1000l" not in transcript:
+            raise RuntimeError("mouse capture entry/exit missing")
         if budget_error:
             raise RuntimeError(budget_error)
         print(f"{profile} {scenario} PASS idle_max_5_samples_rss_bytes="

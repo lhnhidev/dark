@@ -74,13 +74,13 @@ RAM là phần dark tốn thêm (ước tính), chưa tính agent và cửa sổ
 
 | ID | Tính năng | Mô tả | Milestone | RAM thêm |
 |---|---|---|---|---|
-| C1 | Thanh tab 1–7 | `1`–`7` đổi tab, `Alt-1`…`Alt-7` khi đang gõ chữ; 6 View và 7 Help hiện "Coming soon" | M1 | ~0 |
+| C1 | Thanh tab 1–7 | `Alt+1`…`Alt+7` đổi tab ở mọi ngữ cảnh; 6 View và 7 Help hiện "Coming soon" | M1 | ~0 |
 | C2 | Theme theo Hunk | Bảng màu GitHub Dark Default trong một module duy nhất; viền `accent` cho khung active | M1 | ~0 |
 | C3 | Thanh trạng thái | Tên chế độ, gợi ý phím, thông tin ngữ cảnh | M1 | ~0 |
 | C4 | Màn hẹp | Rút gọn nhãn tab; diff tự về 1 cột; thông báo khi < 80×24 | M1 | ~0 |
 | C5 | Snapshot theo lượt AI | Mốc git riêng trước mỗi lượt agent | M1 | ~0 |
 | C6 | Tự làm mới | Nhận thông báo file đổi từ hệ điều hành; WSL đọc ổ Windows dùng cầu nối `dark.exe`; không quét file định kỳ | M1 (đưa lên từ M3, duyệt 02/11/2026) | Đo riêng cầu nối |
-| C7 | `!` chạy test | Hiện lỗi đầu tiên và vị trí | M3 | < 0,2 MB |
+| C7 | `Alt+!` chạy test | Hiện lỗi đầu tiên và vị trí | M3 | < 0,2 MB |
 | C8 | `darkw` | Cửa sổ Windows riêng (Win32 + GDI), gõ tiếng Việt, clipboard, DPI | M4 | 0,5–2 MB |
 | C9 | Song ngữ | Tiếng Anh, tiếng Việt | M6 | ~0 |
 | C10 | Tab View, Help | Nội dung thật | M9 | ~0 |
@@ -89,28 +89,28 @@ RAM là phần dark tốn thêm (ước tính), chưa tính agent và cửa sổ
 
 | ID | Tính năng | Mô tả | Milestone | RAM thêm |
 |---|---|---|---|---|
-| R1 | Panel danh sách thay đổi | Kiểu git panel của Zed: nhóm Staged / Changes / Untracked, chữ trạng thái màu, `+N −N`, `✓` đã xem; `l` ẩn/hiện | M1 | < 0,2 MB |
-| R2 | Khung diff 80% | `r` ẩn/hiện; 2 cột cũ/mới, nhấn mạnh chữ đổi trong dòng; tự về 1 cột khi hẹp; `v` đổi split/unified | M1 | 0,5–1 MB |
-| R3 | Accept / reject hunk | `a` giữ, `x` bỏ (hoàn tác hunk trên working tree) | M1 | ~0 |
-| R4 | Điều hướng hunk | `n` / `N`, tự sang file kế | M1 | ~0 |
-| R5 | Hoàn tác cả lượt | `u` về snapshot, có xác nhận | M1 | ~0 |
-| R6 | Mở editor ngoài | `e` mở đúng file và dòng | M1 | ~0 |
-| R7 | Sửa hunk tại chỗ | `Enter` mở editor của dark tại dòng của hunk | M2 | xem E2 |
-| R8 | Stage và commit từ panel | `Space` stage/unstage file, `s` stage tất cả, ô commit message, `c` commit; `d` bỏ thay đổi file (có xác nhận) | M3 | < 0,2 MB |
+| R1 | Panel danh sách thay đổi | Kiểu git panel của Zed: nhóm Staged / Changes / Untracked, chữ trạng thái màu, `+N −N`, `✓` đã xem; `Alt+l` ẩn/hiện | M1 | < 0,2 MB |
+| R2 | Khung diff 80% | `Alt+r` ẩn/hiện; 2 cột cũ/mới, nhấn mạnh chữ đổi trong dòng; tự về 1 cột khi hẹp; `Alt+v` đổi split/unified | M1 | 0,5–1 MB |
+| R3 | Accept / reject hunk | `Alt+a` giữ, `Alt+x` bỏ (hoàn tác hunk trên working tree) | M1 | ~0 |
+| R4 | Điều hướng hunk | `Alt+n` / `Alt+Shift+n`, tự sang file kế | M1 | ~0 |
+| R5 | Hoàn tác cả lượt | `Alt+u` về snapshot, có xác nhận | M1 | ~0 |
+| R6 | Mở editor ngoài | `Alt+e` mở đúng file và dòng | M1 | ~0 |
+| R7 | Sửa hunk tại chỗ | `Alt+Enter` mở editor của dark tại dòng của hunk | M2 | xem E2 |
+| R8 | Stage và commit từ panel | `Alt+g` stage/unstage file, `Alt+s` stage tất cả, ô commit message, `Alt+c` commit; `Alt+d` bỏ thay đổi file (có xác nhận) | M3 | < 0,2 MB |
 | R9 | Ghi chú AI mỗi hunk | Tóm tắt 1–3 câu và cảnh báo, do agent viết qua skill dark-notes, lưu `.dark/notes/`, không ghi vào code; cache theo nội dung hunk | M5 | < 0,2 MB |
-| R10 | Hỏi agent về hunk | `?` chỉ gửi hunk và vài dòng xung quanh | M5 | < 0,2 MB |
-| R11 | Ghi chú của người dùng | `/` ghi chú dòng/hunk, gửi thẳng cho agent (skill dark-feedback) | M5 | < 0,2 MB |
+| R10 | Hỏi agent về hunk | `Alt+?` chỉ gửi hunk và vài dòng xung quanh | M5 | < 0,2 MB |
+| R11 | Ghi chú của người dùng | `Alt+/` ghi chú dòng/hunk, gửi thẳng cho agent (skill dark-feedback) | M5 | < 0,2 MB |
 
 ### 4.3 Tab 2 · Edit
 
 | ID | Tính năng | Mô tả | Milestone | RAM thêm |
 |---|---|---|---|---|
-| E1 | Cây thư mục | Tải dần, bỏ qua `.gitignore`, đánh dấu file/thư mục đã đổi; `Ctrl-B` ẩn/hiện | M2 | 0,1–1 MB |
+| E1 | Cây thư mục | Tải dần, bỏ qua `.gitignore`, đánh dấu file/thư mục đã đổi; `Alt+Ctrl+B` ẩn/hiện | M2 | 0,1–1 MB |
 | E2 | Editor gọn | Gõ, xóa, di chuyển theo cụm ký tự (tiếng Việt, emoji); Tab theo kiểu thụt lề của file | M2 | 1–2 MB (file 10.000 dòng) |
-| E3 | Lưu an toàn | `Ctrl-S`; giữ LF/CRLF, BOM, quyền file; ghi file tạm rồi đổi tên; hỏi khi thoát chưa lưu | M2 | ~0 |
-| E4 | Hoàn tác / làm lại | `Ctrl-Z` / `Ctrl-Y`, lịch sử có giới hạn | M2 | trong E2 |
-| E5 | Chọn chữ, clipboard | `Shift` + mũi tên; `Ctrl-C` / `Ctrl-X` / `Ctrl-V` với clipboard hệ thống (Windows; OSC 52) | M2 | ~0 |
-| E6 | Tìm, nhảy dòng | `Ctrl-F`, `Ctrl-G` | M2 | ~0 |
+| E3 | Lưu an toàn | `Alt+Ctrl+S`; giữ LF/CRLF, BOM, quyền file; ghi file tạm rồi đổi tên; hỏi khi thoát chưa lưu | M2 | ~0 |
+| E4 | Hoàn tác / làm lại | `Alt+Ctrl+Z` / `Alt+Ctrl+Y`, lịch sử có giới hạn | M2 | trong E2 |
+| E5 | Chọn chữ, clipboard | `Alt+Shift` + mũi tên; `Alt+Ctrl+C` / `Alt+Ctrl+X` / `Alt+Ctrl+V` với clipboard hệ thống (Windows; OSC 52) | M2 | ~0 |
+| E6 | Tìm, nhảy dòng | `Alt+Ctrl+F`, `Alt+Ctrl+G` | M2 | ~0 |
 | E7 | Vạch thay đổi | Lề trái đánh dấu dòng thêm/sửa/xóa so với snapshot | M2 | ~0 |
 | E8 | An toàn khi sửa | File nhị phân, không UTF-8, quá lớn: chỉ xem. File bị đổi từ bên ngoài: báo, không ghi đè âm thầm | M2 | ~0 |
 | E9 | Tô màu cú pháp | Từ khóa, chuỗi, chú thích, hàm, hằng, kiểu, thẻ; bộ tự viết, không dependency. Diff từ M1, editor dùng lại từ M2. RAM lúc chạy ~0 (không lưu kết quả); file chạy +54.272 byte trên Windows, +73.728 byte trên Linux musl (đo ở commit d3efff2) | M1 | ~0 |
@@ -138,8 +138,8 @@ RAM là phần dark tốn thêm (ước tính), chưa tính agent và cửa sổ
 | G1 | Lịch sử commit | hash, message, nhãn nhánh/tag, tác giả, thời gian tương đối; tải dần ~200 commit | M3 | 0,2–0,5 MB |
 | G2 | Cây nhánh | Lấy từ `git log --graph`, tô màu từng nhánh | M3 | trong G1 |
 | G3 | Chi tiết commit | Message, tác giả, parent, danh sách file `+/−` | M3 | < 0,1 MB |
-| G4 | Diff của commit | `Enter` mở bằng khung diff của Review, chỉ đọc | M3 | dùng lại R2 |
-| G5 | Tìm commit, xem nhánh khác | `/` tìm; `b` chọn nhánh để xem (không checkout) | M3 | ~0 |
+| G4 | Diff của commit | `Alt+Enter` mở bằng khung diff của Review, chỉ đọc | M3 | dùng lại R2 |
+| G5 | Tìm commit, xem nhánh khác | `Alt+/` tìm; `Alt+b` chọn nhánh để xem (không checkout) | M3 | ~0 |
 
 ### 4.6 Tab 5 · Models
 
@@ -178,27 +178,29 @@ Chi tiết theo từng tab: [UI_SPEC.md](UI_SPEC.md).
 
 | Phím | Ở đâu | Tác dụng |
 |---|---|---|
-| `1`…`7` / `Alt-1`…`Alt-7` | Mọi nơi / khi đang gõ chữ | Đổi tab |
-| `Tab` | Mọi nơi | Đổi khung active |
-| `l` / `r` | Review | Ẩn/hiện panel danh sách / khung diff |
-| `n` / `N` | Review | Hunk kế / trước |
-| `a` / `x` | Review | Accept / reject hunk |
-| `Enter` | Review | Sửa hunk trong dark |
-| `?` / `/` | Review | Hỏi agent / ghi chú cho agent (M5) |
-| `u` | Review | Hoàn tác cả lượt AI |
-| `e` | Review | Mở editor ngoài |
-| `Space` / `s` / `c` | Review (panel) | Stage file / stage tất cả / commit |
-| `Ctrl-S`, `Ctrl-Z`, `Ctrl-Y`, `Ctrl-F`, `Ctrl-G`, `Ctrl-B` | Edit | Lưu, hoàn tác, làm lại, tìm, nhảy dòng, cây thư mục |
-| `Esc` | Edit | Về màn trước (hỏi nếu chưa lưu) |
-| `Ctrl-1`…`Ctrl-6` | Vibe | Đổi ô agent |
-| `!` | Mọi nơi | Chạy test |
-| `q` | Ngoài chế độ gõ chữ | Thoát |
+| `Alt+1`…`Alt+7` | Mọi nơi | Đổi tab |
+| `Alt+f` | Mọi nơi | Đổi khung active |
+| `Alt+l` / `Alt+r` | Review | Ẩn/hiện panel danh sách / khung diff |
+| `Alt+n` / `Alt+Shift+n` | Review | Hunk kế / trước |
+| `Alt+a` / `Alt+x` | Review | Accept / reject hunk |
+| `Alt+Enter` | Review | Sửa hunk trong dark |
+| `Alt+?` / `Alt+/` | Review | Hỏi agent / ghi chú cho agent (M5) |
+| `Alt+u` | Review | Hoàn tác cả lượt AI |
+| `Alt+e` | Review | Mở editor ngoài |
+| `Alt+[` / `Alt+]` / `Alt+\` | Review | Thu / giãn cột danh sách / về mặc định; cũng kéo được bằng chuột |
+| `Alt+y` / `Alt+n` | Hộp xác nhận | Đồng ý / hủy |
+| `Alt+g` / `Alt+s` / `Alt+c` | Review (panel) | Stage file / stage tất cả / commit |
+| `Alt+Ctrl+S`, `Alt+Ctrl+Z`, `Alt+Ctrl+Y`, `Alt+Ctrl+F`, `Alt+Ctrl+G`, `Alt+Ctrl+B` | Edit | Lưu, hoàn tác, làm lại, tìm, nhảy dòng, cây thư mục |
+| `Alt+n` | Edit | Về màn trước (hỏi nếu chưa lưu) |
+| `Alt+Ctrl+1`…`Alt+Ctrl+6` | Vibe | Đổi ô agent |
+| `Alt+!` | Mọi nơi | Chạy test |
+| `Alt+q` | Ngoài chế độ gõ chữ | Thoát |
 
 ## 6. Ngoài phạm vi (cố tình không làm)
 
 | Không làm | Thay bằng |
 |---|---|
-| Editor kiểu IDE: tự hoàn thành, đa con trỏ, nhiều tab file, chế độ vim, plugin | Editor gọn trong dark; việc lớn dùng `e` mở editor ngoài |
+| Editor kiểu IDE: tự hoàn thành, đa con trỏ, nhiều tab file, chế độ vim, plugin | Editor gọn trong dark; việc lớn dùng `Alt+e` mở editor ngoài |
 | LSP, repo map (tree-sitter) | Lệnh test/lint; agent tự tìm ngữ cảnh |
 | Nhúng giao diện TUI của agent vào trong dark (PTY + terminal thu nhỏ) | Nhường/chia màn hình, hoặc ACP |
 | Tự viết terminal emulator | `darkw` chỉ vẽ lưới chữ của dark |

@@ -10,6 +10,8 @@ Project hiện tại: `D:\workspace\dark`; trong WSL là `/mnt/d/workspace/dark`
 
 ## Windows
 
+Phím hiện tại đều cần Alt; bộ kiểm terminal dùng Alt+q/Alt+Ctrl+C, thử phím cũ không chạy lệnh và kéo đường phân cách thật. `--self-test-review` cũng thử Alt+[ / Alt+] / Alt+\ và đường xử lý kéo trên fixture RAM 30 file. Mouse capture phải tắt khi thoát/panic/nhường editor, Windows khôi phục console mode gốc.
+
 ```powershell
 cd D:\workspace\dark
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify-windows.ps1
@@ -19,7 +21,7 @@ Runner kiểm tra format, Clippy, test debug/release, build debug/release, self-
 
 Runner ép `CARGO_TARGET_DIR` riêng tại `target/verify-windows` và chỉ định target host từ `rustc -vV`; binary được kiểm tra nằm trong `target/verify-windows/<host>/{debug,release}`. Như vậy cấu hình target-dir bên ngoài không làm runner đo nhầm binary cũ. Target mặc định của project không bị thay đổi.
 
-`tests/ram/windows-console.ps1` kiểm tra điều hướng, resize trước phím, q, Ctrl-C, panic và phục hồi input/output mode, con trỏ, màn hình. Tham số `-TargetDirectory PATH` chọn thư mục chứa `debug/dark.exe` và `release/dark.exe`, dùng cùng bài thử cho binary baseline và binary sau sửa.
+`tests/ram/windows-console.ps1` kiểm tra điều hướng, resize trước phím, Alt+q, Alt+Ctrl+C, panic và phục hồi input/output mode, con trỏ, màn hình. Tham số `-TargetDirectory PATH` chọn thư mục chứa `debug/dark.exe` và `release/dark.exe`, dùng cùng bài thử cho binary baseline và binary sau sửa.
 
 ## WSL/Linux: GNU phát triển, musl phát hành
 
@@ -50,7 +52,7 @@ Script cần Python 3, chạy cùng thao tác trên PTY, chờ 1,2 giây rồi l
 bash scripts/linux-interactive.sh musl
 ```
 
-Nhấn 1/2/3 để đổi màn hình, q hoặc Ctrl-C để thoát. Trong terminal WSL thứ hai, `python3 scripts/linux-terminal-resize.py 12 60` đổi kích thước PTY thật; kiểm tra redraw đến trước khi gửi thêm phím. Runner lưu PID/TTY ở `.dark/verification/manual`; helper xác nhận TTY đúng process trước khi đổi. GNU chọn bằng đối số `gnu`.
+Nhấn Alt+1…7 để đổi màn hình, Alt+q hoặc Alt+Ctrl+C để thoát. Trong terminal WSL thứ hai, `python3 scripts/linux-terminal-resize.py 12 60` đổi kích thước PTY thật; kiểm tra redraw đến trước khi gửi thêm phím. Runner lưu PID/TTY ở `.dark/verification/manual`; helper xác nhận TTY đúng process trước khi đổi. GNU chọn bằng đối số `gnu`.
 
 ## Dữ liệu và ngân sách kiểm thử
 

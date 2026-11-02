@@ -149,7 +149,7 @@ def measure(name, argv, cwd, seconds, rows, cols):
                 os.write(fd, b"\x1b[?62;22c")
         elapsed = time.time() - start
         if elapsed > 1.0 and not sent:
-            os.write(fd, b"j")  # one navigation keypress
+            os.write(fd, b"\x1bj" if name == "dark" else b"j")  # one navigation keypress
             sent = True
         procs = process_tree(pid)
         total = {"rss": 0, "private": 0, "pss": 0}

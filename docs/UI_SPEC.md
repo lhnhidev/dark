@@ -5,6 +5,10 @@
 
 Tài liệu này là **chuẩn bắt buộc** cho giao diện của dark. Ảnh trong [`docs/ui/`](ui/) là đích nhìn; khi ảnh và văn bản khác nhau, **văn bản thắng** (ảnh được vẽ bằng HTML nên khoảng cách pixel chỉ mang tính minh họa). Mọi thay đổi giao diện phải cập nhật tài liệu này trước.
 
+**Thay đổi được duyệt 02/11/2026 — chỉnh cột và toàn bộ phím Alt:** mọi lệnh bàn phím đang có, kể cả điều hướng, xác nhận và thoát, phải giữ Alt. Phím chữ không kèm Alt không thực thi lệnh. `Alt+1…7` đổi tab; `Alt+f` đổi khung (không dùng Alt+Tab vì Windows giữ tổ hợp này); `Alt+↑/↓/←/→` và `Alt+j/k` điều hướng; `Alt+PageUp/PageDown/Home` cuộn; `Alt+Enter` mở; `Alt+a/x`, `Alt+n/N`, `Alt+l/r`, `Alt+v`, `Alt+u`, `Alt+e`, `Alt+?`, `Alt+/` giữ chức năng tương ứng. Hộp xác nhận dùng `Alt+y/n` xác nhận/hủy (không phụ thuộc Alt+Esc vì hệ điều hành có thể giữ tổ hợp này); `Alt+q` thoát và `Alt+Ctrl+c` là cách thoát dự phòng. Các mô tả thao tác ở milestone sau cũng tuân theo quy tắc thêm Alt; chưa triển khai tính năng của milestone sau. Stage file dùng `Alt+g`, không dùng Alt+Space vì xung đột menu cửa sổ Windows.
+
+Cột danh sách Review có thể kéo tại đường phân cách bằng nút chuột trái, hoặc `Alt+[` thu / `Alt+]` giãn mỗi lần 4 cột, `Alt+\` về mặc định. Độ rộng tùy chỉnh chỉ nhớ trong phiên, không tự giãn theo tên file. Khi cả hai khung hiện, giữ danh sách ≥24 cột và diff ≥40 cột; độ rộng thực tế được kẹp theo cửa sổ, nhưng nhớ mức người dùng chọn khi cửa sổ mở rộng lại. Mặc định vẫn 20%, giới hạn 24–40 cột như ảnh. Diff <120 cột tự về unified. Không cho kéo khi chỉ còn một khung, tab khác, màn hình quá nhỏ hoặc có hộp xác nhận. Chỉ kéo vùng nội dung/tiêu đề, không nhận thanh tab hay trạng thái; bắt đầu ở cột phân cách và kết thúc khi thả chuột, đổi tab, resize cửa sổ hoặc mở hộp xác nhận. Kéo chỉ vẽ lại, không đọc lại Git/diff. Giữ vị trí cuộn bằng dòng code khi split/unified đổi. Mouse capture bật khi vào terminal, tắt khi thoát, panic hoặc nhường cho editor ngoài; terminal hỗ trợ có thể dùng Shift để chọn chữ như thông thường. Không yêu cầu giữ Alt khi kéo chuột.
+
 ## 1. Ảnh tham chiếu
 
 | Tab | Ảnh | Làm ở milestone |
@@ -86,21 +90,21 @@ Biến, dấu câu và phần còn lại dùng `text`. Bộ tô màu tự viết
 ### 3.1 Thanh tab (dòng 0)
 - Nền `panel`, dưới cùng là một đường `border` (vẽ bằng màu nền dòng 1 tách biệt, không tốn thêm dòng).
 - Trái: chữ `dark` màu `accent`, đậm.
-- Mỗi tab: ` N Nhãn ` với `N` màu `line_number`, nhãn màu `muted`.
-- **Tab đang chọn:** nền `accent_muted`, nhãn `text` đậm, `N` màu `file_modified`.
+- Mỗi tab: ` Alt+N Nhãn ` với `Alt+N` màu `line_number`, nhãn màu `muted`.
+- **Tab đang chọn:** nền `accent_muted`, nhãn `text` đậm, `Alt+N` màu `file_modified`.
 - Phải: `tên-project · ⎇ nhánh ↑trước ↓sau · snapshot HH:MM`, màu `muted`, căn sát phải; `↑N`/`↓N` chỉ hiện khi khác 0. Thông tin này bị cắt trước tiên khi thiếu chỗ.
-- Đổi tab: phím `1`…`7`; khi đang gõ chữ (editor, ô nhập) dùng `Alt-1`…`Alt-7`.
+- Đổi tab: luôn dùng `Alt+1`…`Alt+7`.
 
 ### 3.2 Thanh trạng thái (dòng cuối)
 - Nền `panel`. Trái: tên chế độ viết hoa (`REVIEW`, `EDIT`, `VIBE`, `GIT`, `MODELS`, `VIEW`, `HELP`) màu `text`.
-- Gợi ý phím: phím trong ô nền `panel_alt` chữ `text`, nhãn màu `muted`, cách nhau 2 cột. Cặp phím như `n/N` vẽ thành hai ô `n` và `N`, giữa là `/` màu `muted`.
+- Gợi ý phím: phím trong ô nền `panel_alt` chữ `text`, nhãn màu `muted`, cách nhau 2 cột. Cặp phím như `Alt+n/N` vẽ thành hai ô `n` và `N`, giữa là `Alt+/` màu `muted`.
 - Phải: thông tin ngữ cảnh màu `muted` (tiến độ review, vị trí con trỏ...).
 - `--debug`: thêm RAM của dark ở cuối bên phải.
 
 ### 3.3 Khung (pane)
 - Tiêu đề khung: một dòng riêng nền `panel` (không nằm trên đường viền), tiêu đề màu `text`, thông tin phụ màu `muted`.
 - Dưới dòng tiêu đề, mỗi khung luôn **giữ chỗ** cho viền: 1 cột trái, 1 cột phải, 1 dòng đáy. Hai khung cạnh nhau dùng chung một cột ở giữa.
-- **Khung đang active** (đang nhận phím): vẽ viền `│ └ ─ ┘` màu `accent` vào các ô giữ chỗ. **Khung không active không có viền**: các ô giữ chỗ để trống nền `background`. Nhờ giữ chỗ, đổi khung active không làm nội dung xê dịch. Đổi khung active: `Tab` / `Shift-Tab`.
+- **Khung đang active** (đang nhận phím): vẽ viền `│ └ ─ ┘` màu `accent` vào các ô giữ chỗ. **Khung không active không có viền**: các ô giữ chỗ để trống nền `background`. Nhờ giữ chỗ, đổi khung active không làm nội dung xê dịch. Đổi khung active: `Alt+f`.
 - Phân cách giữa hai khung: cột chung ở giữa. Ở dòng tiêu đề là `│` màu `border` trên nền `panel`; bên dưới là viền của khung active nên mang màu `accent`.
 - Khi chỉ hiện một khung, khung đó luôn coi là active. Khi `NO_COLOR`, có/không có viền cho biết khung nào active.
 - **Dòng đang chọn** trong danh sách: nền `accent_muted`, cột đầu tiên là `▌` màu `accent`.
@@ -112,26 +116,26 @@ Biến, dấu câu và phần còn lại dùng `text`. Bộ tô màu tự viết
 | < 80 cột hoặc < 24 dòng | Chỉ hiện thông báo "Cửa sổ quá nhỏ, cần ít nhất 80×24" |
 | < 100 cột | Nhãn tab rút gọn thành số + chữ đầu (`1 Rev`, `2 Edt`...); bỏ thông tin bên phải thanh tab |
 | Khung diff < 120 cột | Diff tự chuyển từ 2 cột sang 1 cột (inline) |
-| Panel trái | 20% độ rộng, tối thiểu 24 cột, tối đa 40 cột; khung còn lại chiếm phần còn lại (~80%) |
+| Panel trái | Mặc định 20%, giới hạn 24–40 cột; kéo đường phân cách hoặc dùng Alt+[ / Alt+] / Alt+\; giữ danh sách ≥24 và diff ≥40 cột |
 
 ## 4. Tab 1 · Review
 
 Ảnh: [ui/1-review.png](ui/1-review.png)
 
 ### 4.1 Panel trái: danh sách thay đổi (kiểu git panel của Zed)
-- `l` ẩn/hiện. Khi ẩn, khung diff chiếm toàn bộ chiều ngang.
+- `Alt+l` ẩn/hiện. Khi ẩn, khung diff chiếm toàn bộ chiều ngang.
 - Tiêu đề: `Changes` (`text`) + `N file · X/N đã xem` (`muted`).
 - Ba nhóm, mỗi nhóm thu/mở được (`▾`/`▸`): **Staged (n)**, **Changes (n)**, **Untracked (n)**. Giữa các nhóm không có dòng trống (ảnh có dòng trống; bỏ để dành chỗ cho danh sách ở màn thấp).
 - Mỗi dòng file: `[x]`/`[ ]` (đã stage hay chưa) · chữ trạng thái có màu (`M` `file_modified`, `A` `file_added`, `D` `file_deleted`, `?` `file_added`, `R` `file_modified`) · thư mục màu `line_number` + tên file màu `text` (ví dụ `auth/` + `session.ts`) · bên phải `+N` (`file_added`) và `−N` (`file_deleted`); phần bằng 0 không hiện, cả hai bằng 0 thì không hiện số.
 - Thiếu chỗ: rút gọn thư mục từ bên trái (`…/auth/`), rồi bỏ hẳn thư mục; **luôn giữ tên file**. Chỉ khi riêng tên file cũng không vừa mới cắt giữa, giữ khoảng 1/4 đầu (ít nhất 1 ký tự khi có từ 3 cột) và phần còn lại cho đuôi, luôn còn ít nhất 1 ký tự đuôi (2 cột: `…s`) (ví dụ `module_01.ts` trong 7 cột → `m…01.ts`), để phần đuôi phân biệt (`01`/`11`/`21`) và đuôi mở rộng còn thấy.
 - File đã xem hết các hunk: thêm `✓` sau tên (M1); file đang mở: kiểu dòng đang chọn.
-- Dưới cùng: nhãn `Commit message` (`muted`), ô nhập một dòng (nền `background`, viền `border`, viền `accent` khi đang gõ), gợi ý `Space stage · c commit`.
-- Phím: `↑`/`↓` hoặc `j`/`k` chọn file · `Enter` mở diff · `Space` stage/unstage file · `s` stage tất cả · `c` tới ô commit message, `Enter` trong ô để commit · `d` bỏ toàn bộ thay đổi của file (**có hỏi xác nhận**).
+- Dưới cùng: nhãn `Commit message` (`muted`), ô nhập một dòng (nền `background`, viền `border`, viền `accent` khi đang gõ), gợi ý `Alt+g stage · Alt+c commit`.
+- Phím: `Alt+↑`/`Alt+↓` hoặc `Alt+j`/`Alt+k` chọn file · `Alt+Enter` mở diff · `Alt+g` stage/unstage file · `Alt+s` stage tất cả · `Alt+c` tới ô commit message, `Alt+Enter` trong ô để commit · `Alt+d` bỏ toàn bộ thay đổi của file (**có hỏi xác nhận**).
 
 **Trong M1:** vùng commit giữ nguyên vị trí nhưng vô hiệu hóa: đường kẻ `─` màu `border` ngăn với danh sách; nhãn, ô nhập (chữ `Có ở M3`) và dòng gợi ý đều màu `line_number`; gợi ý không có ô phím `panel_alt` để không trông như đang dùng được. Màn cao từ 32 dòng: ô nhập có viền 3 dòng như ảnh; thấp hơn: ô gọn 1 dòng `[ Có ở M3 ]` để giữ chỗ cho danh sách file. Các phím stage/commit/bỏ cả file chỉ báo chưa có ở M1, không thay đổi index. File có cả staged và unstaged có thể hiện trong hai nhóm nhưng tổng file và tiến độ chỉ đếm một lần.
 
 ### 4.2 Khung phải: diff (80%)
-- `r` ẩn/hiện. Hai khung đều ẩn: hiện dòng giữa màn hình "Ấn l hoặc r để hiện lại".
+- `Alt+r` ẩn/hiện. Hai khung đều ẩn: hiện dòng giữa màn hình "Ấn l hoặc r để hiện lại".
 - Tiêu đề: đường dẫn file (`text`) · `hunk i/n` (`muted`) · bên phải `+N` (`file_added`) `−N` (`file_deleted`) · chế độ `split`/`unified` (`muted`).
 - **Dòng tiêu đề hunk:** nền `panel`, chữ `muted`: `@@ -a,b +c,d @@ ngữ cảnh`.
 - **Diff 2 cột** (cũ trái, mới phải), giữa là `│` màu `border`. Mỗi cột: số dòng (5 cột, căn phải, `line_number`) · 1 khoảng trắng · dấu (1 cột) · 1 khoảng trắng · nội dung, ví dụ `   41 − const raw`.
@@ -161,19 +165,21 @@ Biến, dấu câu và phần còn lại dùng `text`. Bộ tô màu tự viết
 
 | Phím | Tác dụng |
 |---|---|
-| `l` / `r` | Ẩn/hiện panel danh sách / khung diff |
-| `Tab` | Đổi khung active |
-| `n` / `N` | Hunk kế / trước (sang file kế khi hết hunk) |
-| `a` / `x` | Accept / reject hunk |
-| `Enter` | Sửa hunk ngay tại chỗ (mở editor của dark tại dòng đó) |
-| `?` | Hỏi agent về hunk (từ M5) |
-| `/` | Ghi chú của người dùng gửi cho agent (từ M5) |
-| `u` | Hoàn tác cả lượt AI về snapshot (có xác nhận) |
-| `e` | Mở file trong editor ngoài |
-| `v` | Đổi split / unified |
-| `q` | Thoát |
+| `Alt+l` / `Alt+r` | Ẩn/hiện panel danh sách / khung diff |
+| `Alt+f` | Đổi khung active |
+| `Alt+n` / `Alt+Shift+n` | Hunk kế / trước (sang file kế khi hết hunk) |
+| `Alt+a` / `Alt+x` | Accept / reject hunk |
+| `Alt+Enter` | Sửa hunk ngay tại chỗ (mở editor của dark tại dòng đó) |
+| `Alt+?` | Hỏi agent về hunk (từ M5) |
+| `Alt+/` | Ghi chú của người dùng gửi cho agent (từ M5) |
+| `Alt+u` | Hoàn tác cả lượt AI về snapshot (có xác nhận) |
+| `Alt+e` | Mở file trong editor ngoài |
+| `Alt+v` | Đổi split / unified |
+| `Alt+[` / `Alt+]` / `Alt+\` | Thu / giãn danh sách 4 cột / về độ rộng mặc định |
+| `Alt+y` / `Alt+n` | Xác nhận / hủy hộp đang mở |
+| `Alt+q` | Thoát |
 
-**Trong M1:** `Enter` ở danh sách mở diff; `Enter` ở diff báo sửa nội bộ có ở M2 và gợi ý `e`. `?` và `/` báo có ở M5 trên thanh trạng thái, không im lặng. Khi chưa có ghi chú AI, thanh trạng thái vẫn chỉ dẫn `a accept` và `x reject`; màn hẹp ưu tiên giữ hai phím này. `u` ghi rõ khôi phục về **lúc mở phiên dark**, liệt kê file bị ảnh hưởng và cảnh báo gồm cả thay đổi người dùng tự làm sau khi mở; file đổi tiếp trong lúc xác nhận thì hủy thao tác và yêu cầu xem lại.
+**Trong M1:** `Alt+Enter` ở danh sách mở diff; `Alt+Enter` ở diff báo sửa nội bộ có ở M2 và gợi ý `Alt+e`. `Alt+?` và `Alt+/` báo có ở M5 trên thanh trạng thái, không im lặng. Khi chưa có ghi chú AI, thanh trạng thái vẫn chỉ dẫn `Alt+a accept` và `Alt+x reject`; màn hẹp ưu tiên giữ hai phím này. `Alt+u` ghi rõ khôi phục về **lúc mở phiên dark**, liệt kê file bị ảnh hưởng và cảnh báo gồm cả thay đổi người dùng tự làm sau khi mở; file đổi tiếp trong lúc xác nhận thì hủy thao tác và yêu cầu xem lại.
 
 **Tự cập nhật (đưa lên M1 theo duyệt ngày 02/11/2026):** thay đổi từ bên ngoài được nhận qua thông báo hệ điều hành, gộp trong khoảng 150 ms trước khi tải lại diff; không quét file định kỳ. Giữ file, hunk và vị trí cuộn đang xem khi còn xác định được. Trong lúc mở hộp xác nhận, ghi nhận thay đổi nhưng hoãn cập nhật màn hình tới khi đóng hộp; kiểm tra stale trước khi ghi vẫn bắt buộc. WSL đọc ổ Windows dùng `dark.exe` chạy ngầm làm cầu nối. Nếu không bật được theo dõi hoặc cầu nối mất kết nối, báo trên thanh trạng thái; người dùng vẫn đổi tab để tải lại được. Bố cục, màu và phím không đổi.
 
@@ -182,10 +188,10 @@ Biến, dấu câu và phần còn lại dùng `text`. Bộ tô màu tự viết
 Ảnh: [ui/2-edit.png](ui/2-edit.png)
 
 ### 5.1 Cây thư mục (trái, 20%)
-- Tiêu đề `Explorer`. `Ctrl-B` ẩn/hiện.
+- Tiêu đề `Explorer`. `Alt+Ctrl+B` ẩn/hiện.
 - Thụt 2 cột mỗi cấp; thư mục có `▾`/`▸`; tải dần, chỉ đọc thư mục khi mở. Bỏ qua file theo `.gitignore`.
 - Thư mục chứa file đã đổi: chấm `•` màu `file_modified`. File đã đổi: chữ trạng thái bên phải như panel Review.
-- Phím: `↑`/`↓` chọn · `→`/`←` mở/thu thư mục · `Enter` mở file.
+- Phím: `Alt+↑`/`Alt+↓` chọn · `Alt+→`/`Alt+←` mở/thu thư mục · `Alt+Enter` mở file.
 
 ### 5.2 Editor (phải)
 - Tiêu đề: đường dẫn file + `● chưa lưu` (`file_modified`) khi có thay đổi.
@@ -194,23 +200,23 @@ Biến, dấu câu và phần còn lại dùng `text`. Bộ tô màu tự viết
 - Vùng chọn: nền `accent_muted`.
 - Code tô màu cú pháp theo §2 (bộ tô màu có từ M1).
 - Thanh trạng thái phải: `Ngôn ngữ · UTF-8 · LF|CRLF · Ln X, Col Y`.
-- Phím: xem [FEATURES.md](FEATURES.md) mục Edit (`Ctrl-S`, `Ctrl-Z`/`Ctrl-Y`, `Shift`+mũi tên, `Ctrl-C`/`Ctrl-X`/`Ctrl-V`, `Ctrl-F`, `Ctrl-G`, `Esc`). Trong editor, `Ctrl-C` là copy, không thoát app.
+- Phím: xem [FEATURES.md](FEATURES.md) mục Edit (`Alt+Ctrl+S`, `Alt+Ctrl+Z`/`Alt+Ctrl+Y`, `Alt+Shift`+mũi tên, `Alt+Ctrl+C`/`Alt+Ctrl+X`/`Alt+Ctrl+V`, `Alt+Ctrl+F`, `Alt+Ctrl+G`, `Alt+n`). Trong editor, `Alt+Ctrl+C` là copy, không thoát app.
 
 ## 6. Tab 3 · Vibe
 
 Ảnh: [ui/3-vibe.png](ui/3-vibe.png)
 
-- **Dải ô agent** (dòng ngay dưới thanh tab): 6 ô `1 · tên-agent` … `6 · +`, ô đang chọn kiểu tab đang chọn. Bên phải: `MVP: 1 agent · tối đa 6 ở bản sau` cho tới M7. Ô 2–6 màu `line_number` và không chọn được trước M7. Đổi ô: `Ctrl-1`…`Ctrl-6`.
+- **Dải ô agent** (dòng ngay dưới thanh tab): 6 ô `1 · tên-agent` … `6 · +`, ô đang chọn kiểu tab đang chọn. Bên phải: `MVP: 1 agent · tối đa 6 ở bản sau` cho tới M7. Ô 2–6 màu `line_number` và không chọn được trước M7. Đổi ô: `Alt+Ctrl+1`…`Alt+Ctrl+6`.
 - **Ô chưa có agent:** khoảng trống, giữa màn hình là hộp chọn agent (rộng ~65% hoặc tối đa 104 cột), viền `accent`, nền `panel`:
   - Tiêu đề `Chọn agent cho ô N` + mô tả `muted`.
   - Nhóm **CLI ĐÃ CÀI TRÊN MÁY** và **MODEL QUA API KEY (từ tab 5 Models)**, tiêu đề nhóm màu `muted`.
   - Mỗi dòng: dấu chọn `▸` · tên · chi tiết (`muted`) · trạng thái: `sẵn sàng` (`file_added`), `cần API key` (`file_modified`), `chưa cài` (`line_number`, cả dòng mờ).
   - Dòng chân: `Enter bắt đầu · ↑↓ chọn · 5 quản lý API key`.
-- **M3:** chỉ nhóm CLI; `Enter` gọi agent CLI ở giao diện gốc (nhường màn hình hoặc chia màn hình), agent thoát thì về tab Review. Nhóm API hiện một dòng `muted` "Có ở v0.2".
+- **M3:** chỉ nhóm CLI; `Alt+Enter` gọi agent CLI ở giao diện gốc (nhường màn hình hoặc chia màn hình), agent thoát thì về tab Review. Nhóm API hiện một dòng `muted` "Có ở v0.2".
 - **Từ M5, ô có agent đang chạy** (chưa có ảnh, theo cùng bảng màu):
   - Luồng hội thoại: tin nhắn người dùng có tiền tố `›` màu `muted`; trả lời của agent màu `text`; kế hoạch dạng danh sách `☐`/`☑`; lệnh agent chạy trong khung nền `panel` có tiền tố `$`; file agent sửa hiện `M path +N −N`.
   - **Yêu cầu xin quyền:** khung viền `accent` như ghi chú AI, có `y cho phép · n từ chối · d xem diff`.
-  - Ô nhập ở đáy, viền `accent` khi đang gõ; `Enter` gửi, `Shift-Enter` xuống dòng.
+  - Ô nhập ở đáy, viền `accent` khi đang gõ; `Alt+Enter` gửi, `Shift-Enter` xuống dòng.
   - Thanh trạng thái phải: tên agent · RAM của agent · token/chi phí lượt này (từ M8).
 
 ## 7. Tab 4 · Git commit
@@ -223,7 +229,7 @@ Biến, dấu câu và phần còn lại dùng `text`. Bộ tô màu tự viết
   - `author`, `time` (tương đối, ví dụ "2 giờ trước"): `muted`.
   - Tải dần theo trang khoảng 200 commit khi cuộn.
 - **Chi tiết commit (phải, ~27%, tối thiểu 36 cột):** message đậm; `hash · tác giả · ngày giờ`, `parent …` màu `muted`; tổng `N file · +a −b`; danh sách file với chữ trạng thái và `+/−`.
-- Phím: `↑`/`↓` chọn · `Enter` mở diff commit bằng chính khung diff của tab Review (chỉ đọc, không accept/reject) · `/` tìm · `b` đổi nhánh (M3: chỉ xem, không checkout).
+- Phím: `Alt+↑`/`Alt+↓` chọn · `Alt+Enter` mở diff commit bằng chính khung diff của tab Review (chỉ đọc, không accept/reject) · `Alt+/` tìm · `Alt+b` đổi nhánh (M3: chỉ xem, không checkout).
 
 ## 8. Tab 5 · Models (M6)
 
@@ -233,7 +239,7 @@ Biến, dấu câu và phần còn lại dùng `text`. Bộ tô màu tự viết
 - **Biểu mẫu (phải):** nhãn `muted` trên ô; ô nhập nền `background`, viền `border`, viền `accent` khi đang gõ; API key luôn hiển thị dạng `••••`; ô `Base URL` chỉ bật với OpenAI-compatible; chọn model mặc định.
 - Nút vẽ dạng `[ Kiểm tra kết nối ]` `[ Lưu ]`; nút đang chọn nền `accent_muted`, viền/chữ `accent`. Kết quả: `✓ kết nối thành công · N ms` (`file_added`) hoặc `✗ lý do` (`file_deleted`).
 - Dòng ghi chú `line_number`: key lưu trong kho mật khẩu của hệ điều hành, không ghi ra file hay log.
-- Phím: `↑`/`↓` nhà cung cấp · `Tab` trường kế · `t` kiểm tra · `Ctrl-S` lưu · `Del` xóa key (có xác nhận).
+- Phím: `Alt+↑`/`Alt+↓` nhà cung cấp · `Alt+f` trường kế · `Alt+t` kiểm tra · `Alt+Ctrl+S` lưu · `Alt+Del` xóa key (có xác nhận).
 
 ## 9. Tab 6 · View và Tab 7 · Help
 

@@ -6,6 +6,7 @@ use std::sync::Once;
 
 use crossterm::{
     cursor::{Hide, Show},
+    event::{DisableMouseCapture, EnableMouseCapture},
     execute,
     terminal::{self, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -14,6 +15,7 @@ static INSTALL_HOOK: Once = Once::new();
 static RAW_CHANGED: AtomicBool = AtomicBool::new(false);
 static ALTERNATE: AtomicBool = AtomicBool::new(false);
 static CURSOR_HIDDEN: AtomicBool = AtomicBool::new(false);
+static MOUSE_CAPTURED: AtomicBool = AtomicBool::new(false);
 #[cfg(windows)]
 static SAVED_MODES: AtomicBool = AtomicBool::new(false);
 #[cfg(windows)]
@@ -50,6 +52,8 @@ impl TerminalSession {
         execute!(io::stdout(), EnterAlternateScreen)?;
         CURSOR_HIDDEN.store(true, Ordering::SeqCst);
         execute!(io::stdout(), Hide)?;
+        MOUSE_CAPTURED.store(true, Ordering::SeqCst);
+        execute!(io::stdout(), EnableMouseCapture)?;
         Ok(session)
     }
 }
@@ -63,8 +67,12 @@ impl Drop for TerminalSession {
 fn restore() {
     let cursor = CURSOR_HIDDEN.swap(false, Ordering::SeqCst);
     let alternate = ALTERNATE.swap(false, Ordering::SeqCst);
-    if cursor || alternate {
+    let mouse = MOUSE_CAPTURED.swap(false, Ordering::SeqCst);
+    if cursor || alternate || mouse {
         let mut out = io::stdout();
+        if mouse {
+            let _ = execute!(out, DisableMouseCapture);
+        }
         if cursor {
             // Unix has no portable cursor visibility getter; show it on exit.
             let _ = execute!(out, Show);

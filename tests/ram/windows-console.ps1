@@ -45,7 +45,7 @@ public static class ConsoleProbe {
  [StructLayout(LayoutKind.Sequential)] struct RECT { public short left,top,right,bottom; }
  [StructLayout(LayoutKind.Sequential)] struct SCREENINFO { public COORD size,cursor; public ushort attributes; public RECT window; public COORD maximum; }
  [StructLayout(LayoutKind.Sequential)] struct CURSOR { public uint size; [MarshalAs(UnmanagedType.Bool)] public bool visible; }
- [StructLayout(LayoutKind.Explicit, Size=20)] struct INPUT { [FieldOffset(0)] public ushort type; [FieldOffset(4)] public int down; [FieldOffset(8)] public ushort repeat; [FieldOffset(10)] public ushort vk; [FieldOffset(12)] public ushort scan; [FieldOffset(14)] public char ch; [FieldOffset(16)] public uint control; }
+ [StructLayout(LayoutKind.Explicit, Size=20)] struct INPUT { [FieldOffset(0)] public ushort type; [FieldOffset(4)] public int down; [FieldOffset(8)] public ushort repeat; [FieldOffset(10)] public ushort vk; [FieldOffset(12)] public ushort scan; [FieldOffset(14)] public char ch; [FieldOffset(16)] public uint control; [FieldOffset(4)] public COORD mousePos; [FieldOffset(8)] public uint buttons; [FieldOffset(12)] public uint mouseControl; [FieldOffset(16)] public uint mouseFlags; }
  [StructLayout(LayoutKind.Sequential)] struct MEM { public uint cb, faults; public UIntPtr peak, working, qpp, qp, qnp, qn, page, peakpage, privateUsage, privateWorking, shared; }
  [DllImport("kernel32.dll", SetLastError=true)] static extern bool AllocConsole();
  [DllImport("kernel32.dll")] static extern bool FreeConsole();
@@ -75,7 +75,10 @@ public static class ConsoleProbe {
  static string Status() { var h=Open("CONOUT$"); try { SCREENINFO info; Check(GetConsoleScreenBufferInfo(h,out info),"screen size"); var s=new StringBuilder(info.size.X+1); uint n; Check(ReadConsoleOutputCharacter(h,s,(uint)info.size.X,new COORD(0,info.window.bottom),out n),"read status"); return s.ToString().Substring(0,(int)n); } finally { CloseHandle(h); } }
  static string Body() { var h=Open("CONOUT$"); try { SCREENINFO info; Check(GetConsoleScreenBufferInfo(h,out info),"screen size"); int row=info.window.top+(info.window.bottom-info.window.top+1)/2; var s=new StringBuilder(info.size.X+1); uint n; Check(ReadConsoleOutputCharacter(h,s,(uint)info.size.X,new COORD(info.window.left,(short)row),out n),"read body"); return s.ToString().Substring(0,(int)n); } finally { CloseHandle(h); } }
  static ulong Memory(Process p) { MEM m=new MEM(); m.cb=(uint)Marshal.SizeOf(typeof(MEM)); Check(GetProcessMemoryInfo(p.Handle,ref m,m.cb),"GetProcessMemoryInfo EX2"); return m.privateWorking.ToUInt64(); }
- static void Key(IntPtr input,char c,bool ctrl) { var e=new INPUT { type=1,down=1,repeat=1,vk=(ushort)char.ToUpperInvariant(c),ch=ctrl?'\x03':c,control=ctrl?8u:0u }; uint n; Check(WriteConsoleInputW(input,new[]{e},1,out n)&&n==1,"WriteConsoleInput"); }
+ static void Key(IntPtr input,char c,bool ctrl) { var e=new INPUT { type=1,down=1,repeat=1,vk=(ushort)char.ToUpperInvariant(c),ch=ctrl?'\x03':c,control=ctrl?10u:2u }; uint n; Check(WriteConsoleInputW(input,new[]{e},1,out n)&&n==1,"WriteConsoleInput"); }
+ static void BareKey(IntPtr input,char c) { var e=new INPUT { type=1,down=1,repeat=1,vk=(ushort)char.ToUpperInvariant(c),ch=c }; uint n; Check(WriteConsoleInputW(input,new[]{e},1,out n)&&n==1,"WriteConsoleInput bare key"); }
+ static void Mouse(IntPtr input,short x,short y,uint buttons,uint flags) { var e=new INPUT { type=2,mousePos=new COORD(x,y),buttons=buttons,mouseFlags=flags }; uint n; Check(WriteConsoleInputW(input,new[]{e},1,out n)&&n==1,"WriteConsoleInput mouse"); }
+ static void WaitBorder(Process p,int column,ref ulong peak) { var until=DateTime.UtcNow.AddSeconds(15); while(DateTime.UtcNow<until) { if(p.HasExited) throw new Exception("process exited during drag"); peak=Math.Max(peak,Memory(p)); var row=Body(); if(column<row.Length && row[column]=='\u2502') return; Thread.Sleep(20); } throw new Exception("drag border not seen at "+column+": "+Body()); }
  static void MarkHeader() { var h=Open("CONOUT$"); try { uint n; const string marker="RESIZE TEST"; Check(WriteConsoleOutputCharacterW(h,marker,(uint)marker.Length,new COORD(0,0),out n) && n==marker.Length,"mark header"); } finally { CloseHandle(h); } }
  static SCREENINFO Shrink() { var h=Open("CONOUT$"); try { SCREENINFO info; Check(GetConsoleScreenBufferInfo(h,out info),"screen size before resize"); var small=info.window; if(small.left!=0 || small.top!=0 || small.right<3 || small.bottom<3 || info.size.Y==short.MaxValue) throw new Exception("unsupported console geometry"); small.right--; small.bottom--; MarkHeader(); Check(SetConsoleWindowInfo(h,true,ref small),"shrink console window"); Check(SetConsoleScreenBufferSize(h,new COORD(info.size.X,(short)(info.size.Y+1))),"resize console buffer"); return info; } finally { CloseHandle(h); } }
  static void RestoreSize(SCREENINFO info) { var h=Open("CONOUT$"); try { MarkHeader(); Check(SetConsoleScreenBufferSize(h,info.size),"restore console buffer"); var window=info.window; Check(SetConsoleWindowInfo(h,true,ref window),"restore console window"); } finally { CloseHandle(h); } }
@@ -102,6 +105,7 @@ public static class ConsoleProbe {
    uint modeRunning; Check(GetConsoleMode(input,out modeRunning),"running input mode"); if((modeRunning & 8u)==0) throw new Exception("ENABLE_WINDOW_INPUT not enabled while running");
    if(scenario=="ctrlc") WaitStatus(p,"Memory (private_working_set):",ref peak);
    if(!panic) {
+    foreach(char c in "qaxu") BareKey(input,c); Thread.Sleep(200); if(p.HasExited) throw new Exception("bare q exited the application");
     // No terminal input: the filesystem notification alone must redraw Review.
     var file=System.IO.Path.Combine(fixture,"sample.txt");
     System.IO.File.WriteAllText(file,"autorefresh_native_write\n"); WaitDiff(p,"autorefresh_native_write",ref peak);
@@ -110,6 +114,8 @@ public static class ConsoleProbe {
     System.IO.File.WriteAllText(System.IO.Path.Combine(fixture,"new-file.txt"),"new file\n"); WaitDiff(p,"new-file.txt",ref peak);
     foreach(var item in new[]{Tuple.Create('2',"Edit"),Tuple.Create('3',"Vibe"),Tuple.Create('5',"Models")}) { Key(input,item.Item1,false); WaitScreen(p,item.Item2,ref peak,true); }
     Key(input,'1',false); WaitScreen(p,"Changes",ref peak);
+    int width=geometry.window.right-geometry.window.left+1; short oldBorder=(short)(Math.Min(40,Math.Max(24,width/5))-1); short newBorder=(short)Math.Min(oldBorder+4,width-42); short mouseY=(short)(geometry.window.top+(geometry.window.bottom-geometry.window.top+1)/2);
+    Mouse(input,(short)(geometry.window.left+oldBorder),mouseY,1,0); Mouse(input,(short)(geometry.window.left+newBorder),mouseY,1,1); Mouse(input,(short)(geometry.window.left+newBorder),mouseY,0,0); WaitBorder(p,newBorder,ref peak);
     var originalSize=Shrink(); WaitResize(p,ref peak); RestoreSize(originalSize); WaitScreen(p,"Changes",ref peak);
     for(int i=0;i<5;i++) { Thread.Sleep(100); idle=Math.Max(idle,Memory(p)); peak=Math.Max(peak,idle); }
     p.Refresh(); threads=p.Threads.Count;
