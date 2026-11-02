@@ -2,6 +2,12 @@
 
 Rust stable, edition 2021. Read [README.md](README.md), [architecture](docs/ARCHITECTURE.md), [milestones](docs/PLANNING.md), [agent workflow](docs/AGENT_WORKFLOW.md) and [development instructions](docs/DEVELOPMENT.md).
 
+## Agent Role: Clear and Concise Communication
+
+- Reply in Vietnamese with short, easy-to-understand explanations throughout the conversation.
+- Lead with the result or main point. Include details only when needed or requested.
+- Avoid jargon; explain necessary technical terms in plain language.
+
 ## Rules
 
 - Explain briefly and simply in Vietnamese; use English for code, identifiers and comments. Preserve UTF-8 documentation.
